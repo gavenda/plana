@@ -52,7 +52,7 @@ application, then:
    to ping `@everyone`.
 
 6. **Move the bot's own role above** Triage, Unit Owner and Boarders in
-   *Server Settings → Roles*. Discord refuses to let a bot grant a role that sits at or
+   _Server Settings → Roles_. Discord refuses to let a bot grant a role that sits at or
    above its own highest role; the dashboard flags roles it cannot manage.
 
 Administrator permission in the guild is what grants dashboard access. It is re-checked
@@ -96,8 +96,10 @@ bun run start
 
 ## Containers
 
-The image builds with either tool; `Containerfile` and `Dockerfile` semantics are the
-same here.
+Both stacks run the published image, `ghcr.io/gavenda/plana`, which
+[the workflow](#publishing) builds on every push to `main`. Nothing needs to be built on
+the deployment host. If you do want to build from a checkout, `Containerfile` and
+`Dockerfile` semantics are the same here.
 
 ### Docker Compose
 
@@ -107,11 +109,15 @@ on a port — only the bot reaches it, over the compose network.
 
 ```sh
 cp .env.example .env   # then fill it in
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 The compose file sets `REDIS_URL=redis://redis:6379` for the bot, overriding whatever
 `.env` says, and waits for Redis to pass its healthcheck before starting the bot.
+
+To build from this checkout instead of pulling, uncomment the `build` block in
+`compose.yaml` and run `docker compose up -d --build`.
 
 ### Publishing
 
@@ -120,22 +126,16 @@ image and pushes it to GitHub Container Registry. Pull requests build the image 
 prove it still assembles but publish nothing. It needs no secrets — the built-in
 `GITHUB_TOKEN` authenticates to GHCR.
 
-Images land at `ghcr.io/<owner>/plana`, tagged `latest` on the default branch, plus the
+Images land at `ghcr.io/gavenda/plana`, tagged `latest` on the default branch, plus the
 branch name, the full commit SHA, and — for a `v*` tag — `1.2.3` and `1.2`. Each push is
 attested with build provenance.
 
 The workflow builds `linux/amd64`. Add `linux/arm64` to `platforms` for a multi-arch
 image; it is emulated on the runner, so expect a considerably longer build.
 
-> **A new GHCR package is private by default.** Either make it public under
-> *Package settings → Change visibility*, or run
-> `podman login ghcr.io -u <user>` with a personal access token that has `read:packages`
-> on the host that pulls it. Deployment fails with an authentication error otherwise.
-
 ### Podman Quadlet (rootless systemd)
 
-To run a locally built image instead, set `Image=localhost/plana:latest`,
-drop the `AutoUpdate=registry` line, and `podman build -t localhost/plana:latest .`.
+`plana.container` pulls `ghcr.io/gavenda/plana:latest`, so the units work as shipped:
 
 ```sh
 install -Dm600 .env.example ~/.config/plana/plana.env   # then fill it in
@@ -153,6 +153,10 @@ journalctl --user -u plana.service -f
 Four units are generated: `plana.network`, `plana.volume`, `plana-redis.service` and
 `plana.service`. Starting `plana.service` pulls the others up in order, and the bot
 reaches the cache at `redis://plana-redis:6379` over the shared network.
+
+To run an image built from a local checkout, `podman build -t plana-local .`, then set
+`Image=localhost/plana-local` in `plana.container` and drop `AutoUpdate=registry` —
+there is no registry to check for a local build.
 
 Check the units parse before installing them:
 
@@ -184,9 +188,12 @@ The port is published on `127.0.0.1` only. Put a reverse proxy in front for TLS 
 `PUBLIC_BASE_URL` to the public `https://` origin — it must match the registered OAuth
 redirect, and it also controls whether the session cookie is marked `Secure`.
 
-Note that `podman build` produces OCI images, which drop the `HEALTHCHECK` baked into the
-Containerfile; the quadlet unit declares `HealthCmd` itself, so deployments are covered
-either way. Use `podman build --format docker` if you want the image-level healthcheck.
+Neither build path bakes the `HEALTHCHECK` into the image. BuildKit pushes an OCI image
+and `podman build` produces one locally, and an OCI image config has no healthcheck
+field, so it is dropped in both cases. This only matters if you run the container by
+hand: both stacks declare the check themselves — `HealthCmd` in the quadlet unit and
+`healthcheck` in the compose file. Use `podman build --format docker` to keep it in a
+local build.
 
 `GET /healthz` reports gateway connection state and whether settings are complete.
 

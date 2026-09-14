@@ -10,8 +10,9 @@ After=plana-redis.service
 [Container]
 ContainerName=plana
 
-# Published by .github/workflows/publish.yml. To run a locally built image instead, use
-# `Image=localhost/plana:latest` and drop AutoUpdate below.
+# Published by .github/workflows/publish.yml. To run an image built from a local
+# checkout instead, `podman build -t plana-local .`, set `Image=localhost/plana-local`
+# and drop AutoUpdate below, since there is no registry to check.
 Image=ghcr.io/gavenda/plana:latest
 
 # `podman auto-update` (enable podman-auto-update.timer) pulls a newer :latest

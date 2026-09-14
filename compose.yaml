@@ -37,12 +37,12 @@ services:
       start_period: 5s
 
   plana:
-    # Builds locally. To run the published image instead, delete this build block
-    # and set image to ghcr.io/gavenda/plana:latest.
-    build:
-      context: .
-      dockerfile: Containerfile
-    image: localhost/plana:latest
+    image: ghcr.io/gavenda/plana:latest
+    # Pulls the published image. To build from this checkout instead, uncomment
+    # the build block and run `docker compose up -d --build`.
+    # build:
+    #   context: .
+    #   dockerfile: Containerfile
     container_name: plana
     restart: unless-stopped
 
