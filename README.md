@@ -7,11 +7,16 @@ one SQLite database.
 ## What it does
 
 **New member triage.** Discord assigns the **Triage** role itself, through onboarding or
-a server auto-role. When someone joins, Plana posts an announcement card to the
-configured channel carrying one button per assignable role, each labelled with the
-role's own name (so renaming a role in Discord renames the button). An administrator
-clicks a button, the member gets that role, the Triage role is removed, and the card
-rewrites itself into a record of who decided what.
+a server auto-role. Plana announces on that role appearing rather than on the join, so
+nobody is announced before they have actually reached triage — with onboarding those can
+be minutes or days apart. The card carries one button per assignable role, each labelled
+with the role's own name (so renaming a role in Discord renames the button). An
+administrator clicks a button, the member gets that role, the Triage role is removed,
+and the card rewrites itself into a record of who decided what.
+
+Only one card is posted per stay in triage. A member who already has an unresolved card
+is not announced again, so the two gateway events that can fire for a single arrival
+cannot double-post.
 
 **Broadcast.** `/broadcast channel:#somewhere message:...` posts as the bot. Omit
 `message:` and a multi-line composer opens instead, since a slash command option cannot

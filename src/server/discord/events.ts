@@ -9,14 +9,16 @@ import {
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type Client,
+  type GuildMember,
   type Interaction,
   type ModalSubmitInteraction,
 } from 'discord.js'
 
 import { commands, MAX_MESSAGE_LENGTH } from './commands'
 import { BROADCAST_INPUT_ID, decodeAssignId, decodeBroadcastId, encodeBroadcastId } from './ids'
-import { announceJoin, assignRole, broadcast, primeMemberCache, type Actor } from './service'
+import { announceTriage, assignRole, broadcast, primeMemberCache, type Actor } from './service'
 import { CacheKey, invalidate } from '../cache'
+import { getSettings } from '../db/settings'
 import { env } from '../env'
 
 const EPHEMERAL = { flags: MessageFlags.Ephemeral } as const
@@ -150,25 +152,44 @@ export function registerEvents(client: Client): void {
     })
   })
 
-  client.on(Events.GuildMemberAdd, async (member) => {
-    if (member.guild.id !== env.DISCORD_GUILD_ID) return
-
-    await invalidate(CacheKey.pendingMembers)
-
-    const result = await announceJoin(member)
-    if (!result.ok) console.warn(`[join] ${member.user.tag}: ${result.message}`)
-  })
-
   // Gateway events keep discord.js's member cache current, so the derived Redis
   // entries are dropped as they arrive rather than waiting for their TTL.
   const forGuild = (id: string) => id === env.DISCORD_GUILD_ID
+
+  async function announceIfInTriage(member: GuildMember): Promise<void> {
+    const { triageRoleId } = getSettings()
+    if (!triageRoleId || !member.roles.cache.has(triageRoleId)) return
+
+    const result = await announceTriage(member)
+    if (!result.ok) console.warn(`[triage] ${member.user.tag}: ${result.message}`)
+  }
+
+  client.on(Events.GuildMemberAdd, async (member) => {
+    if (!forGuild(member.guild.id)) return
+    await invalidate(CacheKey.pendingMembers)
+
+    // Normally the role lands later, but a server that applies it immediately can have
+    // it here with no GuildMemberUpdate to follow.
+    await announceIfInTriage(member)
+  })
 
   client.on(Events.GuildMemberRemove, (member) => {
     if (forGuild(member.guild.id)) void invalidate(CacheKey.pendingMembers)
   })
 
-  client.on(Events.GuildMemberUpdate, (_before, after) => {
-    if (forGuild(after.guild.id)) void invalidate(CacheKey.pendingMembers)
+  client.on(Events.GuildMemberUpdate, async (before, after) => {
+    if (!forGuild(after.guild.id)) return
+    await invalidate(CacheKey.pendingMembers)
+
+    const { triageRoleId } = getSettings()
+    if (!triageRoleId) return
+
+    // Only the transition into triage announces, so unrelated edits (a nickname, any
+    // other role) stay quiet. An uncached `before` cannot answer that, so it falls
+    // through to announceTriage, which refuses to post a second card.
+    if (!before.partial && before.roles.cache.has(triageRoleId)) return
+
+    await announceIfInTriage(after)
   })
 
   // A renamed role changes the announcement button labels, so the queue drops too.

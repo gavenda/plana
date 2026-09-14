@@ -40,8 +40,10 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
   const target = text(entry.targetName, 'an unknown member')
 
   switch (entry.action) {
+    // Key kept as 'member.join' so existing rows keep rendering; what it records is
+    // the member reaching triage, which is when the card is posted.
     case 'member.join':
-      return { label: 'Joined', tone: 'accent', summary: `${target} joined the server` }
+      return { label: 'Triage', tone: 'accent', summary: `${target} entered triage` }
 
     case 'role.assign':
       return {

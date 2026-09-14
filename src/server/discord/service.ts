@@ -64,14 +64,21 @@ export async function isGuildAdmin(userId: string): Promise<boolean> {
 
 /** Puts a new member into triage and posts the announcement card. */
 /**
- * Discord assigns the triage role itself, through onboarding or a server auto-role, so
- * nothing here touches it on join. It can land slightly after this event fires; the
- * GUILD_MEMBER_UPDATE that follows drops the cached queue, so the member appears then.
- * The role still has to be configured: it is how the queue is read, and it is removed
- * when a role is assigned.
+ * Announces a member entering triage. Driven by the triage role appearing rather than by
+ * the join itself: Discord assigns that role through onboarding or an auto-role, which
+ * can be well after the member arrived, and announcing on join would post a card for
+ * someone who has not reached triage yet.
+ *
+ * Idempotent. An unresolved card already means this member is announced and waiting, so
+ * the two events that can both fire for one arrival cannot produce two cards.
  */
-export async function announceJoin(member: GuildMember): Promise<Result<{ messageId: string }>> {
+export async function announceTriage(member: GuildMember): Promise<Result<{ messageId: string }>> {
   const settings = getSettings()
+
+  const existing = getAnnouncement(member.id)
+  if (existing && existing.resolvedAt == null) {
+    return ok({ messageId: existing.messageId })
+  }
 
   if (!settings.announceChannelId) {
     return err('not_configured', 'No announcement channel is configured.')
