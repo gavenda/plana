@@ -1,0 +1,49 @@
+{
+  "name": "plana",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development bun run --watch src/server/index.ts",
+    "build": "run-s type-check build:client build:server",
+    "build:client": "vite build --outDir dist/client --ssrManifest",
+    "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
+    "start": "NODE_ENV=production bun run src/server/index.ts",
+    "commands:deploy": "bun run src/server/discord/deploy-commands.ts",
+    "type-check": "run-s type-check:app type-check:server",
+    "lint": "eslint . --fix --cache",
+    "lint:ci": "eslint .",
+    "format": "prettier --write src/",
+    "type-check:app": "vue-tsc -p tsconfig.app.json --noEmit",
+    "type-check:server": "tsc -p tsconfig.server.json"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "hono": "^4.13.7",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.42",
+    "vue-router": "^4.6.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@tsconfig/node22": "^22.0.6",
+    "@types/bun": "^1.4.2",
+    "@types/node": "^22.20.2",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/tsconfig": "^0.8.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "~10.5.1",
+    "jiti": "^2.7.0",
+    "npm-run-all2": "^8.0.4",
+    "prettier": "3.6.2",
+    "prettier-plugin-tailwindcss": "~0.6.14",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.3",
+    "vite": "npm:rolldown-vite@latest",
+    "vite-plugin-vue-devtools": "^8.2.1",
+    "vue-tsc": "^3.3.11"
+  }
+}

@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------- theme --- */
+/* Tailwind v4 is configured in CSS: every token here generates utilities,
+   so --color-surface gives bg-surface, text-surface, border-surface, and so on.
+   Translucent tints use the opacity modifier instead (bg-accent/15). */
+@theme {
+  --color-canvas: #0f1115;
+  --color-surface: #171a21;
+  --color-raised: #1e222b;
+  --color-elevated: #242935;
+
+  --color-line: #2a2f3a;
+  --color-line-strong: #3a4150;
+
+  --color-ink: #e6e8ec;
+  --color-muted: #9aa3b2;
+  --color-faint: #6b7484;
+
+  --color-accent: #5865f2;
+  --color-accent-hover: #4752c4;
+  --color-accent-ink: #b6bcff;
+
+  --color-success: #3ba55d;
+  --color-success-ink: #8fe3ae;
+  --color-danger: #ed4245;
+  --color-danger-ink: #ffb3b4;
+  --color-warn: #faa61a;
+  --color-warn-ink: #ffd691;
+
+  --font-sans: 'gg sans', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+}
+
+/* ----------------------------------------------------------------- base --- */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-[15px] leading-relaxed text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+/* ----------------------------------------------------------- components --- */
+/* Only the primitives that carry variants and repeat across many views live
+   here. Layout, spacing and typography are utilities in the markup. */
+@layer components {
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-transparent px-4 py-[9px] text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-white hover:not-disabled:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply border-line-strong bg-raised hover:not-disabled:bg-elevated;
+  }
+
+  .btn-ghost {
+    @apply border-line bg-transparent hover:not-disabled:bg-elevated;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-[13px];
+  }
+
+  .input,
+  .select,
+  .textarea {
+    @apply w-full rounded-md border border-line-strong bg-canvas px-3 py-2.5 transition-colors focus:border-accent focus:outline-none;
+  }
+
+  .textarea {
+    @apply min-h-40 resize-y font-sans leading-relaxed;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-raised px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-muted;
+  }
+
+  .badge-accent {
+    @apply bg-accent/15 text-accent-ink;
+  }
+  .badge-success {
+    @apply bg-success/15 text-success-ink;
+  }
+  .badge-danger {
+    @apply bg-danger/15 text-danger-ink;
+  }
+  .badge-warn {
+    @apply bg-warn/15 text-warn-ink;
+  }
+
+  .alert {
+    @apply flex gap-2.5 rounded-md border border-line px-3.5 py-3 text-sm;
+  }
+
+  .alert-error {
+    @apply border-danger/40 bg-danger/15 text-danger-ink;
+  }
+  .alert-success {
+    @apply border-success/40 bg-success/15 text-success-ink;
+  }
+  .alert-warn {
+    @apply border-warn/40 bg-warn/15 text-warn-ink;
+  }
+}

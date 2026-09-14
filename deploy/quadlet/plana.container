@@ -1,0 +1,55 @@
+[Unit]
+Description=Plana - Discord administration bot and dashboard
+After=network-online.target
+Wants=network-online.target
+Requires=plana-volume.service
+After=plana-volume.service
+Requires=plana-redis.service
+After=plana-redis.service
+
+[Container]
+ContainerName=plana
+
+# Published by .github/workflows/publish.yml. To run a locally built image instead, use
+# `Image=localhost/plana:latest` and drop AutoUpdate below.
+Image=ghcr.io/gavenda/plana:latest
+
+# `podman auto-update` (enable podman-auto-update.timer) pulls a newer :latest
+# and restarts this unit, rolling back automatically if the new image fails.
+AutoUpdate=registry
+
+# Secrets and guild IDs live outside the unit file. Create this from .env.example:
+#   install -Dm600 .env.example ~/.config/plana/plana.env
+EnvironmentFile=%h/.config/plana/plana.env
+Environment=NODE_ENV=production
+Environment=DATABASE_PATH=/data/plana.db
+
+Volume=plana.volume:/data
+Network=plana.network
+
+# Resolved by container name on the plana network.
+Environment=REDIS_URL=redis://plana-redis:6379
+
+# Bound to loopback on purpose: terminate TLS with a reverse proxy in front,
+# and set PUBLIC_BASE_URL to the public https:// origin.
+PublishPort=127.0.0.1:3000:3000
+
+HealthCmd=wget -q -O /dev/null http://127.0.0.1:3000/healthz
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=20s
+
+# The process listens on 3000 as an unprivileged user, so it needs no capabilities.
+ReadOnly=true
+Tmpfs=/tmp
+NoNewPrivileges=true
+DropCapability=ALL
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,85 @@
+services:
+  redis:
+    image: docker.io/redis:8-alpine
+    container_name: plana-redis
+    restart: unless-stopped
+
+    # Cache only: no persistence, bounded memory, evict least-recently-used first.
+    command:
+      - redis-server
+      - --save
+      - ''
+      - --appendonly
+      - 'no'
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - allkeys-lru
+
+    # Not published: only the bot talks to it, over the compose network.
+    expose:
+      - '6379'
+
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  plana:
+    # Builds locally. To run the published image instead, delete this build block
+    # and set image to ghcr.io/gavenda/plana:latest.
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/plana:latest
+    container_name: plana
+    restart: unless-stopped
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # Copy .env.example to .env and fill it in before starting.
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /data/plana.db
+      # Overrides whatever .env says: inside the network the cache is this service.
+      REDIS_URL: redis://redis:6379
+
+    ports:
+      - '127.0.0.1:3000:3000'
+
+    volumes:
+      - plana-data:/data
+
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  plana-data:

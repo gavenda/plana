@@ -1,0 +1,33 @@
+[Unit]
+Description=Plana cache (Redis)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=plana-redis
+Image=docker.io/redis:8-alpine
+Network=plana.network
+
+# Cache only: no persistence, bounded memory, evict least-recently-used first.
+# Nothing here needs to survive a restart, so there is no volume.
+Exec=redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+
+HealthCmd=redis-cli ping
+HealthInterval=10s
+HealthTimeout=3s
+HealthRetries=5
+HealthStartPeriod=5s
+
+# No published port: only plana.container reaches it, over the plana network.
+ReadOnly=true
+Tmpfs=/tmp
+Tmpfs=/data
+NoNewPrivileges=true
+DropCapability=ALL
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

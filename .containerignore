@@ -1,0 +1,16 @@
+.git
+.gitignore
+node_modules
+dist
+dist-ssr
+data
+deploy
+coverage
+*.log
+*.tsbuildinfo
+.eslintcache
+.env
+.env.*
+!.env.example
+.vscode
+README.md
