@@ -1,5 +1,0 @@
-[Unit]
-Description=Plana internal network
-
-[Network]
-NetworkName=plana

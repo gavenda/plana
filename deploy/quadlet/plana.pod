@@ -1,0 +1,16 @@
+[Unit]
+Description=Plana pod (bot, dashboard and cache)
+
+[Pod]
+PodName=plana
+
+# Published here, not on the containers: everything in the pod shares this one
+# network namespace, so the bot reaches the cache on 127.0.0.1 and Redis is never
+# exposed outside the pod.
+#
+# Loopback on purpose: terminate TLS with a reverse proxy in front, and set
+# PUBLIC_BASE_URL to the public https:// origin.
+PublishPort=127.0.0.1:3000:3000
+
+[Install]
+WantedBy=default.target

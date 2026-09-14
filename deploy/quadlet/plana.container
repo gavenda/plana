@@ -26,14 +26,10 @@ Environment=NODE_ENV=production
 Environment=DATABASE_PATH=/data/plana.db
 
 Volume=plana.volume:/data
-Network=plana.network
+Pod=plana.pod
 
-# Resolved by container name on the plana network.
-Environment=REDIS_URL=redis://plana-redis:6379
-
-# Bound to loopback on purpose: terminate TLS with a reverse proxy in front,
-# and set PUBLIC_BASE_URL to the public https:// origin.
-PublishPort=127.0.0.1:3000:3000
+# Same network namespace as the cache, so this is the Redis container's own port.
+Environment=REDIS_URL=redis://127.0.0.1:6379
 
 HealthCmd=wget -q -O /dev/null http://127.0.0.1:3000/healthz
 HealthInterval=30s

@@ -140,7 +140,7 @@ image; it is emulated on the runner, so expect a considerably longer build.
 ```sh
 install -Dm600 .env.example ~/.config/plana/plana.env   # then fill it in
 mkdir -p ~/.config/containers/systemd
-cp deploy/quadlet/*.container deploy/quadlet/*.volume deploy/quadlet/*.network \
+cp deploy/quadlet/*.container deploy/quadlet/*.volume deploy/quadlet/*.pod \
   ~/.config/containers/systemd/
 
 systemctl --user daemon-reload
@@ -150,9 +150,32 @@ systemctl --user status plana.service
 journalctl --user -u plana.service -f
 ```
 
-Four units are generated: `plana.network`, `plana.volume`, `plana-redis.service` and
-`plana.service`. Starting `plana.service` pulls the others up in order, and the bot
-reaches the cache at `redis://plana-redis:6379` over the shared network.
+Four units are generated: `plana-pod.service`, `plana-volume.service`,
+`plana-redis.service` and `plana.service`. Starting `plana.service` pulls the others up
+in order.
+
+**Both containers run in one pod**, so they share a single network namespace: the bot
+reaches the cache at `redis://127.0.0.1:6379`, Redis binds loopback and is never exposed
+outside the pod, and port 3000 is published once, by the pod.
+
+A pod is not just tidier here. A rootless pod with default networking uses `pasta` for
+its namespace, so podman never asks **netavark** to build a bridge and apply firewall
+rules. A named network does, and on hosts where that fails you get:
+
+```
+Error: netavark: nftables error: "nft" did not return successfully while applying ruleset
+```
+
+which usually means the kernel or `nft` binary is missing something netavark needs —
+common on minimal VPS kernels, and on hosts where firewalld already owns the ruleset.
+With a pod there is no ruleset to apply. If you hit that error on a *different* podman
+workload, the usual host-side fix is to put this in
+`~/.config/containers/containers.conf`:
+
+```ini
+[network]
+firewall_driver = "iptables"
+```
 
 To run an image built from a local checkout, `podman build -t plana-local .`, then set
 `Image=localhost/plana-local` in `plana.container` and drop `AutoUpdate=registry` —

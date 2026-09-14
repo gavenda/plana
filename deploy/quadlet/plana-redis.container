@@ -6,11 +6,17 @@ Wants=network-online.target
 [Container]
 ContainerName=plana-redis
 Image=docker.io/redis:8-alpine
-Network=plana.network
+Pod=plana.pod
 
 # Cache only: no persistence, bounded memory, evict least-recently-used first.
 # Nothing here needs to survive a restart, so there is no volume.
-Exec=redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+# Bound to loopback inside the pod's network namespace; no port is published for it.
+#
+# `--save` is deliberately last and has no argument. Quadlet's Exec parser drops an
+# empty `""` token *and everything after it*, so the documented `--save ""` form would
+# silently discard the memory limits. A bare trailing `--save` sets an empty save
+# config, which is exactly what `--save ""` means: persistence off.
+Exec=redis-server --bind 127.0.0.1 --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru --save
 
 HealthCmd=redis-cli ping
 HealthInterval=10s
@@ -18,7 +24,6 @@ HealthTimeout=3s
 HealthRetries=5
 HealthStartPeriod=5s
 
-# No published port: only plana.container reaches it, over the plana network.
 ReadOnly=true
 Tmpfs=/tmp
 Tmpfs=/data
