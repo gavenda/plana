@@ -231,31 +231,78 @@ local build.
 ```
 src/
   server/
-    env.ts            environment parsing and validation
-    cache.ts          Redis read-through cache, degrades to live reads
-    db/               bun:sqlite, migrations and repositories
+    context.ts             AppContext handed to every event, handler and command
+    env.ts                 environment parsing and validation
+    cache.ts               Redis read-through cache, degrades to live reads
+    i18n.ts                i18next setup
+    locales/en.json        every string the bot says
+    events.ts              the event registry and its registration loop
+    events/
+      event.ts             the AppEvent contract
+      *.event.ts           one file per gateway event
+    handlers/
+      buttons/             AppButtonHandler contract + one file per button
+      modals/              AppModalSubmitHandler contract + one file per modal
+    commands/
+      chat-input/          AppChatInputCommand contract + one file per command
+    utils/                 small shared predicates and replies
+    db/                    bun:sqlite, migrations and repositories
     discord/
-      service.ts      role assignment, broadcast, queue — shared by bot and API
-      events.ts       gateway handlers (join, buttons, commands, modal)
-      components.ts   the Components V2 announcement card
+      service.ts           role assignment, broadcast, queue — shared by bot and API
+      components.ts        the Components V2 announcement card
+      ids.ts               custom_id encoding
     http/
-      auth.ts         Discord OAuth2 flow
-      api.ts          dashboard JSON API
-      ssr.ts          Vite in development, built bundles in production
-      app.ts          route wiring
-  app.ts              Vue app factory (shared by both entries)
-  entry-client.ts     hydration
-  entry-server.ts     renderToString
-  assets/main.css     Tailwind theme tokens and component layer
+      auth.ts              Discord OAuth2 flow
+      api.ts               dashboard JSON API
+      ssr.ts               Vite in development, built bundles in production
+      app.ts               route wiring
+  app.ts                   Vue app factory (shared by both entries)
+  entry-client.ts          hydration
+  entry-server.ts          renderToString
+  assets/main.css          Tailwind theme tokens and component layer
   views/ components/ stores/ lib/
-deploy/quadlet/       Podman systemd units
-.github/workflows/    lint, type-check, build and publish to GHCR
+deploy/quadlet/            Podman systemd units
+.github/workflows/         lint, type-check, build and publish to GHCR
 ```
+
+Events, handlers and commands are each a contract plus one file per implementation,
+collected in a registry. An event file decides *when* something runs and delegates the
+*what* to a handler, so `guild-member-update.event.ts` holds the rule about entering
+triage while `assign-role.handler.ts` holds what the button does.
+
+Interaction events dispatch by `custom_id` **prefix**, because ids carry their state
+inline (`assign:<memberId>:<roleId>`), and `ids.ts` owns both ends of that encoding.
 
 The bot and the dashboard call the same functions in `discord/service.ts`, so a role
 assigned from the web and one assigned from a button take an identical path: the same
 permission and hierarchy checks, the same audit entry, and the same update to the
 original announcement message.
+
+## Localization
+
+Bot replies go through i18next, keyed off the caller's own Discord locale:
+
+```ts
+tl('reply.role_assigned', interaction.locale, { role, member })
+```
+
+Every string the bot says lives in `src/server/locales/en.json`. Adding a language means
+adding one file beside it and registering it in `i18n.ts` — no code changes. Unknown and
+regional locales fall back to `en`.
+
+The announcement card is rendered in the **guild's** preferred locale rather than any one
+person's, since a message in a channel is read by everyone.
+
+Service functions return a translation key rather than a sentence, so the same failure
+reaches Discord in the caller's language and the dashboard API in English:
+
+```ts
+return err('channel_not_sendable', 'error.channel_not_sendable', { channel: channel.name })
+```
+
+HTML escaping is off — output is Discord markdown, and escaping would mangle mentions.
+
+The dashboard itself is not localized; it is English only.
 
 ## Caching
 

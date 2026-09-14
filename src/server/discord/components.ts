@@ -12,6 +12,7 @@ import {
   type Role,
 } from 'discord.js'
 
+import { tl } from '../i18n'
 import { encodeAssignId } from './ids'
 
 const ACCENT_PENDING = 0x5865f2
@@ -28,23 +29,31 @@ function relative(date: Date): string {
   return `<t:${Math.floor(date.getTime() / 1000)}:R>`
 }
 
-function describeMember(member: GuildMember): string {
+/**
+ * A message is seen by the whole server rather than one caller, so the card is rendered
+ * in the guild's own preferred locale instead of any individual's.
+ */
+function describeMember(member: GuildMember, locale: string): string {
   const lines = [
-    `## Welcome ${member.toString()}`,
-    `**${member.user.tag}** — \`${member.id}\``,
-    `Account created ${relative(member.user.createdAt)}`,
+    tl('announcement.welcome', locale, { member: member.toString() }),
+    tl('announcement.identity', locale, { tag: member.user.tag, id: member.id }),
+    tl('announcement.account_created', locale, { timestamp: relative(member.user.createdAt) }),
   ]
-  if (member.joinedAt) lines.push(`Joined this server ${relative(member.joinedAt)}`)
+
+  if (member.joinedAt) {
+    lines.push(tl('announcement.joined', locale, { timestamp: relative(member.joinedAt) }))
+  }
+
   return lines.join('\n')
 }
 
-function memberSection(member: GuildMember, body: string): SectionBuilder {
+function memberSection(member: GuildMember, locale: string, body: string): SectionBuilder {
   return new SectionBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(body))
     .setThumbnailAccessory(
       new ThumbnailBuilder()
         .setURL(member.displayAvatarURL({ size: 256, extension: 'png' }))
-        .setDescription(`${member.user.username}'s avatar`),
+        .setDescription(tl('announcement.avatar_alt', locale, { username: member.user.username })),
     )
 }
 
@@ -53,20 +62,22 @@ function divider(): SeparatorBuilder {
 }
 
 /**
- * The join announcement: member card plus one button per assignable role, each
+ * The triage announcement: member card plus one button per assignable role, each
  * labelled with the role's own name so the buttons stay correct if a role is renamed.
  */
-export function buildJoinAnnouncement(member: GuildMember, roles: Role[]): ContainerBuilder {
+export function buildTriageAnnouncement(
+  member: GuildMember,
+  roles: Role[],
+  locale: string,
+): ContainerBuilder {
   const container = new ContainerBuilder()
     .setAccentColor(ACCENT_PENDING)
-    .addSectionComponents(memberSection(member, describeMember(member)))
+    .addSectionComponents(memberSection(member, locale, describeMember(member, locale)))
     .addSeparatorComponents(divider())
 
   if (roles.length === 0) {
     return container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        '-# ⚠️ No assignable roles are configured yet. Set them in the dashboard.',
-      ),
+      new TextDisplayBuilder().setContent(tl('announcement.no_roles_configured', locale)),
     )
   }
 
@@ -79,7 +90,7 @@ export function buildJoinAnnouncement(member: GuildMember, roles: Role[]): Conta
 
   return container
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('Assign a role to move them out of triage:'),
+      new TextDisplayBuilder().setContent(tl('announcement.assign_prompt', locale)),
     )
     .addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(buttons))
 }
@@ -93,17 +104,19 @@ export function buildResolvedAnnouncement(options: {
   roleName: string
   actorName: string
   source: 'discord' | 'dashboard'
+  locale: string
 }): ContainerBuilder {
-  const { member, roleName, actorName, source } = options
-  const via = source === 'dashboard' ? ' via the dashboard' : ''
+  const { member, roleName, actorName, source, locale } = options
+  const key =
+    source === 'dashboard' ? 'announcement.resolved_via_dashboard' : 'announcement.resolved'
 
   return new ContainerBuilder()
     .setAccentColor(ACCENT_RESOLVED)
-    .addSectionComponents(memberSection(member, describeMember(member)))
+    .addSectionComponents(memberSection(member, locale, describeMember(member, locale)))
     .addSeparatorComponents(divider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `✅ Assigned **${roleName}** by **${actorName}**${via} ${relative(new Date())}`,
+        tl(key, locale, { role: roleName, actor: actorName, timestamp: relative(new Date()) }),
       ),
     )
 }

@@ -1,0 +1,44 @@
+{
+  "translation": {
+    "reply": {
+      "not_administrator_assign": "Only administrators can assign roles from this message.",
+      "not_administrator_broadcast": "Only administrators can broadcast.",
+      "role_assigned": "Assigned **{{role}}** to **{{member}}**.",
+      "broadcast_posted": "Posted to <#{{channelId}}> — {{url}}",
+      "error_interaction_execution": "There was an error while handling that interaction."
+    },
+    "error": {
+      "no_announce_channel": "No announcement channel is configured.",
+      "no_triage_role": "No triage role is configured.",
+      "unknown_member": "That member is no longer in the server.",
+      "unknown_role": "That role no longer exists.",
+      "triage_role_missing": "The configured triage role no longer exists.",
+      "role_not_assignable": "That role is not one of the configured member roles.",
+      "unknown_channel": "That channel does not exist or is not a text channel.",
+      "announce_channel_missing": "The configured announcement channel no longer exists.",
+      "channel_not_sendable": "The bot cannot post in #{{channel}}.",
+      "missing_manage_roles": "The bot is missing the Manage Roles permission.",
+      "role_above_bot": "The bot's highest role must sit above {{role}} in the role list.",
+      "announce_failed": "Could not post the announcement message.",
+      "assign_rejected": "Discord rejected the role change.",
+      "broadcast_rejected": "Discord rejected the message."
+    },
+    "announcement": {
+      "welcome": "## Welcome {{member}}",
+      "identity": "**{{tag}}** — `{{id}}`",
+      "account_created": "Account created {{timestamp}}",
+      "joined": "Joined this server {{timestamp}}",
+      "avatar_alt": "{{username}}'s avatar",
+      "no_roles_configured": "-# ⚠️ No assignable roles are configured yet. Set them in the dashboard.",
+      "assign_prompt": "Assign a role to move them out of triage:",
+      "resolved": "✅ Assigned **{{role}}** by **{{actor}}** {{timestamp}}",
+      "resolved_via_dashboard": "✅ Assigned **{{role}}** by **{{actor}}** via the dashboard {{timestamp}}"
+    },
+    "command": {
+      "broadcast": {
+        "modal_title": "Broadcast to #{{channel}}",
+        "modal_input_label": "Message"
+      }
+    }
+  }
+}

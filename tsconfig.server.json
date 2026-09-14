@@ -1,6 +1,9 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
-  "include": ["src/server/**/*", "env.d.ts"],
+  "include": [
+    "src/server/**/*",
+    "env.d.ts"
+  ],
   "compilerOptions": {
     "noEmit": true,
     "composite": true,
@@ -8,9 +11,14 @@
     "module": "Preserve",
     "moduleResolution": "Bundler",
     "verbatimModuleSyntax": true,
-    "types": ["bun"],
+    "types": [
+      "bun"
+    ],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "resolveJsonModule": true
   }
 }

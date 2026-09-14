@@ -1,9 +1,11 @@
 import { closeCache, connectCache } from './cache'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
+import type { AppContext } from './context'
 import { client } from './discord/client'
-import { registerEvents } from './discord/events'
 import { primeMemberCache } from './discord/service'
+import { registerEvents } from './events'
+import { initI18n } from './i18n'
 import { env } from './env'
 import { createHttpApp } from './http/app'
 import { createRenderer } from './http/ssr'
@@ -18,9 +20,15 @@ const MEMBER_REFRESH_INTERVAL_MS = 30 * 60 * 1000
 
 seedSettingsFromEnv()
 
+await initI18n()
 await connectCache()
 
-registerEvents(client)
+const context: AppContext = {
+  applicationId: env.DISCORD_CLIENT_ID,
+  client,
+}
+
+registerEvents(client, context)
 await login()
 
 /**

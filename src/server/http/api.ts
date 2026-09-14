@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { CacheKey, invalidate } from '../cache'
 import { listAudit, recordAudit } from '../db/audit'
 import { getSettings, isConfigured, SETTING_KEYS, updateSettings } from '../db/settings'
-import { MAX_MESSAGE_LENGTH } from '../discord/commands'
+import { MAX_MESSAGE_LENGTH } from '../constants'
 import {
   assignRole,
   broadcast,
