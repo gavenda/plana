@@ -23,7 +23,7 @@ const ROLE_FIELDS = [
   {
     key: 'triageRoleId',
     label: 'Triage role',
-    hint: 'Applied automatically when someone joins, and removed once a role is assigned.',
+    hint: 'Assigned by Discord when someone joins. Plana removes it once a role is assigned.',
   },
   {
     key: 'unitOwnerRoleId',
