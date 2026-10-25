@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import AuditSummary from '@/components/AuditSummary.vue'
+import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import type { ActivityOverview } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
@@ -36,6 +37,13 @@ const PLAY_LIMIT = 5
 const topGames = computed(() => play.data.value?.games.slice(0, PLAY_LIMIT) ?? [])
 const topTracks = computed(() => play.data.value?.tracks.slice(0, PLAY_LIMIT) ?? [])
 
+/** Loading, or not started yet: each request waits for the guild and settings first. */
+const waiting = (state: { data: { value: unknown }; error: { value: unknown } }) =>
+  state.data.value == null && state.error.value == null
+const pendingLoading = computed(() => !settings.loaded || waiting(pending))
+const activityLoading = computed(() => waiting(activity))
+const playLoading = computed(() => waiting(play))
+
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
   // Without a triage role there is no one to list; "Finish setting up" above says so.
@@ -58,18 +66,21 @@ const stats = computed(() => [
   {
     label: 'Awaiting a role',
     value: pending.data.value?.length ?? '—',
+    loading: (!settings.loaded || hasTriageRole.value) && pendingLoading.value,
     to: '/queue',
     tone: 'bg-primary-container text-on-primary-container',
   },
   {
     label: 'Server members',
     value: guild.directory?.guild.memberCount ?? '—',
+    loading: !guild.directory && !guild.error,
     to: null,
     tone: 'bg-secondary-container text-on-secondary-container',
   },
   {
     label: 'Events logged',
     value: activity.data.value?.total ?? '—',
+    loading: activityLoading.value,
     to: '/audit',
     tone: 'bg-tertiary-container text-on-tertiary-container',
   },
@@ -114,7 +125,13 @@ const recent = computed(() =>
         class="card flex flex-col gap-1 px-6 py-5 transition-shadow duration-150 ease-effects-fast"
         :class="[stat.tone, stat.to && 'state-layer hover:shadow-level1']"
       >
-        <span class="text-display-small font-medium">{{ stat.value }}</span>
+        <span class="text-display-small font-medium">
+          <span
+            v-if="stat.loading"
+            class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle"
+          />
+          <template v-else>{{ stat.value }}</template>
+        </span>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
       </component>
     </div>
@@ -126,14 +143,15 @@ const recent = computed(() =>
           <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
         </div>
         <!-- Loading, empty and error states sit in one card in place of the list. -->
-        <div :class="(pending.data.value?.length ?? 0) === 0 && 'card'">
+        <div :class="!pendingLoading && (pending.data.value?.length ?? 0) === 0 && 'card'">
           <StateBlock
-            :loading="!settings.loaded || pending.loading.value"
+            :loading="pendingLoading"
             :error="pending.error.value"
             :empty="(pending.data.value?.length ?? 0) === 0"
             empty-text="Nobody is waiting."
             compact
           >
+            <template #skeleton><SkeletonList trailing="text" /></template>
             <ul class="segmented-list">
               <li
                 v-for="member in pending.data.value?.slice(0, 5)"
@@ -168,14 +186,15 @@ const recent = computed(() =>
           <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
           <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
         </div>
-        <div :class="recent.length === 0 && 'card'">
+        <div :class="!activityLoading && recent.length === 0 && 'card'">
           <StateBlock
-            :loading="activity.loading.value"
+            :loading="activityLoading"
             :error="activity.error.value"
             :empty="recent.length === 0"
             empty-text="No activity recorded."
             compact
           >
+            <template #skeleton><SkeletonList two-line trailing="text" /></template>
             <ul class="segmented-list">
               <li v-for="{ entry, description } in recent" :key="entry.id" class="segmented-item">
                 <span
@@ -207,14 +226,15 @@ const recent = computed(() =>
           <h2 id="overview-games" class="text-title-medium">Top games this week</h2>
           <RouterLink class="btn btn-text" to="/activity">View all</RouterLink>
         </div>
-        <div :class="topGames.length === 0 && 'card'">
+        <div :class="!playLoading && topGames.length === 0 && 'card'">
           <StateBlock
-            :loading="play.loading.value"
+            :loading="playLoading"
             :error="play.error.value"
             :empty="topGames.length === 0"
             empty-text="No games played this week."
             compact
           >
+            <template #skeleton><SkeletonList leading="art" rank trailing="text" /></template>
             <ol class="segmented-list">
               <li v-for="(game, index) in topGames" :key="game.name" class="segmented-item p-0">
                 <RouterLink
@@ -258,14 +278,17 @@ const recent = computed(() =>
           <h2 id="overview-tracks" class="text-title-medium">Top tracks this week</h2>
           <RouterLink class="btn btn-text" to="/activity">View all</RouterLink>
         </div>
-        <div :class="topTracks.length === 0 && 'card'">
+        <div :class="!playLoading && topTracks.length === 0 && 'card'">
           <StateBlock
-            :loading="play.loading.value"
+            :loading="playLoading"
             :error="play.error.value"
             :empty="topTracks.length === 0"
             empty-text="Nothing played on Spotify this week."
             compact
           >
+            <template #skeleton>
+              <SkeletonList leading="art" rank two-line trailing="text" />
+            </template>
             <ol class="segmented-list">
               <li v-for="(track, index) in topTracks" :key="track.id" class="segmented-item">
                 <span

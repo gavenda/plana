@@ -17,6 +17,8 @@ declare module 'vue-router' {
     adminOnly?: boolean
     /** Fills the left of the window with art and moves the page to a column on the right. */
     scene?: boolean
+    /** The page's main action, as a FAB in the rail; the page gives it its action (`useRailFab`). */
+    fab?: { label: string; icon: string }
   }
 }
 
@@ -49,7 +51,7 @@ const routes: RouteRecordRaw[] = [
     path: '/birthdays',
     name: 'birthdays',
     component: () => import('@/views/BirthdaysView.vue'),
-    meta: { title: 'Birthdays' },
+    meta: { title: 'Birthdays', fab: { label: 'Add birthday', icon: 'add' } },
   },
   {
     path: '/activity',

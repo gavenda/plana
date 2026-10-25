@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import FilterChip from '@/components/FilterChip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
+import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import type { ActivityOverview, GamePlayers } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
@@ -47,6 +48,8 @@ watch(days, (value) => {
 })
 
 const data = computed(() => overview.data.value)
+/** Nothing to show yet; a change of period keeps the last answer up until the next lands. */
+const loading = computed(() => !data.value && !overview.error.value)
 const games = computed(() => data.value?.games ?? [])
 const tracks = computed(() => data.value?.tracks ?? [])
 
@@ -193,7 +196,10 @@ const plural = (count: number, one: string, many: string) =>
         class="card flex flex-col gap-1 px-6 py-5"
         :class="stat.tone"
       >
-        <span class="text-display-small font-medium">{{ stat.value }}</span>
+        <span class="text-display-small font-medium">
+          <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
+          <template v-else>{{ stat.value }}</template>
+        </span>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
       </div>
     </div>
@@ -205,14 +211,15 @@ const plural = (count: number, one: string, many: string) =>
           live.length
         }}</span>
       </div>
-      <div :class="live.length === 0 && 'card'">
+      <div :class="!loading && live.length === 0 && 'card'">
         <StateBlock
-          :loading="overview.loading.value && !data"
+          :loading="loading"
           :error="overview.error.value"
           :empty="live.length === 0"
           empty-text="Nobody is playing or listening right now."
           compact
         >
+          <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
           <ul class="segmented-list">
             <li v-for="entry in live" :key="entry.key" class="segmented-item">
               <img
@@ -265,14 +272,17 @@ const plural = (count: number, one: string, many: string) =>
         <div class="section-header">
           <h2 id="activity-games" class="text-title-medium">Most played games</h2>
         </div>
-        <div :class="games.length === 0 && 'card'">
+        <div :class="!loading && games.length === 0 && 'card'">
           <StateBlock
-            :loading="overview.loading.value && !data"
+            :loading="loading"
             :error="overview.error.value"
             :empty="games.length === 0"
             empty-text="No games played in this period."
             compact
           >
+            <template #skeleton>
+              <SkeletonList :rows="5" leading="art" rank two-line trailing="text" />
+            </template>
             <ol class="segmented-list">
               <li v-for="(game, index) in games" :key="game.name" class="segmented-item p-0">
                 <button
@@ -337,14 +347,17 @@ const plural = (count: number, one: string, many: string) =>
         <div class="section-header">
           <h2 id="activity-tracks" class="text-title-medium">Most played on Spotify</h2>
         </div>
-        <div :class="tracks.length === 0 && 'card'">
+        <div :class="!loading && tracks.length === 0 && 'card'">
           <StateBlock
-            :loading="overview.loading.value && !data"
+            :loading="loading"
             :error="overview.error.value"
             :empty="tracks.length === 0"
             empty-text="No Spotify tracks played in this period."
             compact
           >
+            <template #skeleton>
+              <SkeletonList :rows="5" leading="art" two-line trailing="stack" />
+            </template>
             <ol class="segmented-list">
               <li v-for="track in tracks" :key="track.id" class="segmented-item">
                 <img
@@ -424,6 +437,15 @@ const plural = (count: number, one: string, many: string) =>
         empty-text="Nobody played this in this period."
         compact
       >
+        <template #skeleton>
+          <SkeletonList
+            :rows="4"
+            rank
+            two-line
+            trailing="text"
+            item-class="bg-surface-container-high"
+          />
+        </template>
         <ol class="segmented-list">
           <li
             v-for="(player, index) in detail?.players"

@@ -4,9 +4,10 @@ import PlanaSays from '@/components/PlanaSays.vue'
 import type { PlanaMood } from '@/lib/plana'
 
 /**
- * Loading, error and empty states around a block of content. Plana shows up for an empty
- * state given an `emptyMood`, and for a load failure unless `compact` (a small card beside
- * figures, where she never goes). See "Where she appears" in BRANDING.md.
+ * Loading, error and empty states around a block of content. While loading, a `#skeleton`
+ * slot (the content's shape, such as `SkeletonList`) stands in for her halo. Plana shows up
+ * for an empty state given an `emptyMood`, and for a load failure unless `compact` (a small
+ * card beside figures, where she never goes). See "Where she appears" in BRANDING.md.
  */
 defineProps<{
   loading?: boolean
@@ -23,8 +24,13 @@ defineProps<{
 
 <template>
   <!-- Renders the slot only once there is something real to show. -->
+  <div v-if="loading && $slots.skeleton" role="status" aria-busy="true">
+    <span class="sr-only">Processing…</span>
+    <slot name="skeleton" />
+  </div>
+
   <div
-    v-if="loading"
+    v-else-if="loading"
     class="flex items-center justify-center gap-3 px-6 py-10 text-body-medium text-on-surface-variant"
   >
     <HaloMark />

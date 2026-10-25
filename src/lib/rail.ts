@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 
 const STORAGE_KEY = 'plana:rail-expanded'
 
@@ -38,6 +38,22 @@ function restore() {
     }
   }
   requestAnimationFrame(() => requestAnimationFrame(() => (still.value = false)))
+}
+
+/** What the rail's FAB does on the current page; its label and icon come from the route. */
+const fabAction = shallowRef<(() => void) | null>(null)
+
+/** Runs the current page's FAB action, if it has registered one. */
+export function runRailFab() {
+  fabAction.value?.()
+}
+
+/** Gives the rail's FAB (named by the route's `fab` meta) its action while this page is up. */
+export function useRailFab(action: () => void) {
+  onMounted(() => (fabAction.value = action))
+  onBeforeUnmount(() => {
+    if (fabAction.value === action) fabAction.value = null
+  })
 }
 
 export function useRail() {

@@ -82,10 +82,18 @@ async function send() {
       <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
         <div class="card card-body">
           <StateBlock
-            :loading="guild.loading && !guild.directory"
+            :loading="!guild.directory && !guild.error"
             :error="guild.error"
             :retry="() => guild.load(true)"
           >
+            <!-- The channel, the message and Send, as they will stand. -->
+            <template #skeleton>
+              <div class="flex flex-col gap-6">
+                <span class="skeleton h-14 rounded-xs" />
+                <span class="skeleton mb-5 h-40 rounded-xs" />
+                <span class="skeleton h-10 w-44 self-end" />
+              </div>
+            </template>
             <form class="flex flex-col gap-6" @submit.prevent="send">
               <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 

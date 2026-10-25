@@ -37,10 +37,21 @@ const menuStyle = ref<Record<string, string>>({})
 let typed = ''
 let typedTimer: ReturnType<typeof setTimeout> | undefined
 
-// The menu teleports to <body> so card overflow cannot clip it. Teleport only
-// after hydration, since the server render has no menu to match.
+// The menu is a popover, drawn in the top layer so neither card overflow nor a modal dialog
+// covers it. It teleports into the dialog the field is in, if any, since everything outside an
+// open modal dialog is inert, and to <body> otherwise. Teleport only after hydration, since the
+// server render has no menu to match.
 const mounted = ref(false)
-onMounted(() => (mounted.value = true))
+const menuHost = ref<HTMLElement | string>('body')
+onMounted(() => {
+  menuHost.value = field.value?.closest('dialog') ?? 'body'
+  mounted.value = true
+})
+
+/** Into the top layer as soon as it is in the page, so its opening transition plays there. */
+function showMenu(el: Element) {
+  if (el instanceof HTMLElement) el.showPopover?.()
+}
 
 const selectedIndex = computed(() =>
   props.options.findIndex((option) => option.value === model.value),
@@ -304,8 +315,9 @@ function onKeydown(event: KeyboardEvent) {
       >
     </OutlinedField>
 
-    <Teleport v-if="mounted" to="body">
+    <Teleport v-if="mounted" :to="menuHost">
       <Transition
+        @enter="showMenu"
         enter-active-class="transition-[opacity,scale] duration-350 ease-spatial-fast"
         enter-from-class="scale-y-75 opacity-0"
         leave-active-class="transition-opacity duration-150 ease-effects-fast"
@@ -316,8 +328,9 @@ function onKeydown(event: KeyboardEvent) {
           :id="listboxId"
           ref="menu"
           role="listbox"
+          popover="manual"
           :aria-labelledby="labelId"
-          class="fixed z-50 overflow-y-auto overscroll-contain rounded-lg bg-surface-container-low p-1 shadow-level2"
+          class="fixed inset-auto m-0 overflow-y-auto overscroll-contain rounded-lg border-0 bg-surface-container-low p-1 text-on-surface shadow-level2"
           :class="placement === 'top' ? 'origin-bottom' : 'origin-top'"
           :style="menuStyle"
           @mousedown.prevent

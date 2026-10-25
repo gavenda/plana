@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
 import FilterChip from '@/components/FilterChip.vue'
+import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import {
@@ -22,7 +23,8 @@ import { useGuildStore } from '@/stores/guild'
 const entries = ref<AuditEntry[]>([])
 const total = ref(0)
 const cursor = ref<number | null>(null)
-const loading = ref(false)
+// Loading from the start: the first page is requested on mount.
+const loading = ref(true)
 const loadingMore = ref(false)
 const error = ref<string | null>(null)
 
@@ -177,7 +179,12 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between gap-4 px-4">
-      <p class="text-headline-medium text-on-surface" aria-live="polite">
+      <span
+        v-if="loading && entries.length === 0"
+        class="skeleton my-1.5 h-6 w-56"
+        aria-hidden="true"
+      />
+      <p v-else class="text-headline-medium text-on-surface" aria-live="polite">
         {{ total }} {{ filtering ? 'matching' : 'recorded' }} {{ total === 1 ? 'event' : 'events' }}
       </p>
       <button
@@ -225,6 +232,12 @@ onMounted(() => {
       empty-mood="standby"
       :retry="load"
     >
+      <template #skeleton>
+        <div>
+          <span class="skeleton mx-4 mt-4 mb-3 h-3 w-20" />
+          <SkeletonList :rows="5" two-line trailing="text" />
+        </div>
+      </template>
       <section v-for="group in days" :key="group.day" :aria-labelledby="`day-${group.day}`">
         <h2 :id="`day-${group.day}`" class="segmented-header">{{ group.label }}</h2>
 

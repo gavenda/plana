@@ -92,6 +92,12 @@ Her [wiki page](https://bluearchive.wiki/wiki/Plana) gives the facts, her
   account (avatar, display name, username) at its foot, as a segmented list. From 840px it pushes the page aside; below
   that it floats over the page behind a scrim and closes after a choice. The choice is
   remembered per browser, and only restored where it docks.
+- **A page's main action is a FAB in the rail**, under the menu button, as in M3's rail: a
+  56dp FAB (`primary-container`, `rounded-lg`, `shadow-level1`) in the slim rail that
+  stretches into an extended FAB, its label beside the icon, in the open one. Its icon stays
+  on the destinations' 36px line in both. A route names it (`meta.fab`: label and icon) and
+  the page gives it its action (`useRailFab` in `src/lib/rail.ts`); it grows in and out
+  between pages. Only Birthdays has one, "Add birthday", which opens the birthday dialog.
 - **There is no top app bar.** The rail shows where you are, so each page has a heading for
   screen readers only. Overview is the exception: her greeting is its visible heading, with
   the server's name and member count under it.
@@ -338,14 +344,26 @@ portrait draws to its own canvas, and only while it's on screen.
 
 Her halo, redrawn in code as a tilted ellipse (`HaloMark.vue`), stroked in `tertiary`.
 
-- **It is the loading indicator.** `StateBlock`'s spinner is replaced by the halo at
-  32dp, with a brighter band (`on-tertiary-container`) travelling round it once a
-  second, linear. The text beside it is "Processing…". With `prefers-reduced-motion` the
+- **It is the loading indicator** wherever the shape of what's coming isn't known.
+  Where it is, a [skeleton](#skeletons) stands in instead. `StateBlock`'s spinner is
+  replaced by the halo at 32dp, with a brighter band (`on-tertiary-container`) travelling
+  round it once a second, linear. The text beside it is "Processing…". With `prefers-reduced-motion` the
   band stops and the ring holds still.
 - **Buttons that wait** (Assign, Send, Save) keep their label and disable; they don't get
   a halo.
 - It is never decoration: not a bullet, a divider or a background. It always means "Plana
   is working".
+
+### Skeletons
+
+A block whose shape is known (a list, a stat tile's figure, a form) loads as a skeleton of
+it: plain shapes (`.skeleton`) where its text, images and fields will stand, tinted from
+the text colour at 12% so they read on any container, pulsing slowly (1.6s,
+`ease-effects`) and still with `prefers-reduced-motion`. A list's skeleton is
+`SkeletonList`, a segmented list matched to the real rows' avatar or art, rank, lines and
+trailing figures, with name widths varied so they don't line up. Skeletons are hidden from
+screen readers, which hear "Processing…" instead. They stand in place of the content, never
+in a card around it, and are never decoration.
 
 The halo in a portrait is part of the art and changes with the mood. `HaloMark` is only
 ever the ring.
@@ -400,14 +418,20 @@ Escape): `rounded-xl` on `surface-container-high`, `shadow-level3`, a `scrim` at
 `on-surface-variant`, text buttons at the end. It opens on `ease-spatial` (scale from 90%
 and fade) and closes on `ease-effects`.
 
+**A form that isn't the page's whole purpose goes in a dialog**: Birthdays' add and change
+form opens from the rail's FAB and each row's Edit button, with text buttons (Cancel ·
+Save). A failed save closes the dialog, so its snackbar can be reached, and the snackbar's
+"Try again" reopens it on the same answers.
+
 **A confirmation dialog shows her in the hero slot**, above a centred headline, as M3's
 hero icon. A dialog that holds a form or a list has no hero and no face. **Never use
 `window.confirm`**: like a native `<select>`, the browser draws it.
 
-| Dialog                        | Mood        | Headline         | Supporting text                                             | Buttons         |
-| ----------------------------- | ----------- | ---------------- | ----------------------------------------------------------- | --------------- |
-| Sign out (from the open rail) | `Hesitant`  | You mean that?   | I'll be standing by until you return, Sensei.               | Stay · Sign out |
-| Remove a birthday             | `Attentive` | Remove birthday? | {member}'s birthday will be deleted and won't be announced. | Cancel · Remove |
+| Dialog                        | Mood        | Headline                       | Supporting text                                             | Buttons         |
+| ----------------------------- | ----------- | ------------------------------ | ----------------------------------------------------------- | --------------- |
+| Sign out (from the open rail) | `Hesitant`  | You mean that?                 | I'll be standing by until you return, Sensei.               | Stay · Sign out |
+| Remove a birthday             | `Attentive` | Remove birthday?               | {member}'s birthday will be deleted and won't be announced. | Cancel · Remove |
+| Add or change a birthday      | —           | Add birthday / Change birthday | Member and Birthday fields                                  | Cancel · Save   |
 
 Only the sign-out dialog speaks in her voice: it is about Sensei leaving her. A
 destructive confirmation states the consequence plainly, and her face is there to look
@@ -534,18 +558,20 @@ Vue components, where M3 needs behaviour CSS can't give:
 | `PlanaPortrait`, `PlanaSays`, `SpeechBubble`        | Her portrait, and her portrait with a line (see [Plana's portraits](#planas-portraits))                                               |
 | `HaloMark`                                          | Circular progress indicator, indeterminate, in her halo's shape                                                                       |
 | `StateBlock`                                        | Loading, error and empty states around a block (see below)                                                                            |
+| `SkeletonList`                                      | Skeleton loader for a segmented list (see [Skeletons](#skeletons))                                                                    |
 | `SchaleMark`                                        | Schale's emblem, as a watermark (see [The Schale mark](#the-schale-mark))                                                             |
 | `DiscordMention`, `AuditSummary`, `DiscordMessage`  | A role, channel or user as a Discord mention; an audit summary with its names as mentions; message text with its Discord markup drawn |
 
-`StateBlock` shows `HaloMark` while loading. Given an `emptyMood`, its `emptyText` is her
-line in a bubble, with an optional `#empty` slot for plain text under it; without one,
-`emptyText` is plain. A load failure shows her `Confused` face, the reason, and "Try
+`StateBlock` shows `HaloMark` while loading, or its `#skeleton` slot when given one. Given
+an `emptyMood`, its `emptyText` is her line in a bubble, with an optional `#empty` slot for
+plain text under it; without one, `emptyText` is plain. A load failure shows her `Confused` face, the reason, and "Try
 again" when `retry` is passed. `compact` keeps her out, for small cards beside figures.
 
 **Never use a native `<select>`**: its option list is drawn by the browser and can't
 follow M3. Use `AppSelect` with a `SelectOption[]` list (`src/lib/select.ts`); options
 can carry `trailing` text, a colour `swatch`, be `disabled`, and share a `group` to form a labelled
-section (pass grouped lists through `groupOptions`).
+section (pass grouped lists through `groupOptions`). Its menu is a popover in the top layer,
+so a card's overflow can't clip it and it works inside a dialog.
 
 `AppSelect` menus follow M3 Expressive standard menus: a `rounded-lg` container on
 `surface-container-low` at `shadow-level2`,

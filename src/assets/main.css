@@ -173,6 +173,15 @@
     }
   }
 
+  /* A skeleton's pulse while its content loads (.skeleton): a slow fade, so a screen of them
+     stays calm. */
+  --animate-skeleton-pulse: skeleton-pulse 1.6s var(--ease-effects) infinite;
+  @keyframes skeleton-pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
   /* M3 window size classes. Compact (< 600px) is the unsupported phone range. */
   --breakpoint-medium: 600px;
   --breakpoint-expanded: 840px;
@@ -369,6 +378,13 @@
 
   .card-body {
     @apply p-6;
+  }
+
+  /* A placeholder in the shape of content still loading. Tinted from the text colour, so it
+     reads on any container (a list item, a tonal stat tile). Held still with reduced motion. */
+  .skeleton {
+    @apply block animate-skeleton-pulse rounded-full motion-reduce:animate-none;
+    background-color: color-mix(in oklab, currentColor 12%, transparent);
   }
 
   /* M3 Expressive segmented list: each item is its own container, 2dp apart, with large
@@ -590,6 +606,63 @@
   line-height: 1.25rem;
   letter-spacing: 0.1px;
   color: inherit;
+}
+
+/*
+ * The page's main action (AppNavigationRail): a 56px FAB in the slim rail, its icon on the same
+ * 36px line as the destinations', that stretches into an extended FAB in the open rail. The label
+ * column grows from nothing, so the FAB widens to hug it rather than swapping for a wider one.
+ */
+.rail-fab {
+  display: inline-grid;
+  grid-template-columns: 24px 0fr;
+  align-items: center;
+  height: 56px;
+  padding: 0 16px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  box-shadow: var(--shadow-level1);
+  cursor: pointer;
+  outline: none;
+  transition:
+    grid-template-columns var(--rail-time) var(--rail-ease),
+    column-gap var(--rail-time) var(--rail-ease),
+    padding var(--rail-time) var(--rail-ease),
+    box-shadow 150ms var(--ease-effects-fast);
+}
+
+.rail-fab[data-expanded='true'] {
+  grid-template-columns: 24px 1fr;
+  column-gap: 12px;
+  padding-right: 20px;
+}
+
+.rail-fab:hover {
+  box-shadow: var(--shadow-level2);
+}
+
+.rail-fab:focus-visible {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.rail-fab-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 150ms var(--ease-standard);
+}
+
+.rail-fab[data-expanded='true'] .rail-fab-label {
+  opacity: 1;
+  transition-duration: 200ms;
+  transition-delay: 100ms;
 }
 
 /* Something that is only there some of the time: it fades, holding back a beat on the way in. */

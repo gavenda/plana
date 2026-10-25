@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor, roleColor } from '@/lib/discord'
@@ -55,6 +56,11 @@ const assignable = computed(() =>
 )
 
 const members = computed(() => pending.data.value ?? [])
+
+/** Nothing to show yet: settings and the guild come first, then the list. */
+const loading = computed(
+  () => !settings.loaded || (pending.data.value == null && pending.error.value == null),
+)
 
 /** Whole days in triage, or null under a day, when the label would only be noise. */
 function waitingDays(member: PendingMember): number | null {
@@ -124,15 +130,16 @@ async function assign(member: PendingMember, roleId: string) {
       </div>
 
       <!-- Loading, empty and error states sit in one card in place of the list. -->
-      <div :class="members.length === 0 && 'card'">
+      <div :class="!loading && members.length === 0 && 'card'">
         <StateBlock
-          :loading="(!settings.loaded || pending.loading.value) && members.length === 0"
+          :loading="loading"
           :error="pending.error.value"
           :empty="members.length === 0"
           empty-text="Standing by. No one is waiting in triage."
           empty-mood="asleep"
           :retry="pending.run"
         >
+          <template #skeleton><SkeletonList two-line trailing="actions" /></template>
           <ul class="segmented-list">
             <li v-for="member in members" :key="member.id" class="segmented-item flex-wrap">
               <img

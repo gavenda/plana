@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import RailItem from '@/components/RailItem.vue'
 import { logoUrl } from '@/lib/plana'
-import { railDocks, useRail } from '@/lib/rail'
+import { railDocks, runRailFab, useRail } from '@/lib/rail'
 import { useBotStore } from '@/stores/bot'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
@@ -62,6 +63,19 @@ const server = computed(() => {
 /** A floating rail is in the way once it has done its job; a docked one stays put. */
 function afterChoice() {
   if (!railDocks()) collapse()
+}
+
+/** The page's main action, kept while the FAB shrinks away so its label doesn't vanish first. */
+const route = useRoute()
+const fab = computed(() => route.meta.fab ?? null)
+const lastFab = ref(fab.value)
+watch(fab, (value) => {
+  if (value) lastFab.value = value
+})
+
+function onFab() {
+  afterChoice()
+  runRailFab()
 }
 
 function signOut() {
@@ -178,6 +192,24 @@ onBeforeUnmount(() => observer?.disconnect())
           >menu_open</span
         >
       </button>
+
+      <!-- The page's main action, under the menu button as in M3's rail: a FAB in the slim rail,
+           an extended FAB (icon and label) in the open one. It grows in and out between pages. -->
+      <div class="rail-collapse flex-none" :data-open="!!fab" :inert="!fab">
+        <div>
+          <button
+            v-if="lastFab"
+            type="button"
+            class="rail-fab state-layer my-2 ml-5"
+            :data-expanded="expanded"
+            :aria-label="lastFab.label"
+            @click="onFab"
+          >
+            <span class="icon" aria-hidden="true">{{ lastFab.icon }}</span>
+            <span class="rail-fab-label" aria-hidden="true">{{ lastFab.label }}</span>
+          </button>
+        </div>
+      </div>
 
       <!-- M3's expanded rail keeps this gap between its header and its items. -->
       <div class="mt-10 flex min-h-0 flex-1 flex-col">

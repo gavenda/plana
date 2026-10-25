@@ -174,6 +174,12 @@ const version = __APP_VERSION__
       <div class="section-header">
         <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
         <span
+          v-if="!store.loaded && !store.error"
+          class="skeleton mr-4 h-3.5 w-24"
+          aria-hidden="true"
+        />
+        <span
+          v-else
           class="inline-flex items-center gap-1.5 pr-4 text-label-large"
           :class="store.configured ? 'text-success' : 'text-warning'"
         >
@@ -186,10 +192,24 @@ const version = __APP_VERSION__
 
       <div class="card card-body">
         <StateBlock
-          :loading="store.loading && !store.loaded"
+          :loading="!store.loaded && !store.error"
           :error="store.error"
           :retry="() => store.load(true)"
         >
+          <!-- The form's fields and buttons, as they will stand. -->
+          <template #skeleton>
+            <div class="grid grid-cols-1 gap-6 expanded:grid-cols-2">
+              <span
+                v-for="field in ROLE_FIELDS.length + 3"
+                :key="field"
+                class="skeleton h-14 rounded-xs"
+              />
+              <div class="flex justify-end gap-2 expanded:col-span-2">
+                <span class="skeleton h-10 w-20" />
+                <span class="skeleton h-10 w-40" />
+              </div>
+            </div>
+          </template>
           <form
             class="grid grid-cols-1 gap-x-6 gap-y-6 expanded:grid-cols-2"
             @submit.prevent="submit"

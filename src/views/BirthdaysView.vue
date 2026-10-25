@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useId, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import AppDatePicker from '@/components/AppDatePicker.vue'
 import AppDialog from '@/components/AppDialog.vue'
 import AppSelect from '@/components/AppSelect.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
+import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { formatMonthDay } from '@/lib/dates'
 import { discordTextColor, roleColor } from '@/lib/discord'
+import { useRailFab } from '@/lib/rail'
 import type { SelectOption } from '@/lib/select'
 import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
@@ -37,6 +39,9 @@ const settings = useSettingsStore()
 const session = useSessionStore()
 const overview = useAsync(() => apiFetch<BirthdayOverview>('/api/birthdays'))
 
+/** The add or change dialog, and what it holds. */
+const formOpen = ref(false)
+const formId = useId()
 const memberId = ref<string | null>(null)
 const month = ref<number | null>(null)
 const day = ref<number | null>(null)
@@ -60,6 +65,7 @@ onMounted(() => {
 
 const birthdays = computed(() => overview.data.value?.birthdays ?? [])
 const members = computed(() => overview.data.value?.members ?? [])
+const loading = computed(() => overview.data.value == null && overview.error.value == null)
 const byMember = computed(() => new Map(birthdays.value.map((entry) => [entry.id, entry])))
 
 const existing = computed(() => (memberId.value ? byMember.value.get(memberId.value) : undefined))
@@ -76,11 +82,40 @@ const memberOptions = computed<SelectOption<string | null>[]>(() =>
   }),
 )
 
-// Picking a member who already has a birthday loads it, so the form edits it in place.
-watch(memberId, () => {
+/** Their saved date, or none, for whoever the form now names. */
+function loadSaved() {
   month.value = existing.value?.month ?? null
   day.value = existing.value?.day ?? null
-})
+}
+
+/** Picking a member who already has a birthday loads it, so the form changes it in place. */
+function pickMember(id: string | null) {
+  memberId.value = id
+  loadSaved()
+}
+
+/** Opens the form empty, on one member's saved birthday, or on a date given. */
+function openForm(id: string | null = null, date?: { month: number; day: number }) {
+  pickMember(id)
+  if (date) {
+    month.value = date.month
+    day.value = date.day
+  }
+  formOpen.value = true
+}
+
+/** Set only while the dialog is open, so saving doesn't retitle it as it closes. */
+const formHeadline = ref('Add birthday')
+watch(
+  [existing, formOpen],
+  ([saved, open]) => {
+    if (open) formHeadline.value = saved ? 'Change birthday' : 'Add birthday'
+  },
+  { immediate: true },
+)
+
+// The rail's "Add birthday".
+useRailFab(() => openForm())
 
 const canSave = computed(
   () =>
@@ -101,33 +136,33 @@ function formatUntil(days: number): string {
   return `In ${days} days`
 }
 
-function edit(entry: BirthdayEntry) {
-  memberId.value = entry.id
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-function clearForm() {
-  memberId.value = null
-}
-
 async function save() {
-  if (!memberId.value || month.value == null || day.value == null) return
+  if (!canSave.value || !memberId.value || month.value == null || day.value == null) return
 
-  const member = members.value.find((candidate) => candidate.id === memberId.value)
+  const id = memberId.value
+  const date = { month: month.value, day: day.value }
+  const member = members.value.find((candidate) => candidate.id === id)
   busy.value = true
   try {
-    await apiFetch(`/api/birthdays/${memberId.value}`, {
-      method: 'PUT',
-      body: { month: month.value, day: day.value },
-    })
+    await apiFetch(`/api/birthdays/${id}`, { method: 'PUT', body: date })
+    formOpen.value = false
     const whose = member ? `${member.displayName}'s` : 'the'
-    snackbar.show(
-      `Saved ${whose} birthday as ${formatDate({ month: month.value, day: day.value })}.`,
-    )
+    snackbar.show(`Saved ${whose} birthday as ${formatDate(date)}.`)
     await overview.run()
-    clearForm()
   } catch (cause) {
-    snackbar.showError(cause, 'Could not save the birthday.')
+    // The snackbar can't be reached past the dialog, so it closes, and "Try again" brings the
+    // same answers back.
+    formOpen.value = false
+    snackbar.show(
+      cause instanceof Error && cause.message ? cause.message : 'Could not save the birthday.',
+      {
+        error: true,
+        action: {
+          label: 'Try again',
+          run: () => openForm(id, date),
+        },
+      },
+    )
   } finally {
     busy.value = false
   }
@@ -142,7 +177,6 @@ async function remove() {
   try {
     await apiFetch(`/api/birthdays/${entry.id}`, { method: 'DELETE' })
     snackbar.show(`Removed ${entry.displayName}'s birthday.`)
-    if (memberId.value === entry.id) clearForm()
     await overview.run()
   } catch (cause) {
     snackbar.showError(cause, 'Could not remove the birthday.')
@@ -170,51 +204,6 @@ async function remove() {
       >
     </div>
 
-    <section aria-labelledby="birthday-form">
-      <div class="section-header">
-        <h2 id="birthday-form" class="text-title-medium">
-          {{ existing ? 'Change a birthday' : 'Add a birthday' }}
-        </h2>
-      </div>
-
-      <form
-        class="card card-body flex flex-col gap-4 expanded:flex-row expanded:items-end"
-        @submit.prevent="save"
-      >
-        <AppSelect
-          v-model="memberId"
-          class="min-w-0 flex-1"
-          label="Member"
-          :options="memberOptions"
-          :disabled="overview.loading.value && members.length === 0"
-        />
-
-        <AppDatePicker
-          v-model:month="month"
-          v-model:day="day"
-          class="expanded:w-56"
-          label="Birthday"
-          :disabled="!memberId"
-        />
-
-        <div class="flex h-14 items-center justify-end gap-2">
-          <button
-            v-if="memberId"
-            class="btn btn-text"
-            type="button"
-            :disabled="busy"
-            @click="clearForm"
-          >
-            Cancel
-          </button>
-          <button class="btn btn-filled btn-wide" type="submit" :disabled="!canSave">
-            <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
-            {{ busy ? 'Saving…' : 'Save' }}
-          </button>
-        </div>
-      </form>
-    </section>
-
     <section aria-labelledby="birthday-list">
       <div class="section-header">
         <h2 id="birthday-list" class="text-title-medium">Saved birthdays</h2>
@@ -224,9 +213,9 @@ async function remove() {
       </div>
 
       <!-- Loading, empty and error states sit in one card in place of the list. -->
-      <div :class="birthdays.length === 0 && 'card'">
+      <div :class="!loading && birthdays.length === 0 && 'card'">
         <StateBlock
-          :loading="overview.loading.value && birthdays.length === 0"
+          :loading="loading"
           :error="overview.error.value"
           :empty="birthdays.length === 0"
           empty-text="No birthdays yet. I'll remember each one I'm told."
@@ -234,6 +223,7 @@ async function remove() {
           :retry="overview.run"
         >
           <template #empty>Members add theirs with <code>/birthday set</code>.</template>
+          <template #skeleton><SkeletonList :rows="4" two-line trailing="stack" /></template>
           <ul class="segmented-list">
             <li v-for="entry in birthdays" :key="entry.id" class="segmented-item">
               <img
@@ -272,7 +262,7 @@ async function remove() {
                   :aria-label="`Edit ${entry.displayName}'s birthday`"
                   title="Edit"
                   :disabled="busy"
-                  @click="edit(entry)"
+                  @click="openForm(entry.id)"
                 >
                   <span class="icon [--icon-size:20px]" aria-hidden="true">edit</span>
                 </button>
@@ -292,6 +282,33 @@ async function remove() {
         </StateBlock>
       </div>
     </section>
+
+    <!-- A form in a dialog has no hero and no face (see "Dialogs" in BRANDING.md). -->
+    <AppDialog v-model:open="formOpen" :headline="formHeadline">
+      <form :id="formId" class="flex flex-col gap-6 pt-2" @submit.prevent="save">
+        <AppSelect
+          :model-value="memberId"
+          label="Member"
+          :options="memberOptions"
+          :disabled="loading"
+          @update:model-value="pickMember"
+        />
+        <AppDatePicker
+          v-model:month="month"
+          v-model:day="day"
+          label="Birthday"
+          :disabled="!memberId"
+        />
+      </form>
+      <template #actions>
+        <button class="btn btn-text" type="button" :disabled="busy" @click="formOpen = false">
+          Cancel
+        </button>
+        <button class="btn btn-text" type="submit" :form="formId" :disabled="!canSave">
+          {{ busy ? 'Saving…' : 'Save' }}
+        </button>
+      </template>
+    </AppDialog>
 
     <AppDialog v-model:open="removeOpen" headline="Remove birthday?">
       <template #hero><PlanaPortrait mood="attentive" /></template>
