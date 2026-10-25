@@ -6,9 +6,20 @@ export type GuildSettings = {
   unitOwnerRoleId: string | null
   boardersRoleId: string | null
   announceChannelId: string | null
+  /** Optional. Birthday announcements are off while it is unset. */
+  birthdayChannelId: string | null
 }
 
 export const SETTING_KEYS = [
+  'triageRoleId',
+  'unitOwnerRoleId',
+  'boardersRoleId',
+  'announceChannelId',
+  'birthdayChannelId',
+] as const satisfies readonly (keyof GuildSettings)[]
+
+/** The settings the triage flow cannot run without. */
+const REQUIRED_SETTING_KEYS = [
   'triageRoleId',
   'unitOwnerRoleId',
   'boardersRoleId',
@@ -20,6 +31,7 @@ const EMPTY: GuildSettings = {
   unitOwnerRoleId: null,
   boardersRoleId: null,
   announceChannelId: null,
+  birthdayChannelId: null,
 }
 
 const selectAll = db.query<{ key: string; value: string }, []>('SELECT key, value FROM settings')
@@ -63,6 +75,7 @@ export function seedSettingsFromEnv(): void {
     unitOwnerRoleId: env.UNIT_OWNER_ROLE_ID,
     boardersRoleId: env.BOARDERS_ROLE_ID,
     announceChannelId: env.ANNOUNCE_CHANNEL_ID,
+    birthdayChannelId: env.BIRTHDAY_CHANNEL_ID,
   }
 
   const patch: Partial<GuildSettings> = {}
@@ -78,5 +91,5 @@ export function seedSettingsFromEnv(): void {
 
 /** True once every setting the join flow depends on has been configured. */
 export function isConfigured(settings: GuildSettings = getSettings()): boolean {
-  return SETTING_KEYS.every((key) => settings[key] != null)
+  return REQUIRED_SETTING_KEYS.every((key) => settings[key] != null)
 }

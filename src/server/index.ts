@@ -2,6 +2,7 @@ import { closeCache, connectCache } from './cache'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
 import type { AppContext } from './context'
+import { announceBirthdays } from './discord/birthdays'
 import { client } from './discord/client'
 import { primeMemberCache } from './discord/service'
 import { registerEvents } from './events'
@@ -17,6 +18,9 @@ const SESSION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
  * One Request Guild Members every half hour is nowhere near the opcode 8 limits.
  */
 const MEMBER_REFRESH_INTERVAL_MS = 30 * 60 * 1000
+
+/** How soon after midnight birthdays are posted. Each check is one SQLite query. */
+const BIRTHDAY_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 seedSettingsFromEnv()
 
@@ -93,10 +97,13 @@ const memberRefreshTimer = setInterval(() => {
   })
 }, MEMBER_REFRESH_INTERVAL_MS)
 
+const birthdayTimer = setInterval(() => void announceBirthdays(), BIRTHDAY_CHECK_INTERVAL_MS)
+
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n[shutdown] received ${signal}`)
   clearInterval(pruneTimer)
   clearInterval(memberRefreshTimer)
+  clearInterval(birthdayTimer)
   await server.stop(true)
   await renderer.close()
   await client.destroy()

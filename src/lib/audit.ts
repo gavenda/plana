@@ -1,4 +1,11 @@
-export type AuditAction = 'member.join' | 'role.assign' | 'broadcast.send' | 'settings.update'
+export type AuditAction =
+  | 'member.join'
+  | 'role.assign'
+  | 'broadcast.send'
+  | 'settings.update'
+  | 'birthday.announce'
+  | 'birthday.set'
+  | 'birthday.remove'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -65,6 +72,38 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
         tone: 'warn',
         summary: `${actor} changed ${Object.keys(entry.detail ?? {}).join(', ') || 'settings'}`,
       }
+
+    case 'birthday.announce': {
+      const names = Array.isArray(entry.detail?.memberNames) ? entry.detail.memberNames : []
+      return {
+        label: 'Birthday',
+        tone: 'success',
+        summary: `Wished ${names.join(', ') || 'members'} a happy birthday in ${target}`,
+      }
+    }
+
+    case 'birthday.set': {
+      const from = text(entry.detail?.from, '')
+      const to = text(entry.detail?.to, 'a date')
+      const self = entry.actorId != null && entry.actorId === entry.targetId
+      const whose = self ? 'their' : `${target}'s`
+      return {
+        label: 'Birthday',
+        tone: 'neutral',
+        summary: from
+          ? `${actor} changed ${whose} birthday from ${from} to ${to}`
+          : `${actor} set ${whose} birthday to ${to}`,
+      }
+    }
+
+    case 'birthday.remove': {
+      const self = entry.actorId != null && entry.actorId === entry.targetId
+      return {
+        label: 'Birthday',
+        tone: 'neutral',
+        summary: `${actor} removed ${self ? 'their' : `${target}'s`} birthday`,
+      }
+    }
 
     default:
       return { label: entry.action, tone: 'neutral', summary: `${actor} performed ${entry.action}` }

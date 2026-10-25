@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Broadcast' },
   },
   {
+    path: '/birthdays',
+    name: 'birthdays',
+    component: () => import('@/views/BirthdaysView.vue'),
+    meta: { title: 'Birthdays' },
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('@/views/SettingsView.vue'),

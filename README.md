@@ -22,10 +22,21 @@ cannot double-post.
 `message:` and a multi-line composer opens instead, since a slash command option cannot
 hold line breaks. The command is restricted to administrators.
 
+**Birthdays.** Members run `/birthday set month:… day:…` to share their birthday (month
+and day only, never the year), `/birthday remove` to take it back, `/birthday show` to
+look one up and `/birthday upcoming` for the next ten. Shortly after midnight in
+`BIRTHDAY_TIMEZONE`, Plana posts one message in the **Birthday channel** that pings
+everyone celebrating that day. Each birthday is marked with the year it was celebrated,
+so restarts never post twice and a day missed while the bot was down is caught up on
+the next start. 29 February birthdays are celebrated on the 28th in common years.
+Leaving the server deletes a member's birthday. Leave the Birthday channel unset in the
+dashboard to keep the feature off.
+
 **Dashboard.** Signed in with Discord OAuth2, administrators get an overview, the triage
 queue (assign roles from the web, which also updates the Discord card), a broadcast
-composer with a live preview, the role/channel settings editor, and an audit log of every
-role assignment, broadcast and settings change.
+composer with a live preview, a birthdays page for adding, changing or removing any
+member's birthday, the role/channel settings editor, and an audit log of every
+role assignment, broadcast, birthday change and settings change.
 
 ## Requirements
 

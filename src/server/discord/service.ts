@@ -25,6 +25,7 @@ export type ErrorCode =
   | 'unknown_channel'
   | 'channel_not_sendable'
   | 'missing_permissions'
+  | 'invalid_birthday'
   | 'discord_error'
 
 export type Failure = {
@@ -39,9 +40,9 @@ export type Failure = {
 
 export type Result<T> = { ok: true; data: T } | Failure
 
-const ok = <T>(data: T): Result<T> => ({ ok: true, data })
+export const ok = <T>(data: T): Result<T> => ({ ok: true, data })
 
-const err = (code: ErrorCode, key: string, params?: Record<string, unknown>): Failure => ({
+export const err = (code: ErrorCode, key: string, params?: Record<string, unknown>): Failure => ({
   ok: false,
   code,
   key,

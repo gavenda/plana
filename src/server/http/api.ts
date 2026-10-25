@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { CacheKey, invalidate } from '../cache'
 import { listAudit, recordAudit } from '../db/audit'
 import { getSettings, isConfigured, SETTING_KEYS, updateSettings } from '../db/settings'
+import { deleteBirthday, getBirthdayOverview, saveBirthday } from '../discord/birthdays'
 import { MAX_MESSAGE_LENGTH } from '../constants'
 import {
   assignRole,
@@ -26,6 +27,7 @@ const STATUS_BY_CODE: Record<ErrorCode, ContentfulStatusCode> = {
   unknown_channel: 404,
   channel_not_sendable: 403,
   missing_permissions: 403,
+  invalid_birthday: 400,
   discord_error: 502,
 }
 
@@ -54,6 +56,7 @@ const settingsSchema = z
     unitOwnerRoleId: snowflake.nullable(),
     boardersRoleId: snowflake.nullable(),
     announceChannelId: snowflake.nullable(),
+    birthdayChannelId: snowflake.nullable(),
   })
   .partial()
 
@@ -124,6 +127,47 @@ api.post('/broadcast', async (c) => {
     c,
     await broadcast({
       ...parsed.data,
+      actor: { id: user.id, name: user.username },
+      source: 'dashboard',
+    }),
+  )
+})
+
+api.get('/birthdays', async (c) => respond(c, await getBirthdayOverview()))
+
+const birthdaySchema = z.object({
+  month: z.number().int().min(1).max(12),
+  day: z.number().int().min(1).max(31),
+})
+
+api.put('/birthdays/:memberId', async (c) => {
+  const memberId = snowflake.safeParse(c.req.param('memberId'))
+  if (!memberId.success) return c.json({ error: 'Invalid member ID.' }, 400)
+
+  const parsed = birthdaySchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A month and a day are required.' }, 400)
+
+  const user = c.get('user')
+  return respond(
+    c,
+    await saveBirthday({
+      memberId: memberId.data,
+      ...parsed.data,
+      actor: { id: user.id, name: user.username },
+      source: 'dashboard',
+    }),
+  )
+})
+
+api.delete('/birthdays/:memberId', async (c) => {
+  const memberId = snowflake.safeParse(c.req.param('memberId'))
+  if (!memberId.success) return c.json({ error: 'Invalid member ID.' }, 400)
+
+  const user = c.get('user')
+  return respond(
+    c,
+    await deleteBirthday({
+      memberId: memberId.data,
       actor: { id: user.id, name: user.username },
       source: 'dashboard',
     }),

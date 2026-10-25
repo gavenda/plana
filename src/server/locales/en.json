@@ -5,7 +5,21 @@
       "not_administrator_broadcast": "Only administrators can broadcast.",
       "role_assigned": "Assigned **{{role}}** to **{{member}}**.",
       "broadcast_posted": "Posted to <#{{channelId}}> — {{url}}",
-      "error_interaction_execution": "There was an error while handling that interaction."
+      "error_interaction_execution": "There was an error while handling that interaction.",
+      "birthday_set": "🎂 Saved your birthday as **{{date}}**.",
+      "birthday_disabled": "Birthday announcements are not switched on in this server yet, but your date is saved for when they are.",
+      "birthday_invalid": "{{month}} doesn't have a day {{day}}.",
+      "birthday_removed": "Your birthday has been forgotten.",
+      "birthday_none": "You haven't set a birthday. Use `/birthday set` to add one.",
+      "birthday_none_other": "{{member}} hasn't shared a birthday.",
+      "birthday_show_one": "🎂 {{member}}'s birthday is **{{date}}** — tomorrow.",
+      "birthday_show_other": "🎂 {{member}}'s birthday is **{{date}}** — in {{count}} days.",
+      "birthday_show_today": "🎉 {{member}}'s birthday is **today**!",
+      "birthday_upcoming_title": "## Upcoming birthdays",
+      "birthday_upcoming_line_one": "- **{{date}}** — {{member}} (tomorrow)",
+      "birthday_upcoming_line_other": "- **{{date}}** — {{member}} (in {{count}} days)",
+      "birthday_upcoming_line_today": "- **{{date}}** — {{member}} 🎉 today",
+      "birthday_upcoming_empty": "Nobody has shared a birthday yet. Use `/birthday set` to be the first."
     },
     "error": {
       "no_announce_channel": "No announcement channel is configured.",
@@ -21,7 +35,8 @@
       "role_above_bot": "The bot's highest role must sit above {{role}} in the role list.",
       "announce_failed": "Could not post the announcement message.",
       "assign_rejected": "Discord rejected the role change.",
-      "broadcast_rejected": "Discord rejected the message."
+      "broadcast_rejected": "Discord rejected the message.",
+      "invalid_birthday": "That is not a real date."
     },
     "announcement": {
       "welcome": "## Welcome {{member}}",
@@ -39,6 +54,10 @@
         "modal_title": "Broadcast to #{{channel}}",
         "modal_input_label": "Message"
       }
+    },
+    "birthday": {
+      "announcement_one": "🎉 Happy birthday, {{mentions}}! 🎂",
+      "announcement_other": "🎉 Happy birthday to {{mentions}}! 🎂"
     }
   }
 }

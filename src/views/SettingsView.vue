@@ -13,6 +13,7 @@ const draft = reactive<GuildSettings>({
   unitOwnerRoleId: null,
   boardersRoleId: null,
   announceChannelId: null,
+  birthdayChannelId: null,
 })
 
 const saving = ref(false)
@@ -67,15 +68,15 @@ function warningFor(key: keyof GuildSettings): string | null {
   return null
 }
 
-const channelWarning = computed(() => {
-  const id = draft.announceChannelId
+function channelWarningFor(key: 'announceChannelId' | 'birthdayChannelId'): string | null {
+  const id = draft[key]
   if (!id || guild.channels.length === 0) return null
 
   const channel = guild.channels.find((candidate) => candidate.id === id)
   if (!channel) return 'This channel no longer exists.'
   if (!channel.sendable) return 'The bot cannot post in this channel.'
   return null
-})
+}
 
 async function submit() {
   saving.value = true
@@ -141,7 +142,28 @@ function reset() {
                 </option>
               </select>
               <p class="text-[12.5px] text-muted">Where new member cards are posted.</p>
-              <p v-if="channelWarning" class="text-[12.5px] text-warn">{{ channelWarning }}</p>
+              <p v-if="channelWarningFor('announceChannelId')" class="text-[12.5px] text-warn">
+                {{ channelWarningFor('announceChannelId') }}
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label class="text-[13px] font-semibold" for="birthdayChannelId">
+                Birthday channel
+              </label>
+              <select id="birthdayChannelId" v-model="draft.birthdayChannelId" class="select">
+                <option :value="null">Off</option>
+                <option v-for="channel in guild.channels" :key="channel.id" :value="channel.id">
+                  #{{ channel.name }}{{ channel.category ? ` — ${channel.category}` : '' }}
+                </option>
+              </select>
+              <p class="text-[12.5px] text-muted">
+                Where Plana wishes members happy birthday. Members add theirs with
+                <code>/birthday set</code>. Optional.
+              </p>
+              <p v-if="channelWarningFor('birthdayChannelId')" class="text-[12.5px] text-warn">
+                {{ channelWarningFor('birthdayChannelId') }}
+              </p>
             </div>
 
             <p v-if="saveError" class="alert alert-error">{{ saveError }}</p>

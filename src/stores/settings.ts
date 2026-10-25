@@ -8,6 +8,7 @@ export type GuildSettings = {
   unitOwnerRoleId: string | null
   boardersRoleId: string | null
   announceChannelId: string | null
+  birthdayChannelId: string | null
 }
 
 type SettingsResponse = { settings: GuildSettings; configured: boolean }
@@ -17,6 +18,7 @@ const EMPTY: GuildSettings = {
   unitOwnerRoleId: null,
   boardersRoleId: null,
   announceChannelId: null,
+  birthdayChannelId: null,
 }
 
 export const useSettingsStore = defineStore('settings', () => {

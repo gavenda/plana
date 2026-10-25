@@ -1,6 +1,13 @@
 import { db } from './index'
 
-export type AuditAction = 'member.join' | 'role.assign' | 'broadcast.send' | 'settings.update'
+export type AuditAction =
+  | 'member.join'
+  | 'role.assign'
+  | 'broadcast.send'
+  | 'settings.update'
+  | 'birthday.announce'
+  | 'birthday.set'
+  | 'birthday.remove'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {

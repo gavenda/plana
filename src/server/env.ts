@@ -27,11 +27,25 @@ const schema = z.object({
    */
   REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
 
+  /** IANA time zone the bot's day starts in, e.g. `Europe/Dublin`. Birthdays post at its midnight. */
+  BIRTHDAY_TIMEZONE: z
+    .string()
+    .default('UTC')
+    .refine((timeZone) => {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone })
+        return true
+      } catch {
+        return false
+      }
+    }, 'must be an IANA time zone such as Europe/Dublin'),
+
   // Optional first-boot seeds for the settings the dashboard otherwise manages.
   TRIAGE_ROLE_ID: snowflake.optional(),
   UNIT_OWNER_ROLE_ID: snowflake.optional(),
   BOARDERS_ROLE_ID: snowflake.optional(),
   ANNOUNCE_CHANNEL_ID: snowflake.optional(),
+  BIRTHDAY_CHANNEL_ID: snowflake.optional(),
 })
 
 export type Env = z.infer<typeof schema>

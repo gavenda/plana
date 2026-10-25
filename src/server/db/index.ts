@@ -48,6 +48,17 @@ const migrations: string[] = [
   );
   CREATE INDEX audit_log_created_at ON audit_log (created_at DESC);
   `,
+  `
+  CREATE TABLE birthdays (
+    member_id           TEXT PRIMARY KEY,
+    month               INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+    day                 INTEGER NOT NULL CHECK (day BETWEEN 1 AND 31),
+    created_at          INTEGER NOT NULL,
+    updated_at          INTEGER NOT NULL,
+    last_announced_year INTEGER
+  );
+  CREATE INDEX birthdays_month_day ON birthdays (month, day);
+  `,
 ]
 
 function migrate(database: Database): void {
