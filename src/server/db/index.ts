@@ -59,6 +59,9 @@ const migrations: string[] = [
   );
   CREATE INDEX birthdays_month_day ON birthdays (month, day);
   `,
+  `
+  ALTER TABLE join_announcements ADD COLUMN reminded_at INTEGER;
+  `,
 ]
 
 function migrate(database: Database): void {

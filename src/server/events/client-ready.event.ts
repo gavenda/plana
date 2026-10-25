@@ -3,6 +3,7 @@ import { Events } from 'discord.js'
 import { chatInputCommandData } from '../commands/chat-input'
 import { announceBirthdays } from '../discord/birthdays'
 import { primeMemberCache } from '../discord/service'
+import { remindStaleTriage } from '../discord/triage-reminders'
 import { env } from '../env'
 import type { AppEvent } from './event'
 
@@ -27,5 +28,6 @@ export const clientReadyEvent: AppEvent<Events.ClientReady> = {
 
     // Catches up on a birthday missed while the bot was down.
     await announceBirthdays()
+    await remindStaleTriage()
   },
 }

@@ -55,6 +55,13 @@
         "modal_input_label": "Message"
       }
     },
+    "triage": {
+      "reminder_title_one": "⏳ **{{count}} member** has been waiting in triage for over {{days}} days:",
+      "reminder_title_other": "⏳ **{{count}} members** have been waiting in triage for over {{days}} days:",
+      "reminder_line": "- {{member}} — since {{since}} · [card]({{url}})",
+      "reminder_more_one": "- …and {{count}} more",
+      "reminder_more_other": "- …and {{count}} more"
+    },
     "birthday": {
       "announcement_one": "🎉 Happy birthday, {{mentions}}! 🎂",
       "announcement_other": "🎉 Happy birthday to {{mentions}}! 🎂"

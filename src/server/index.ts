@@ -5,6 +5,7 @@ import type { AppContext } from './context'
 import { announceBirthdays } from './discord/birthdays'
 import { client } from './discord/client'
 import { primeMemberCache } from './discord/service'
+import { remindStaleTriage } from './discord/triage-reminders'
 import { registerEvents } from './events'
 import { initI18n } from './i18n'
 import { env } from './env'
@@ -21,6 +22,9 @@ const MEMBER_REFRESH_INTERVAL_MS = 30 * 60 * 1000
 
 /** How soon after midnight birthdays are posted. Each check is one SQLite query. */
 const BIRTHDAY_CHECK_INTERVAL_MS = 5 * 60 * 1000
+
+/** Reminders are measured in days, so an hour late is close enough. */
+const TRIAGE_REMINDER_INTERVAL_MS = 60 * 60 * 1000
 
 seedSettingsFromEnv()
 
@@ -98,12 +102,14 @@ const memberRefreshTimer = setInterval(() => {
 }, MEMBER_REFRESH_INTERVAL_MS)
 
 const birthdayTimer = setInterval(() => void announceBirthdays(), BIRTHDAY_CHECK_INTERVAL_MS)
+const triageReminderTimer = setInterval(() => void remindStaleTriage(), TRIAGE_REMINDER_INTERVAL_MS)
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n[shutdown] received ${signal}`)
   clearInterval(pruneTimer)
   clearInterval(memberRefreshTimer)
   clearInterval(birthdayTimer)
+  clearInterval(triageReminderTimer)
   await server.stop(true)
   await renderer.close()
   await client.destroy()

@@ -6,6 +6,7 @@ import { CacheKey, invalidate } from '../cache'
 import { listAudit, recordAudit } from '../db/audit'
 import { getSettings, isConfigured, SETTING_KEYS, updateSettings } from '../db/settings'
 import { deleteBirthday, getBirthdayOverview, saveBirthday } from '../discord/birthdays'
+import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
 import {
   assignRole,
@@ -57,6 +58,7 @@ const settingsSchema = z
     boardersRoleId: snowflake.nullable(),
     announceChannelId: snowflake.nullable(),
     birthdayChannelId: snowflake.nullable(),
+    triageReminderDays: z.number().int().min(1).max(30).nullable(),
   })
   .partial()
 
@@ -83,6 +85,9 @@ api.put('/settings', async (c) => {
         changed.map((key) => [key, { from: before[key], to: settings[key] }]),
       ),
     })
+
+    // Turning reminders on (or shortening them) takes effect now, not at the next hourly check.
+    if (changed.includes('triageReminderDays')) void remindStaleTriage()
   }
 
   return c.json({ settings, configured: isConfigured(settings), changed })

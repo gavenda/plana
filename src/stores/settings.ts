@@ -9,6 +9,8 @@ export type GuildSettings = {
   boardersRoleId: string | null
   announceChannelId: string | null
   birthdayChannelId: string | null
+  /** Days in triage before staff are reminded; null is off. */
+  triageReminderDays: number | null
 }
 
 type SettingsResponse = { settings: GuildSettings; configured: boolean }
@@ -19,6 +21,7 @@ const EMPTY: GuildSettings = {
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  triageReminderDays: null,
 }
 
 export const useSettingsStore = defineStore('settings', () => {

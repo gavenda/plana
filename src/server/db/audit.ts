@@ -8,6 +8,7 @@ export type AuditAction =
   | 'birthday.announce'
   | 'birthday.set'
   | 'birthday.remove'
+  | 'triage.remind'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {

@@ -8,7 +8,12 @@ export type GuildSettings = {
   announceChannelId: string | null
   /** Optional. Birthday announcements are off while it is unset. */
   birthdayChannelId: string | null
+  /** Days in triage before staff are reminded. Reminders are off while it is unset. */
+  triageReminderDays: number | null
 }
+
+/** Settings stored as numbers; every other setting is a Discord ID. */
+const NUMERIC_KEYS: readonly (keyof GuildSettings)[] = ['triageReminderDays']
 
 export const SETTING_KEYS = [
   'triageRoleId',
@@ -16,6 +21,7 @@ export const SETTING_KEYS = [
   'boardersRoleId',
   'announceChannelId',
   'birthdayChannelId',
+  'triageReminderDays',
 ] as const satisfies readonly (keyof GuildSettings)[]
 
 /** The settings the triage flow cannot run without. */
@@ -32,6 +38,7 @@ const EMPTY: GuildSettings = {
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  triageReminderDays: null,
 }
 
 const selectAll = db.query<{ key: string; value: string }, []>('SELECT key, value FROM settings')
@@ -44,8 +51,13 @@ const remove = db.query<void, { key: string }>('DELETE FROM settings WHERE key =
 export function getSettings(): GuildSettings {
   const settings = { ...EMPTY }
   for (const row of selectAll.all()) {
-    if ((SETTING_KEYS as readonly string[]).includes(row.key)) {
-      settings[row.key as keyof GuildSettings] = row.value
+    if (!(SETTING_KEYS as readonly string[]).includes(row.key)) continue
+    const key = row.key as keyof GuildSettings
+    if (NUMERIC_KEYS.includes(key)) {
+      const value = Number(row.value)
+      ;(settings as Record<string, unknown>)[key] = Number.isFinite(value) ? value : null
+    } else {
+      ;(settings as Record<string, unknown>)[key] = row.value
     }
   }
   return settings
@@ -58,7 +70,7 @@ export function updateSettings(patch: Partial<GuildSettings>): GuildSettings {
       if (!(key in patch)) continue
       const value = patch[key]
       if (value == null || value === '') remove.run({ key })
-      else upsert.run({ key, value })
+      else upsert.run({ key, value: String(value) })
     }
   })()
   return getSettings()
@@ -78,13 +90,13 @@ export function seedSettingsFromEnv(): void {
     birthdayChannelId: env.BIRTHDAY_CHANNEL_ID,
   }
 
-  const patch: Partial<GuildSettings> = {}
+  const patch: Partial<Record<keyof GuildSettings, unknown>> = {}
   for (const key of SETTING_KEYS) {
     if (current[key] == null && seeds[key] != null) patch[key] = seeds[key]
   }
 
   if (Object.keys(patch).length > 0) {
-    updateSettings(patch)
+    updateSettings(patch as Partial<GuildSettings>)
     console.log(`[settings] seeded from environment: ${Object.keys(patch).join(', ')}`)
   }
 }

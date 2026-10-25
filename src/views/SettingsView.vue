@@ -18,11 +18,14 @@ const draft = reactive<GuildSettings>({
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  triageReminderDays: null,
 })
 
 const saving = ref(false)
 const saved = ref(false)
 const saveError = ref<string | null>(null)
+
+type RoleKey = 'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId'
 
 const ROLE_FIELDS = [
   {
@@ -57,8 +60,16 @@ const dirty = computed(() =>
   (Object.keys(draft) as (keyof GuildSettings)[]).some((key) => draft[key] !== store.settings[key]),
 )
 
+const REMINDER_OPTIONS: SelectOption<number | null>[] = [
+  { value: null, label: 'Off' },
+  ...[1, 2, 3, 5, 7, 14].map((days) => ({
+    value: days,
+    label: days === 1 ? 'After 1 day' : `After ${days} days`,
+  })),
+]
+
 /** Roles Discord will actually let the bot grant, plus whatever is already selected. */
-function roleOptions(key: keyof GuildSettings): SelectOption<string | null>[] {
+function roleOptions(key: RoleKey): SelectOption<string | null>[] {
   return [
     { value: null, label: 'Not set' },
     ...guild.roles
@@ -81,7 +92,7 @@ function channelOptions(emptyLabel: string): SelectOption<string | null>[] {
   ]
 }
 
-function warningFor(key: keyof GuildSettings): string | null {
+function warningFor(key: RoleKey): string | null {
   const id = draft[key]
   if (!id || guild.roles.length === 0) return null
 
@@ -184,6 +195,15 @@ const version = __APP_VERSION__
               <p v-if="channelWarningFor('birthdayChannelId')" class="supporting-text text-warning">
                 {{ channelWarningFor('birthdayChannelId') }}
               </p>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <AppSelect
+                v-model="draft.triageReminderDays"
+                label="Triage reminder"
+                :options="REMINDER_OPTIONS"
+                supporting-text="Plana lists members still waiting this long in the announcement channel, once each, without pinging them."
+              />
             </div>
 
             <p v-if="saveError" class="alert alert-error expanded:col-span-2">{{ saveError }}</p>

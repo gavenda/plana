@@ -20,9 +20,12 @@ type PendingMember = {
   avatarUrl: string
   joinedAt: number | null
   createdAt: number
+  /** When they reached triage. */
+  waitingSince: number | null
 }
 
-const NEW_ACCOUNT_MS = 7 * 86_400_000
+const DAY_MS = 86_400_000
+const NEW_ACCOUNT_MS = 7 * DAY_MS
 
 const guild = useGuildStore()
 const settings = useSettingsStore()
@@ -48,6 +51,20 @@ const assignable = computed(() =>
 )
 
 const members = computed(() => pending.data.value ?? [])
+
+/** Whole days in triage, or null under a day, when a chip would only be noise. */
+function waitingDays(member: PendingMember): number | null {
+  if (member.waitingSince == null) return null
+  const days = Math.floor((Date.now() - member.waitingSince) / DAY_MS)
+  return days >= 1 ? days : null
+}
+
+/** Past the reminder threshold, which is when Plana nudges staff about them. */
+function overdue(member: PendingMember): boolean {
+  const threshold = settings.settings.triageReminderDays
+  const days = waitingDays(member)
+  return threshold != null && days != null && days >= threshold
+}
 
 async function assign(member: PendingMember, roleId: string) {
   busyId.value = member.id
@@ -93,7 +110,7 @@ async function assign(member: PendingMember, roleId: string) {
         <div>
           <h2 id="queue-pending" class="text-title-medium">Members awaiting a role</h2>
           <p class="text-body-medium text-on-surface-variant">
-            Everyone currently holding the triage role.
+            Everyone currently holding the triage role, longest wait first.
           </p>
         </div>
         <button
@@ -141,9 +158,18 @@ async function assign(member: PendingMember, roleId: string) {
               </div>
 
               <div class="flex shrink-0 flex-col items-end text-right">
-                <span class="text-body-medium" :title="absoluteTime(member.joinedAt)"
-                  >Joined {{ relativeTime(member.joinedAt) }}</span
-                >
+                <span class="flex items-center gap-2 text-body-medium">
+                  <span
+                    v-if="waitingDays(member) != null"
+                    class="chip"
+                    :class="overdue(member) && 'chip-warn'"
+                    :title="`In triage since ${absoluteTime(member.waitingSince)}`"
+                    >Waiting {{ waitingDays(member) }}d</span
+                  >
+                  <span :title="absoluteTime(member.joinedAt)"
+                    >Joined {{ relativeTime(member.joinedAt) }}</span
+                  >
+                </span>
                 <span class="flex items-center gap-2 text-label-small text-on-surface-variant">
                   <span v-if="Date.now() - member.createdAt < NEW_ACCOUNT_MS" class="chip chip-warn"
                     >New</span

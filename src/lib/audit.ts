@@ -6,6 +6,7 @@ export type AuditAction =
   | 'birthday.announce'
   | 'birthday.set'
   | 'birthday.remove'
+  | 'triage.remind'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -96,7 +97,20 @@ const SETTING_NAMES: Record<string, { label: string; kind: 'role' | 'channel' }>
   birthdayChannelId: { label: 'the birthday channel', kind: 'channel' },
 }
 
+/** Settings that hold a number of days rather than an ID. */
+const DAY_SETTING_NAMES: Record<string, string> = {
+  triageReminderDays: 'the triage reminder',
+}
+
 function settingChange(key: string, change: unknown): SummaryPart[] {
+  const days = DAY_SETTING_NAMES[key]
+  if (days) {
+    const to = (change as { to?: unknown } | null)?.to
+    return typeof to === 'number'
+      ? [`set ${days} to ${to} ${to === 1 ? 'day' : 'days'}`]
+      : [`turned off ${days}`]
+  }
+
   const setting = SETTING_NAMES[key]
   if (!setting) return [key]
   const to = id((change as { to?: unknown } | null)?.to)
@@ -187,6 +201,22 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
     case 'birthday.remove':
       return describe('Birthday', 'neutral', actor, ' removed ', ...whose, ' birthday')
 
+    case 'triage.remind': {
+      const names = Array.isArray(entry.detail?.memberNames)
+        ? entry.detail.memberNames.filter((name): name is string => typeof name === 'string')
+        : []
+      return describe(
+        'Reminder',
+        'warn',
+        'Reminded staff in ',
+        targetChannel,
+        ' that ',
+        ...(names.length > 0 ? list(names.map((name) => [{ user: name }])) : ['members']),
+        names.length === 1 ? ' is' : ' are',
+        ' still waiting in triage',
+      )
+    }
+
     default:
       return describe(entry.action, 'neutral', actor, ` performed ${entry.action}`)
   }
@@ -207,6 +237,8 @@ export function auditIcon(action: AuditAction): string {
     case 'birthday.set':
     case 'birthday.remove':
       return 'cake'
+    case 'triage.remind':
+      return 'hourglass_top'
     default:
       return 'history'
   }

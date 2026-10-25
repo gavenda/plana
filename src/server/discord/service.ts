@@ -272,6 +272,8 @@ export type PendingMember = {
   avatarUrl: string
   joinedAt: number | null
   createdAt: number
+  /** When they reached triage: their card's timestamp, else when they joined. */
+  waitingSince: number | null
 }
 
 let membersPrimed = false
@@ -303,6 +305,11 @@ export async function primeMemberCache(force = false): Promise<void> {
   return priming
 }
 
+function waitingSince(member: GuildMember): number | null {
+  const card = getAnnouncement(member.id)
+  return card && card.resolvedAt == null ? card.createdAt : member.joinedTimestamp
+}
+
 export async function listPendingMembers(): Promise<Result<PendingMember[]>> {
   const settings = getSettings()
   if (!settings.triageRoleId) return err('not_configured', 'error.no_triage_role')
@@ -324,8 +331,10 @@ export async function listPendingMembers(): Promise<Result<PendingMember[]>> {
         avatarUrl: member.displayAvatarURL({ size: 128, extension: 'png' }),
         joinedAt: member.joinedTimestamp,
         createdAt: member.user.createdTimestamp,
+        waitingSince: waitingSince(member),
       }))
-      .sort((a, b) => (b.joinedAt ?? 0) - (a.joinedAt ?? 0)),
+      // Longest wait first, so whoever has been forgotten is at the top.
+      .sort((a, b) => (a.waitingSince ?? Infinity) - (b.waitingSince ?? Infinity)),
   )
 
   return ok(members)
