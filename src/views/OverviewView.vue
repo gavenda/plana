@@ -7,6 +7,8 @@ import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import type { ActivityOverview } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
+import { formatUntil, type UpcomingBirthdays } from '@/lib/birthdays'
+import { formatMonthDay } from '@/lib/dates'
 import { auditIcon, describeAudit, toneContainerClass, type AuditPage } from '@/lib/audit'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
@@ -31,6 +33,7 @@ const session = useSessionStore()
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
 const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
 const play = useAsync(() => apiFetch<ActivityOverview>('/api/activity?days=7'))
+const upcoming = useAsync(() => apiFetch<UpcomingBirthdays>('/api/birthdays/upcoming'))
 
 /** How many games and tracks Overview lists; Games & music has the rest. */
 const PLAY_LIMIT = 5
@@ -43,11 +46,18 @@ const waiting = (state: { data: { value: unknown }; error: { value: unknown } })
 const pendingLoading = computed(() => !settings.loaded || waiting(pending))
 const activityLoading = computed(() => waiting(activity))
 const playLoading = computed(() => waiting(play))
+const upcomingLoading = computed(() => waiting(upcoming))
+const birthdays = computed(() => upcoming.data.value?.birthdays ?? [])
 
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
   // Without a triage role there is no one to list; "Finish setting up" above says so.
-  await Promise.all([hasTriageRole.value ? pending.run() : undefined, activity.run(), play.run()])
+  await Promise.all([
+    hasTriageRole.value ? pending.run() : undefined,
+    activity.run(),
+    play.run(),
+    upcoming.run(),
+  ])
 })
 
 const CHECKLIST: { key: keyof GuildSettings; label: string }[] = [
@@ -61,7 +71,11 @@ const hasTriageRole = computed(() => settings.settings.triageRoleId != null)
 
 const missing = computed(() => CHECKLIST.filter((item) => settings.settings[item.key] == null))
 
-/** Each tile takes a different tonal container, per M3 Expressive's color emphasis. */
+/** People, not activities: someone in two games at once counts once. */
+const countMembers = (entries: { member: { id: string } }[]) =>
+  new Set(entries.map((entry) => entry.member.id)).size
+
+/** The tiles take the three tonal containers in turn, per M3 Expressive's color emphasis. */
 const stats = computed(() => [
   {
     label: 'Awaiting a role',
@@ -78,11 +92,25 @@ const stats = computed(() => [
     tone: 'bg-secondary-container text-on-secondary-container',
   },
   {
-    label: 'Events logged',
-    value: activity.data.value?.total ?? '—',
-    loading: activityLoading.value,
-    to: '/audit',
+    label: 'Playing now',
+    value: play.data.value ? countMembers(play.data.value.playing) : '—',
+    loading: playLoading.value,
+    to: '/activity',
     tone: 'bg-tertiary-container text-on-tertiary-container',
+  },
+  {
+    label: 'Listening now',
+    value: play.data.value ? countMembers(play.data.value.listening) : '—',
+    loading: playLoading.value,
+    to: '/activity',
+    tone: 'bg-primary-container text-on-primary-container',
+  },
+  {
+    label: 'Birthdays this month',
+    value: upcoming.data.value?.thisMonth ?? '—',
+    loading: upcomingLoading.value,
+    to: '/birthdays',
+    tone: 'bg-secondary-container text-on-secondary-container',
   },
 ])
 
@@ -137,6 +165,46 @@ const recent = computed(() =>
     </div>
 
     <div class="grid items-start gap-6 expanded:grid-cols-2">
+      <section aria-labelledby="overview-activity">
+        <div class="section-header">
+          <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
+          <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
+        </div>
+        <div :class="!activityLoading && recent.length === 0 && 'card'">
+          <StateBlock
+            :loading="activityLoading"
+            :error="activity.error.value"
+            :empty="recent.length === 0"
+            empty-text="No activity recorded."
+            compact
+          >
+            <template #skeleton><SkeletonList two-line trailing="text" /></template>
+            <ul class="segmented-list">
+              <li v-for="{ entry, description } in recent" :key="entry.id" class="segmented-item">
+                <span
+                  class="grid size-10 shrink-0 place-items-center rounded-full"
+                  :class="toneContainerClass(description.tone)"
+                  aria-hidden="true"
+                >
+                  <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
+                </span>
+                <div class="min-w-0 flex-1 py-1">
+                  <p class="truncate text-body-large" :title="description.summary">
+                    <AuditSummary :parts="description.parts" />
+                  </p>
+                  <p class="text-body-medium text-on-surface-variant">{{ description.label }}</p>
+                </div>
+                <span
+                  class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
+                  :title="absoluteTime(entry.createdAt)"
+                  >{{ relativeTime(entry.createdAt) }}</span
+                >
+              </li>
+            </ul>
+          </StateBlock>
+        </div>
+      </section>
+
       <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="overview-triage">
         <div class="section-header">
           <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
@@ -174,46 +242,6 @@ const recent = computed(() =>
                   class="shrink-0 text-label-small text-on-surface-variant"
                   :title="absoluteTime(member.joinedAt)"
                   >{{ relativeTime(member.joinedAt) }}</span
-                >
-              </li>
-            </ul>
-          </StateBlock>
-        </div>
-      </section>
-
-      <section aria-labelledby="overview-activity">
-        <div class="section-header">
-          <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
-          <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
-        </div>
-        <div :class="!activityLoading && recent.length === 0 && 'card'">
-          <StateBlock
-            :loading="activityLoading"
-            :error="activity.error.value"
-            :empty="recent.length === 0"
-            empty-text="No activity recorded."
-            compact
-          >
-            <template #skeleton><SkeletonList two-line trailing="text" /></template>
-            <ul class="segmented-list">
-              <li v-for="{ entry, description } in recent" :key="entry.id" class="segmented-item">
-                <span
-                  class="grid size-10 shrink-0 place-items-center rounded-full"
-                  :class="toneContainerClass(description.tone)"
-                  aria-hidden="true"
-                >
-                  <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
-                </span>
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="description.summary">
-                    <AuditSummary :parts="description.parts" />
-                  </p>
-                  <p class="text-body-medium text-on-surface-variant">{{ description.label }}</p>
-                </div>
-                <span
-                  class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
-                  :title="absoluteTime(entry.createdAt)"
-                  >{{ relativeTime(entry.createdAt) }}</span
                 >
               </li>
             </ul>
@@ -321,6 +349,54 @@ const recent = computed(() =>
                 }}</span>
               </li>
             </ol>
+          </StateBlock>
+        </div>
+      </section>
+
+      <section aria-labelledby="overview-birthdays">
+        <div class="section-header">
+          <h2 id="overview-birthdays" class="text-title-medium">Upcoming birthdays</h2>
+          <RouterLink class="btn btn-text" to="/birthdays">View all</RouterLink>
+        </div>
+        <div :class="!upcomingLoading && birthdays.length === 0 && 'card'">
+          <StateBlock
+            :loading="upcomingLoading"
+            :error="upcoming.error.value"
+            :empty="birthdays.length === 0"
+            empty-text="No birthdays in the next 30 days."
+            compact
+          >
+            <template #skeleton><SkeletonList two-line trailing="stack" /></template>
+            <ul class="segmented-list">
+              <li v-for="entry in birthdays" :key="entry.id" class="segmented-item">
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="entry.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <div class="min-w-0 flex-1 py-1">
+                  <p
+                    class="truncate text-body-large"
+                    :style="{ color: discordTextColor(entry.color) }"
+                  >
+                    {{ entry.displayName }}
+                  </p>
+                  <p class="truncate font-mono text-body-small text-on-surface-variant">
+                    {{ entry.username }}
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-col items-end">
+                  <span class="text-body-large">{{ formatMonthDay(entry.month, entry.day) }}</span>
+                  <span
+                    class="text-label-small"
+                    :class="entry.daysUntil === 0 ? 'text-tertiary' : 'text-on-surface-variant'"
+                    >{{ formatUntil(entry.daysUntil) }}</span
+                  >
+                </div>
+              </li>
+            </ul>
           </StateBlock>
         </div>
       </section>

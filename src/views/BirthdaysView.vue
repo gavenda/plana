@@ -9,6 +9,7 @@ import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
+import { formatUntil, type BirthdayEntry, type BirthdayOverview } from '@/lib/birthdays'
 import { formatMonthDay } from '@/lib/dates'
 import { discordTextColor, roleColor } from '@/lib/discord'
 import { useRailFab } from '@/lib/rail'
@@ -17,23 +18,6 @@ import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
 import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
-
-type BirthdayMember = {
-  id: string
-  username: string
-  displayName: string
-  /** Their name's colour in Discord (highest coloured role); #000000 for none. */
-  color?: string
-  avatarUrl: string
-}
-
-type BirthdayEntry = BirthdayMember & { month: number; day: number; daysUntil: number }
-
-type BirthdayOverview = {
-  birthdays: BirthdayEntry[]
-  members: BirthdayMember[]
-  timeZone: string
-}
 
 const settings = useSettingsStore()
 const session = useSessionStore()
@@ -128,12 +112,6 @@ const canSave = computed(
 
 function formatDate(entry: { month: number; day: number }): string {
   return formatMonthDay(entry.month, entry.day)
-}
-
-function formatUntil(days: number): string {
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Tomorrow'
-  return `In ${days} days`
 }
 
 async function save() {

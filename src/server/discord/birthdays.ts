@@ -175,15 +175,13 @@ function toBirthdayMember(member: GuildMember): BirthdayMember {
 
 export type BirthdayEntry = BirthdayMember & { month: number; day: number; daysUntil: number }
 
-/** Everything the dashboard's birthday page shows, from the in-memory member cache. */
-export async function getBirthdayOverview(): Promise<
-  Result<{ birthdays: BirthdayEntry[]; members: BirthdayMember[]; timeZone: string }>
-> {
+/** Every saved birthday of a member still in the server, soonest first. */
+async function listBirthdayEntries(): Promise<BirthdayEntry[]> {
   await primeMemberCache()
   const guild = await getGuild()
   const from = today()
 
-  const birthdays = listBirthdays()
+  return listBirthdays()
     .flatMap((birthday) => {
       const member = guild.members.cache.get(birthday.memberId)
       return member
@@ -198,6 +196,14 @@ export async function getBirthdayOverview(): Promise<
         : []
     })
     .sort((a, b) => a.daysUntil - b.daysUntil)
+}
+
+/** Everything the dashboard's birthday page shows, from the in-memory member cache. */
+export async function getBirthdayOverview(): Promise<
+  Result<{ birthdays: BirthdayEntry[]; members: BirthdayMember[]; timeZone: string }>
+> {
+  const birthdays = await listBirthdayEntries()
+  const guild = await getGuild()
 
   const members = [...guild.members.cache.values()]
     .filter((member) => !member.user.bot)
@@ -205,6 +211,23 @@ export async function getBirthdayOverview(): Promise<
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
 
   return ok({ birthdays, members, timeZone: env.BIRTHDAY_TIMEZONE })
+}
+
+/**
+ * The next few birthdays, within `days` from today (today counts), and how many fall in this
+ * calendar month, passed or not, for Overview.
+ */
+export async function getUpcomingBirthdays(
+  days: number,
+  limit: number,
+): Promise<Result<{ birthdays: BirthdayEntry[]; thisMonth: number; timeZone: string }>> {
+  const entries = await listBirthdayEntries()
+  const { month } = today()
+  return ok({
+    birthdays: entries.filter((entry) => entry.daysUntil < days).slice(0, limit),
+    thisMonth: entries.filter((entry) => entry.month === month).length,
+    timeZone: env.BIRTHDAY_TIMEZONE,
+  })
 }
 
 // ---------------------------------------------------------------------------

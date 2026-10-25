@@ -14,6 +14,7 @@ import {
 import {
   deleteBirthday,
   getBirthdayOverview,
+  getUpcomingBirthdays,
   MAX_BIRTHDAY_ROLE_REMOVALS,
   saveBirthday,
   syncBirthdayRole,
@@ -192,6 +193,14 @@ api.post('/broadcast', requireAdmin, async (c) => {
 })
 
 api.get('/birthdays', async (c) => respond(c, await getBirthdayOverview()))
+
+/** How far ahead Overview looks, and how many it lists. */
+const UPCOMING_DAYS = 30
+const UPCOMING_LIMIT = 5
+
+api.get('/birthdays/upcoming', async (c) =>
+  respond(c, await getUpcomingBirthdays(UPCOMING_DAYS, UPCOMING_LIMIT)),
+)
 
 const birthdaySchema = z.object({
   month: z.number().int().min(1).max(12),
