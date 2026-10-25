@@ -5,6 +5,16 @@
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#121318" />
+    <!-- Paint the dark surface before any stylesheet arrives, so the first frame isn't white.
+         Keep in step with --color-surface and --color-on-surface in src/assets/main.css. -->
+    <meta name="color-scheme" content="dark" />
+    <style>
+      html {
+        background-color: #121318;
+        color: #e3e1e9;
+        color-scheme: dark;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
