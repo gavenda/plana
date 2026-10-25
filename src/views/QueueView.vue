@@ -34,9 +34,12 @@ const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending')
 const snackbar = useSnackbar()
 const busyId = ref<string | null>(null)
 
+/** Without a triage role there is no one to list; the notice above the page says so. */
+const hasTriageRole = computed(() => settings.settings.triageRoleId != null)
+
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
-  await pending.run()
+  if (hasTriageRole.value) await pending.run()
 })
 
 /** The two configured roles, in the same order as the Discord buttons. */
@@ -88,13 +91,19 @@ async function assign(member: PendingMember, roleId: string) {
       v-if="settings.loaded && !settings.configured"
       class="card card-warn flex items-center gap-4 py-3 pr-3 pl-6"
     >
-      <p class="min-w-0 flex-1 text-body-medium">Some roles are not configured yet.</p>
+      <p class="min-w-0 flex-1 text-body-medium">
+        {{
+          hasTriageRole
+            ? 'Some roles are not configured yet.'
+            : 'No triage role is configured. Choose one to see who is waiting.'
+        }}
+      </p>
       <RouterLink to="/settings" class="btn btn-text text-on-warning-container"
         >Finish setup</RouterLink
       >
     </div>
 
-    <section aria-labelledby="queue-pending">
+    <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="queue-pending">
       <div class="section-header">
         <div>
           <h2 id="queue-pending" class="text-title-medium">Members awaiting a role</h2>
@@ -117,7 +126,7 @@ async function assign(member: PendingMember, roleId: string) {
       <!-- Loading, empty and error states sit in one card in place of the list. -->
       <div :class="members.length === 0 && 'card'">
         <StateBlock
-          :loading="pending.loading.value && members.length === 0"
+          :loading="(!settings.loaded || pending.loading.value) && members.length === 0"
           :error="pending.error.value"
           :empty="members.length === 0"
           empty-text="Standing by. No one is waiting in triage."

@@ -29,7 +29,8 @@ const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
 
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
-  await Promise.all([pending.run(), activity.run()])
+  // Without a triage role there is no one to list; "Finish setting up" above says so.
+  await Promise.all([hasTriageRole.value ? pending.run() : undefined, activity.run()])
 })
 
 const CHECKLIST: { key: keyof GuildSettings; label: string }[] = [
@@ -38,6 +39,8 @@ const CHECKLIST: { key: keyof GuildSettings; label: string }[] = [
   { key: 'boardersRoleId', label: 'Boarders role' },
   { key: 'announceChannelId', label: 'Announcement channel' },
 ]
+
+const hasTriageRole = computed(() => settings.settings.triageRoleId != null)
 
 const missing = computed(() => CHECKLIST.filter((item) => settings.settings[item.key] == null))
 
@@ -105,7 +108,7 @@ const recent = computed(() =>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-6">
-      <section aria-labelledby="overview-triage">
+      <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="overview-triage">
         <div class="section-header">
           <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
           <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
@@ -113,7 +116,7 @@ const recent = computed(() =>
         <!-- Loading, empty and error states sit in one card in place of the list. -->
         <div :class="(pending.data.value?.length ?? 0) === 0 && 'card'">
           <StateBlock
-            :loading="pending.loading.value"
+            :loading="!settings.loaded || pending.loading.value"
             :error="pending.error.value"
             :empty="(pending.data.value?.length ?? 0) === 0"
             empty-text="Nobody is waiting."
