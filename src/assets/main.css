@@ -303,6 +303,12 @@
     @apply h-14 rounded-full-56 px-6 text-title-medium active:not-disabled:rounded-md;
   }
 
+  /* Wide width, as Expressive gives icon buttons narrow, default and wide: 24dp a side (the
+     padding M3 used before Expressive's 16dp) for a form's primary action. */
+  .btn-wide {
+    @apply px-6;
+  }
+
   .btn-filled {
     @apply bg-primary text-on-primary hover:not-disabled:shadow-level1 disabled:bg-on-surface/12 disabled:text-on-surface/38;
   }

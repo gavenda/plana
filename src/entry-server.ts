@@ -2,11 +2,14 @@ import { renderToString } from 'vue/server-renderer'
 import { createMemoryHistory } from 'vue-router'
 
 import { createApp } from './app'
+import { useBotStore } from './stores/bot'
 import { useSessionStore, type SessionUser } from './stores/session'
 
 export type SSRContext = {
   url: string
   user: SessionUser | null
+  /** The bot's custom Discord avatar, for the rail's mark; null falls back to the logo. */
+  botAvatarUrl: string | null
 }
 
 export type RenderResult = {
@@ -28,6 +31,7 @@ export async function render(context: SSRContext): Promise<RenderResult> {
   const { app, router, pinia } = createApp(createMemoryHistory())
 
   useSessionStore(pinia).setUser(context.user)
+  useBotStore(pinia).setAvatarUrl(context.botAvatarUrl)
 
   await router.push(context.url)
   await router.isReady()

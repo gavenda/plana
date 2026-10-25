@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import type { Context } from 'hono'
 
 import { readSession } from './session'
-import { isReady } from '../discord/client'
+import { client, isReady } from '../discord/client'
 import { getAccessLevel } from '../discord/service'
 import { isProduction } from '../env'
 
@@ -16,6 +16,7 @@ const VITE_PREFIXES = ['/@', '/src/', '/node_modules/', '/__vite', '/public/']
 export type SSRContext = {
   url: string
   user: unknown
+  botAvatarUrl: string | null
 }
 
 export type RenderResult = {
@@ -53,7 +54,15 @@ async function renderPage(c: Context, template: string, render: RenderFn): Promi
   // Live, like the API, so the dashboard shows only what this person may use.
   const access = session && isReady() ? await getAccessLevel(session.id).catch(() => null) : null
   const user = session ? { ...session, access } : null
-  const result = await render({ url: c.req.path + (new URL(c.req.url).search || ''), user })
+  // Read on every page, so a new avatar shows on the next load without a restart.
+  const botAvatarUrl = isReady()
+    ? (client.user?.avatarURL({ size: 128, extension: 'png' }) ?? null)
+    : null
+  const result = await render({
+    url: c.req.path + (new URL(c.req.url).search || ''),
+    user,
+    botAvatarUrl,
+  })
 
   if (result.redirect) return c.redirect(result.redirect, 302)
 

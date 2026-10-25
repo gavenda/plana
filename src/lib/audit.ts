@@ -451,7 +451,7 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
               {
                 label:
                   unseen > 0
-                    ? `Messages (${unseen} not shown: from bots, or sent before Plana last started)`
+                    ? `Messages (${unseen} not shown: from bots, or sent before the last restart)`
                     : 'Messages',
                 text: transcript,
               },

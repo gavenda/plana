@@ -4,19 +4,27 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import RailItem from '@/components/RailItem.vue'
 import { logoUrl } from '@/lib/plana'
 import { railDocks, useRail } from '@/lib/rail'
+import { useBotStore } from '@/stores/bot'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
 
-type Destination = { to: string; label: string; icon: string; adminOnly?: boolean }
+type Destination = {
+  to: string
+  label: string
+  icon: string
+  adminOnly?: boolean
+  /** Shown in the slim rail too. The rest appear only once it opens, as in Yuuka's. */
+  slim?: boolean
+}
 
 /** Icon names are Material Symbols; add new ones to the icon_names list in index.html. */
 const allDestinations: Destination[] = [
-  { to: '/', label: 'Overview', icon: 'dashboard' },
-  { to: '/queue', label: 'Triage', icon: 'how_to_reg' },
+  { to: '/', label: 'Overview', icon: 'dashboard', slim: true },
+  { to: '/queue', label: 'Triage', icon: 'how_to_reg', slim: true },
   { to: '/broadcast', label: 'Broadcast', icon: 'campaign', adminOnly: true },
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
   { to: '/activity', label: 'Games & music', icon: 'sports_esports' },
-  { to: '/audit', label: 'Audit log', icon: 'history' },
+  { to: '/audit', label: 'Audit log', icon: 'history', slim: true },
   { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
 
@@ -32,6 +40,10 @@ const destinations = computed(() =>
 const { expanded, toggle, collapse } = useRail()
 
 const guild = useGuildStore()
+
+/** The bot's own avatar, as members see it in Discord; the logo when it has none. */
+const bot = useBotStore()
+const markUrl = computed(() => bot.avatarUrl ?? logoUrl)
 
 const initial = computed(() => session.user?.displayName.trim().charAt(0).toUpperCase() || '?')
 
@@ -128,7 +140,13 @@ onBeforeUnmount(() => observer?.disconnect())
            open. It is a mark, not a control (no link, and never beside the menu button, which sits
            beneath it); Overview is the way home. -->
       <div class="flex items-center pb-3 pl-7" aria-hidden="true">
-        <img class="size-10 shrink-0 rounded-full" :src="logoUrl" alt="" width="40" height="40" />
+        <img
+          class="size-10 shrink-0 rounded-full bg-primary-container object-cover"
+          :src="markUrl"
+          alt=""
+          width="40"
+          height="40"
+        />
         <span
           class="rail-fade flex items-baseline gap-1.5 pr-4 pl-3 whitespace-nowrap text-on-surface"
           :data-shown="expanded"
@@ -165,16 +183,30 @@ onBeforeUnmount(() => observer?.disconnect())
       <div class="mt-10 flex min-h-0 flex-1 flex-col">
         <!-- One scrolling column: on a short window the open rail would otherwise run off the bottom. -->
         <div class="min-h-0 flex-1 [scrollbar-width:none] overflow-x-hidden overflow-y-auto">
-          <RailItem
-            v-for="item in destinations"
-            :key="item.to"
-            :to="item.to"
-            :exact="item.to === '/'"
-            :label="item.label"
-            :icon="item.icon"
-            :expanded="expanded"
-            @click="afterChoice"
-          />
+          <!-- The slim rail keeps only the everyday destinations; the others grow in between them
+               as it opens, the way "Sign out" does below, and are inert while shut. -->
+          <template v-for="item in destinations" :key="item.to">
+            <RailItem
+              v-if="item.slim"
+              :to="item.to"
+              :exact="item.to === '/'"
+              :label="item.label"
+              :icon="item.icon"
+              :expanded="expanded"
+              @click="afterChoice"
+            />
+            <div v-else class="rail-collapse" :data-open="expanded" :inert="!expanded">
+              <div>
+                <RailItem
+                  :to="item.to"
+                  :label="item.label"
+                  :icon="item.icon"
+                  :expanded="expanded"
+                  @click="afterChoice"
+                />
+              </div>
+            </div>
+          </template>
 
           <!-- Only in the open rail: it grows out of nothing rather than appearing, and is inert while shut. -->
           <div class="rail-collapse" :data-open="expanded" :inert="!expanded">

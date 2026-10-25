@@ -87,7 +87,8 @@ Her [wiki page](https://bluearchive.wiki/wiki/Plana) gives the facts, her
   [`RailItem.vue`](src/components/RailItem.vue)), built the way Yuuka's is: slim (96dp, icon
   over label) by default, and open (icon beside label) from the menu button, as wide as its
   content needs between 220 and 360dp. Both states are one structure that morphs (see
-  [Motion](#motion)). The open rail adds "Sign out" under the destinations and the server and
+  [Motion](#motion)). The slim rail shows only the everyday destinations (Overview, Triage,
+  Audit log); the open rail grows the rest in between them, "Sign out" under the destinations and the server and
   account (avatar, display name, username) at its foot, as a segmented list. From 840px it pushes the page aside; below
   that it floats over the page behind a scrim and closes after a choice. The choice is
   remembered per browser, and only restored where it docks.
@@ -190,8 +191,8 @@ The logo is her `Standby` face, close in and without the halo, on a circle in th
 of her coat, so it still reads at 16px (`src/assets/plana/logo.webp`, 128px). It is
 always a circle: the cookie is for her portraits.
 
-**In the navigation rail** the logo is the app's mark, at 40dp at the top of the rail in
-both states, with "Plana" and the version beside it once the rail is open. The menu
+**In the navigation rail** the app's mark is the bot's current Discord avatar (the logo
+when it has none, or before the bot connects), at 40dp at the top of the rail in both states, with "Plana" and the version beside it once the rail is open. The menu
 button sits on its own row beneath it, as M3 places it; nothing goes beside the menu
 button. The mark is not a link or a control (Overview is the way home), and is hidden from
 screen readers.
@@ -353,8 +354,8 @@ ever the ring.
 
 The emblem of Schale, her affiliation (`branding/Schale_Icon.webp`): a halo over a
 compass ring with a cross-hair. Redrawn as a single-colour SVG (`SchaleMark.vue`), it
-appears in one place: the footer of the stand-alone pages (sign-in and 404), centred at
-the bottom of the window, 96px wide in `on-surface-variant` (`App.vue`). It never carries
+appears in one place: the footer of every page, centred beneath the content (at the bottom
+of the window when the page is shorter), 96px wide in `on-surface-variant` (`App.vue`). It never carries
 meaning, and never goes behind a panel, a list, a form or her portrait's badge.
 
 ## The backdrop
@@ -483,7 +484,8 @@ Expressive springs, approximated as cubic-bézier curves (`ease-*` utilities):
 The navigation rail is the exception, and moves as Yuuka's does: M3's emphasized decelerate
 curve over 300ms (`ease-emphasized-decelerate`) for the rail's width, the page moving aside,
 and every item's pill, icon and label, so they all land together without overshoot. Things
-that come and go with the open rail (the name, the menu glyph, "Sign out", the account card)
+that come and go with the open rail (the name, the menu glyph, the destinations the slim rail
+leaves out, "Sign out", the account card)
 fade on `ease-standard`, 150ms out and 200ms in after a 100ms beat; groups grow from zero
 height rather than appear. The scrim fades in on `ease-standard-decelerate` and out on
 `ease-standard-accelerate`. The rules live under "navigation rail" in `main.css`.

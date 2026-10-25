@@ -172,14 +172,9 @@ async function remove() {
 
     <section aria-labelledby="birthday-form">
       <div class="section-header">
-        <div>
-          <h2 id="birthday-form" class="text-title-medium">
-            {{ existing ? 'Change a birthday' : 'Add a birthday' }}
-          </h2>
-          <p class="text-body-medium text-on-surface-variant">
-            Only the month and day are stored. Members can also use <code>/birthday set</code>.
-          </p>
-        </div>
+        <h2 id="birthday-form" class="text-title-medium">
+          {{ existing ? 'Change a birthday' : 'Add a birthday' }}
+        </h2>
       </div>
 
       <form
@@ -202,10 +197,7 @@ async function remove() {
           :disabled="!memberId"
         />
 
-        <div class="flex h-14 items-center gap-2.5">
-          <button class="btn btn-filled" type="submit" :disabled="!canSave">
-            {{ busy ? 'Saving…' : 'Save' }}
-          </button>
+        <div class="flex h-14 items-center justify-end gap-2">
           <button
             v-if="memberId"
             class="btn btn-text"
@@ -215,19 +207,17 @@ async function remove() {
           >
             Cancel
           </button>
+          <button class="btn btn-filled btn-wide" type="submit" :disabled="!canSave">
+            <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
+            {{ busy ? 'Saving…' : 'Save' }}
+          </button>
         </div>
       </form>
     </section>
 
     <section aria-labelledby="birthday-list">
       <div class="section-header">
-        <div>
-          <h2 id="birthday-list" class="text-title-medium">Saved birthdays</h2>
-          <p class="text-body-medium text-on-surface-variant">
-            Soonest first. Announced just after midnight
-            <template v-if="overview.data.value">({{ overview.data.value.timeZone }})</template>.
-          </p>
-        </div>
+        <h2 id="birthday-list" class="text-title-medium">Saved birthdays</h2>
         <span v-if="birthdays.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
           birthdays.length
         }}</span>

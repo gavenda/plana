@@ -18,7 +18,7 @@ import {
   saveBirthday,
   syncBirthdayRole,
 } from '../discord/birthdays'
-import { ACTIVITY_RETENTION_DAYS, getActivityOverview, getGamePlayers } from '../discord/activity'
+import { getActivityOverview, getGamePlayers, MAX_ACTIVITY_DAYS } from '../discord/activity'
 import { getGuild } from '../discord/client'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
@@ -101,7 +101,7 @@ async function checkBirthdayRole(roleId: string, settings: GuildSettings): Promi
   if (role && role.members.size > MAX_BIRTHDAY_ROLE_REMOVALS) {
     return (
       `@${role.name} is already held by ${role.members.size} members. ` +
-      'Plana takes the birthday role from everyone without a birthday today, so pick a role used only for birthdays.'
+      'The birthday role is taken from everyone without a birthday today, so pick a role used only for birthdays.'
     )
   }
   return null
@@ -255,7 +255,11 @@ api.get('/audit', (c) => {
 })
 
 const activityQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(ACTIVITY_RETENTION_DAYS).default(7),
+  /** A number of days, or `all` for everything recorded. */
+  days: z
+    .union([z.literal('all'), z.coerce.number().int().min(1).max(MAX_ACTIVITY_DAYS)])
+    .default(7)
+    .transform((days) => (days === 'all' ? null : days)),
 })
 
 api.get('/activity', async (c) => {

@@ -122,18 +122,6 @@ export const touchActivity = db.transaction(
   },
 )
 
-const pruneGames = db.query<void, { cutoff: number }>(
-  'DELETE FROM game_sessions WHERE ended_at < :cutoff',
-)
-const pruneTracks = db.query<void, { cutoff: number }>(
-  'DELETE FROM spotify_plays WHERE ended_at < :cutoff',
-)
-
-export function pruneActivity(cutoff: number): void {
-  pruneGames.run({ cutoff })
-  pruneTracks.run({ cutoff })
-}
-
 // ---------------------------------------------------------------------------
 // Totals
 // ---------------------------------------------------------------------------

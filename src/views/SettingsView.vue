@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import AppSelect from '@/components/AppSelect.vue'
+import RichTooltip from '@/components/RichTooltip.vue'
 import PlanaSays from '@/components/PlanaSays.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { roleColor } from '@/lib/discord'
@@ -48,7 +49,7 @@ const ROLE_FIELDS: RoleField[] = [
   {
     key: 'triageRoleId',
     label: 'Triage role',
-    hint: 'Assigned by Discord when someone joins. Plana removes it once a role is assigned.',
+    hint: 'Assigned by Discord when someone joins, and removed once they are given a role.',
     empty: 'Not set',
   },
   {
@@ -73,7 +74,7 @@ const ROLE_FIELDS: RoleField[] = [
   {
     key: 'birthdayRoleId',
     label: 'Birthday role',
-    hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: Plana removes it from everyone else.',
+    hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: it is removed from everyone else.',
     empty: 'Off',
   },
 ]
@@ -171,16 +172,14 @@ const version = __APP_VERSION__
   <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_480px]">
     <section aria-labelledby="settings-roles">
       <div class="section-header">
-        <div>
-          <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
-          <p class="text-body-medium text-on-surface-variant">
-            These drive the join announcement and the triage queue.
-          </p>
-        </div>
+        <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
         <span
-          class="pr-4 text-label-large"
+          class="inline-flex items-center gap-1.5 pr-4 text-label-large"
           :class="store.configured ? 'text-success' : 'text-warning'"
         >
+          <span class="icon [--icon-size:18px] icon-filled" aria-hidden="true">{{
+            store.configured ? 'assignment_turned_in' : 'assignment_late'
+          }}</span>
           {{ store.configured ? 'Configured' : 'Incomplete' }}
         </span>
       </div>
@@ -196,54 +195,72 @@ const version = __APP_VERSION__
             @submit.prevent="submit"
           >
             <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1">
-              <AppSelect
-                v-model="draft[field.key]"
-                :label="field.label"
-                :options="roleOptions(field)"
-                :supporting-text="field.hint"
-              />
+              <div class="flex items-center gap-1">
+                <AppSelect
+                  v-model="draft[field.key]"
+                  class="min-w-0 flex-1"
+                  :label="field.label"
+                  :options="roleOptions(field)"
+                />
+                <RichTooltip :title="field.label" :text="field.hint" />
+              </div>
               <p v-if="warningFor(field)" class="supporting-text text-warning">
                 {{ warningFor(field) }}
               </p>
             </div>
 
             <div class="flex flex-col gap-1">
-              <AppSelect
-                v-model="draft.announceChannelId"
-                label="Announcement channel"
-                :options="channelOptions('Not set')"
-                supporting-text="Where new member cards are posted."
-              />
+              <div class="flex items-center gap-1">
+                <AppSelect
+                  v-model="draft.announceChannelId"
+                  class="min-w-0 flex-1"
+                  label="Announcement channel"
+                  :options="channelOptions('Not set')"
+                />
+                <RichTooltip
+                  title="Announcement channel"
+                  text="Where new member cards are posted."
+                />
+              </div>
               <p v-if="channelWarningFor('announceChannelId')" class="supporting-text text-warning">
                 {{ channelWarningFor('announceChannelId') }}
               </p>
             </div>
 
             <div class="flex flex-col gap-1">
-              <AppSelect
-                v-model="draft.birthdayChannelId"
-                label="Birthday channel"
-                :options="channelOptions('Off')"
-                supporting-text="Where Plana wishes members happy birthday. Members add theirs with /birthday set. Optional."
-              />
+              <div class="flex items-center gap-1">
+                <AppSelect
+                  v-model="draft.birthdayChannelId"
+                  class="min-w-0 flex-1"
+                  label="Birthday channel"
+                  :options="channelOptions('Off')"
+                />
+                <RichTooltip
+                  title="Birthday channel"
+                  text="Where birthday wishes are posted. Members add theirs with /birthday set. Optional."
+                />
+              </div>
               <p v-if="channelWarningFor('birthdayChannelId')" class="supporting-text text-warning">
                 {{ channelWarningFor('birthdayChannelId') }}
               </p>
             </div>
 
             <div class="flex flex-col gap-1">
-              <AppSelect
-                v-model="draft.triageReminderDays"
-                label="Triage reminder"
-                :options="REMINDER_OPTIONS"
-                supporting-text="Plana lists members still waiting this long in the announcement channel, once each, without pinging them."
-              />
+              <div class="flex items-center gap-1">
+                <AppSelect
+                  v-model="draft.triageReminderDays"
+                  class="min-w-0 flex-1"
+                  label="Triage reminder"
+                  :options="REMINDER_OPTIONS"
+                />
+                <RichTooltip
+                  title="Triage reminder"
+                  text="Members still waiting this long are listed in the announcement channel, once each, without a ping."
+                />
+              </div>
             </div>
 
-            <div class="flex gap-2.5 expanded:col-span-2">
-              <button class="btn btn-filled" type="submit" :disabled="!dirty || saving">
-                {{ saving ? 'Saving…' : 'Save changes' }}
-              </button>
+            <div class="flex justify-end gap-2 expanded:col-span-2">
               <button
                 class="btn btn-text"
                 type="button"
@@ -251,6 +268,10 @@ const version = __APP_VERSION__
                 @click="reset"
               >
                 Discard
+              </button>
+              <button class="btn btn-filled btn-wide" type="submit" :disabled="!dirty || saving">
+                <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
+                {{ saving ? 'Saving…' : 'Save changes' }}
               </button>
             </div>
           </form>

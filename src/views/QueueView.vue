@@ -110,12 +110,7 @@ async function assign(member: PendingMember, roleId: string) {
 
     <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="queue-pending">
       <div class="section-header">
-        <div>
-          <h2 id="queue-pending" class="text-title-medium">Members awaiting a role</h2>
-          <p class="text-body-medium text-on-surface-variant">
-            Everyone currently holding the triage role, longest wait first.
-          </p>
-        </div>
+        <h2 id="queue-pending" class="text-title-medium">Members awaiting a role</h2>
         <button
           class="icon-btn icon-btn-tonal icon-btn-narrow"
           type="button"

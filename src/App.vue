@@ -72,10 +72,17 @@ async function signOut() {
   >
     <AppNavigationRail @sign-out="confirmingSignOut = true" />
 
-    <main class="w-full px-6 py-6">
+    <main class="flex min-h-dvh w-full flex-col px-6 py-6">
       <!-- Pages are titled for assistive tech only, as the rail already shows where you are. -->
       <h1 class="sr-only">{{ route.meta.title }}</h1>
-      <RouterView />
+      <div class="flex-1">
+        <RouterView />
+      </div>
+      <!-- Schale's emblem closes every page, as on the stand-alone ones: after the content, or at
+           the foot of the window when the page is short. -->
+      <footer class="flex justify-center pt-10">
+        <SchaleMark class="w-24 text-on-surface-variant" />
+      </footer>
     </main>
 
     <AppSnackbar />

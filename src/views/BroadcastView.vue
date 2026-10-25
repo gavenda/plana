@@ -75,12 +75,7 @@ async function send() {
   <div class="flex flex-col gap-4">
     <section aria-labelledby="broadcast-compose">
       <div class="section-header">
-        <div>
-          <h2 id="broadcast-compose" class="text-title-medium">Send a message as the bot</h2>
-          <p class="text-body-medium text-on-surface-variant">
-            Equivalent to the <code>/broadcast</code> command.
-          </p>
-        </div>
+        <h2 id="broadcast-compose" class="text-title-medium">Send a message as the bot</h2>
       </div>
 
       <!-- The form in its card; the preview beside it on the page, so it isn't a card in a card. -->
@@ -101,8 +96,13 @@ async function send() {
                 supporting-text="Discord markdown is supported."
               />
 
-              <div>
-                <button class="btn btn-filled" type="submit" :disabled="!canSend || sending">
+              <div class="flex justify-end">
+                <button
+                  class="btn btn-filled btn-wide"
+                  type="submit"
+                  :disabled="!canSend || sending"
+                >
+                  <span class="icon [--icon-size:20px]" aria-hidden="true">send</span>
                   {{ sending ? 'Sending…' : 'Send message' }}
                 </button>
               </div>

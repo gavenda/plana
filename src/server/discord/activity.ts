@@ -18,8 +18,8 @@ import { ok, primeMemberCache, type Result } from './service'
 /** How much play is lost at most if the process dies without warning. */
 export const ACTIVITY_CHECKPOINT_INTERVAL_MS = 2 * 60_000
 
-/** How long play history is kept; also the longest period the dashboard offers. */
-export const ACTIVITY_RETENTION_DAYS = 90
+/** The longest period in days the dashboard asks for; beyond it, ask for all time. */
+export const MAX_ACTIVITY_DAYS = 366
 
 const DAY_MS = 86_400_000
 const TOP_ITEMS = 25
@@ -168,7 +168,8 @@ export type TrackStat = Track & {
 }
 
 export type ActivityOverview = {
-  days: number
+  /** Null for all time. */
+  days: number | null
   totals: { gameMs: number; games: number; trackPlays: number; tracks: number }
   games: GameStat[]
   tracks: TrackStat[]
@@ -211,15 +212,18 @@ function group<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
   return groups
 }
 
+/** The start of a period of `days`, or of all history when `days` is null. */
+const periodStart = (days: number | null, now: number) => (days == null ? 0 : now - days * DAY_MS)
+
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
-/** Most-played games and Spotify tracks over the last `days`, and what is on right now. */
-export async function getActivityOverview(days: number): Promise<Result<ActivityOverview>> {
+/** Most-played games and Spotify tracks over the last `days` (null: all time), and what is on now. */
+export async function getActivityOverview(days: number | null): Promise<Result<ActivityOverview>> {
   await primeMemberCache()
   const guild = await getGuild()
   const members = guild.members.cache
   const now = Date.now()
-  const since = now - days * DAY_MS
+  const since = periodStart(days, now)
 
   // Open rows count up to this moment, not to their last checkpoint.
   checkpointActivity(now)
@@ -290,21 +294,25 @@ export async function getActivityOverview(days: number): Promise<Result<Activity
 export type GamePlayers = {
   name: string
   iconUrl: string | null
-  days: number
+  /** Null for all time. */
+  days: number | null
   ms: number
   /** Most hours first; `playingSince` is set for whoever is playing it right now. */
   players: (ActivityMember & { ms: number; playingSince: number | null })[]
 }
 
-/** Everyone who played one game over the last `days`, ranked by hours. */
-export async function getGamePlayers(name: string, days: number): Promise<Result<GamePlayers>> {
+/** Everyone who played one game over the last `days` (null: all time), ranked by hours. */
+export async function getGamePlayers(
+  name: string,
+  days: number | null,
+): Promise<Result<GamePlayers>> {
   await primeMemberCache()
   const guild = await getGuild()
   const now = Date.now()
 
   checkpointActivity(now)
 
-  const players = listGamePlayerTotals(name, now - days * DAY_MS).map((row) => ({
+  const players = listGamePlayerTotals(name, periodStart(days, now)).map((row) => ({
     ...describe(guild.members.cache, row.memberId),
     ms: row.ms,
     playingSince: live.get(row.memberId)?.games.get(name)?.startedAt ?? null,

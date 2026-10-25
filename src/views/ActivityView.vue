@@ -5,69 +5,44 @@ import { useRoute, useRouter } from 'vue-router'
 import FilterChip from '@/components/FilterChip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import type { ActivityOverview, GamePlayers } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
 
-type ActivityMember = {
-  id: string
-  username: string
-  displayName: string
-  /** Their name's colour in Discord (highest coloured role); #000000 for none. */
-  color?: string
-  avatarUrl: string
-}
-
-type Track = {
-  id: string
-  title: string
-  artist: string | null
-  album: string | null
-  artUrl: string | null
-}
-
-type ActivityOverview = {
-  days: number
-  totals: { gameMs: number; games: number; trackPlays: number; tracks: number }
-  games: {
-    name: string
-    iconUrl: string | null
-    ms: number
-    players: number
-    top: (ActivityMember & { ms: number })[]
-  }[]
-  tracks: (Track & {
-    plays: number
-    listeners: number
-    ms: number
-    top: (ActivityMember & { plays: number })[]
-  })[]
-  playing: { member: ActivityMember; game: string; iconUrl: string | null; since: number }[]
-  listening: { member: ActivityMember; track: Track; since: number }[]
-}
-
-const PERIODS = [
+/** `days` null is all time; in the URL and the API it is `all`. */
+const PERIODS: { days: number | null; label: string }[] = [
   { days: 7, label: '7 days' },
   { days: 30, label: '30 days' },
   { days: 90, label: '90 days' },
+  { days: null, label: 'All time' },
 ]
+const DEFAULT_DAYS = 7
+
+const daysParam = (days: number | null) => (days == null ? 'all' : String(days))
 
 const route = useRoute()
 const router = useRouter()
 
-function daysFromQuery(): number {
-  const days = Number(route.query.days)
-  return PERIODS.some((period) => period.days === days) ? days : 7
+function daysFromQuery(): number | null {
+  const raw = route.query.days
+  if (raw === 'all') return null
+  const days = Number(raw)
+  return PERIODS.some((period) => period.days === days) ? days : DEFAULT_DAYS
 }
 
 const days = ref(daysFromQuery())
-const overview = useAsync(() => apiFetch<ActivityOverview>(`/api/activity?days=${days.value}`))
+const overview = useAsync(() =>
+  apiFetch<ActivityOverview>(`/api/activity?days=${daysParam(days.value)}`),
+)
 
 onMounted(() => void overview.run())
 
 watch(days, (value) => {
-  void router.replace({ query: { ...route.query, days: value === 7 ? undefined : String(value) } })
+  void router.replace({
+    query: { ...route.query, days: value === DEFAULT_DAYS ? undefined : daysParam(value) },
+  })
   void overview.run()
 })
 
@@ -122,14 +97,6 @@ const stats = computed(() => {
   ]
 })
 
-type GamePlayers = {
-  name: string
-  iconUrl: string | null
-  days: number
-  ms: number
-  players: (ActivityMember & { ms: number; playingSince: number | null })[]
-}
-
 /** The game whose players the supporting sheet shows. It lives in the URL, so a link opens it. */
 const chosenGame = computed(() =>
   typeof route.query.game === 'string' && route.query.game ? route.query.game : null,
@@ -177,7 +144,7 @@ function closeGame() {
 }
 
 const gamePlayers = useAsync(() => {
-  const query = new URLSearchParams({ name: chosenGame.value ?? '', days: String(days.value) })
+  const query = new URLSearchParams({ name: chosenGame.value ?? '', days: daysParam(days.value) })
   return apiFetch<GamePlayers>(`/api/activity/game?${query}`)
 })
 
@@ -212,7 +179,7 @@ const plural = (count: number, one: string, many: string) =>
     <div class="flex flex-wrap gap-2" role="group" aria-label="Period">
       <FilterChip
         v-for="period in PERIODS"
-        :key="period.days"
+        :key="period.label"
         :label="period.label"
         :model-value="days === period.days"
         @update:model-value="days = period.days"

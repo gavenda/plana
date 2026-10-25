@@ -1,13 +1,8 @@
 import { closeCache, connectCache } from './cache'
-import { pruneActivity } from './db/activity'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
 import type { AppContext } from './context'
-import {
-  ACTIVITY_CHECKPOINT_INTERVAL_MS,
-  ACTIVITY_RETENTION_DAYS,
-  checkpointActivity,
-} from './discord/activity'
+import { ACTIVITY_CHECKPOINT_INTERVAL_MS, checkpointActivity } from './discord/activity'
 import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
 import { primeMemberCache } from './discord/service'
@@ -100,7 +95,6 @@ if (!isConfigured(getSettings())) {
 const pruneTimer = setInterval(() => {
   const removed = pruneExpiredSessions()
   if (removed > 0) console.log(`[sessions] pruned ${removed} expired session(s)`)
-  pruneActivity(Date.now() - ACTIVITY_RETENTION_DAYS * 86_400_000)
 }, SESSION_PRUNE_INTERVAL_MS)
 
 const activityTimer = setInterval(() => checkpointActivity(), ACTIVITY_CHECKPOINT_INTERVAL_MS)

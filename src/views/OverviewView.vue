@@ -4,10 +4,11 @@ import { RouterLink } from 'vue-router'
 
 import AuditSummary from '@/components/AuditSummary.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import type { ActivityOverview } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { auditIcon, describeAudit, toneContainerClass, type AuditPage } from '@/lib/audit'
 import { discordTextColor } from '@/lib/discord'
-import { absoluteTime, relativeTime } from '@/lib/format'
+import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
@@ -28,11 +29,17 @@ const session = useSessionStore()
 
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
 const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
+const play = useAsync(() => apiFetch<ActivityOverview>('/api/activity?days=7'))
+
+/** How many games and tracks Overview lists; Games & music has the rest. */
+const PLAY_LIMIT = 5
+const topGames = computed(() => play.data.value?.games.slice(0, PLAY_LIMIT) ?? [])
+const topTracks = computed(() => play.data.value?.tracks.slice(0, PLAY_LIMIT) ?? [])
 
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
   // Without a triage role there is no one to list; "Finish setting up" above says so.
-  await Promise.all([hasTriageRole.value ? pending.run() : undefined, activity.run()])
+  await Promise.all([hasTriageRole.value ? pending.run() : undefined, activity.run(), play.run()])
 })
 
 const CHECKLIST: { key: keyof GuildSettings; label: string }[] = [
@@ -112,7 +119,7 @@ const recent = computed(() =>
       </component>
     </div>
 
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-6">
+    <div class="grid items-start gap-6 expanded:grid-cols-2">
       <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="overview-triage">
         <div class="section-header">
           <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
@@ -191,6 +198,106 @@ const recent = computed(() =>
                 >
               </li>
             </ul>
+          </StateBlock>
+        </div>
+      </section>
+
+      <section aria-labelledby="overview-games">
+        <div class="section-header">
+          <h2 id="overview-games" class="text-title-medium">Top games this week</h2>
+          <RouterLink class="btn btn-text" to="/activity">View all</RouterLink>
+        </div>
+        <div :class="topGames.length === 0 && 'card'">
+          <StateBlock
+            :loading="play.loading.value"
+            :error="play.error.value"
+            :empty="topGames.length === 0"
+            empty-text="No games played this week."
+            compact
+          >
+            <ol class="segmented-list">
+              <li v-for="(game, index) in topGames" :key="game.name" class="segmented-item p-0">
+                <RouterLink
+                  :to="{ path: '/activity', query: { game: game.name } }"
+                  class="state-layer flex min-h-14 w-full min-w-0 items-center gap-4 rounded-[inherit] px-4 py-2"
+                >
+                  <span
+                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    >#{{ index + 1 }}</span
+                  >
+                  <img
+                    v-if="game.iconUrl"
+                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                    :src="game.iconUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                  <span
+                    v-else
+                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                    aria-hidden="true"
+                    ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                  >
+                  <span class="min-w-0 flex-1 truncate text-body-large" :title="game.name">{{
+                    game.name
+                  }}</span>
+                  <span class="shrink-0 text-body-large tabular-nums">{{
+                    formatDuration(game.ms)
+                  }}</span>
+                </RouterLink>
+              </li>
+            </ol>
+          </StateBlock>
+        </div>
+      </section>
+
+      <section aria-labelledby="overview-tracks">
+        <div class="section-header">
+          <h2 id="overview-tracks" class="text-title-medium">Top tracks this week</h2>
+          <RouterLink class="btn btn-text" to="/activity">View all</RouterLink>
+        </div>
+        <div :class="topTracks.length === 0 && 'card'">
+          <StateBlock
+            :loading="play.loading.value"
+            :error="play.error.value"
+            :empty="topTracks.length === 0"
+            empty-text="Nothing played on Spotify this week."
+            compact
+          >
+            <ol class="segmented-list">
+              <li v-for="(track, index) in topTracks" :key="track.id" class="segmented-item">
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                  >#{{ index + 1 }}</span
+                >
+                <img
+                  v-if="track.artUrl"
+                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                  :src="track.artUrl"
+                  :alt="track.album ?? ''"
+                  width="40"
+                  height="40"
+                />
+                <span
+                  v-else
+                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                  aria-hidden="true"
+                  ><span class="icon [--icon-size:20px]">music_note</span></span
+                >
+                <div class="min-w-0 flex-1 py-1">
+                  <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
+                  <p class="truncate text-body-small text-on-surface-variant">
+                    {{ track.artist ?? 'Unknown artist' }}
+                  </p>
+                </div>
+                <span class="shrink-0 text-body-large tabular-nums">{{
+                  track.plays === 1 ? '1 play' : `${track.plays.toLocaleString()} plays`
+                }}</span>
+              </li>
+            </ol>
           </StateBlock>
         </div>
       </section>
