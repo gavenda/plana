@@ -13,6 +13,8 @@ declare module 'vue-router' {
     title: string
     /** Reachable without a session. */
     public?: boolean
+    /** Fills the left of the window with art and moves the page to a column on the right. */
+    scene?: boolean
   }
 }
 
@@ -21,7 +23,7 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView.vue'),
-    meta: { title: 'Sign in', public: true },
+    meta: { title: 'Sign in', public: true, scene: true },
   },
   {
     path: '/',

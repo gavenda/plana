@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PlanaSays from '@/components/PlanaSays.vue'
-import type { PlanaMood } from '@/lib/plana'
+import { sceneUrls, type PlanaMood, type SceneFrame } from '@/lib/plana'
 
 const route = useRoute()
 
@@ -27,8 +27,97 @@ const loginHref = computed(() => {
 const code = computed(() => (typeof route.query.error === 'string' ? route.query.error : null))
 const error = computed(() => (code.value ? (MESSAGES[code.value] ?? 'Sign-in failed.') : null))
 
+/**
+ * The scene on the left: she looks at you, raises a finger, and the scan grid comes up around
+ * it. Each frame is drawn over the one before, so a crossfade never dips through the page.
+ */
+const FRAMES: SceneFrame[] = ['look', 'raise', 'scan']
+const frame = ref<SceneFrame>('look')
+const shown = (f: SceneFrame) => FRAMES.indexOf(f) <= FRAMES.indexOf(frame.value)
+
+/** How long the button must be held to sign in; the button's fill takes as long. */
+const HOLD_MS = 2500
+
+const timers: number[] = []
+function clearTimers() {
+  timers.splice(0).forEach((t) => window.clearTimeout(t))
+}
+
+/** Set once the check has finished and the browser is on its way to Discord. */
+const verified = ref(false)
+/** Set when Sensei lets go before the check finishes; cleared by the next press. */
+const interrupted = ref(false)
+
+/** The check is only played where the scene is on screen and motion isn't reduced. */
+function scenePlays(): boolean {
+  return (
+    window.matchMedia('(min-width: 1200px)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+/** Plays the fingerprint check; if nothing cancels it, leaves for Discord at the end. */
+function startCheck() {
+  clearTimers()
+  interrupted.value = false
+  frame.value = 'raise'
+  timers.push(window.setTimeout(() => (frame.value = 'scan'), 350))
+  timers.push(
+    window.setTimeout(() => {
+      verified.value = true
+      window.location.assign(loginHref.value)
+    }, HOLD_MS),
+  )
+}
+
+/** Letting go early turns her back, as a failed sign-in does. */
+function cancelCheck() {
+  if (verified.value || frame.value === 'look') return
+  clearTimers()
+  frame.value = 'look'
+  interrupted.value = true
+}
+
+const opensElsewhere = (e: MouseEvent) => e.metaKey || e.ctrlKey || e.shiftKey || e.altKey
+
+/** Holding the button is holding a finger to the scanner: the check runs while it's held. */
+function onPress(event: PointerEvent) {
+  if (event.button !== 0 || opensElsewhere(event) || verified.value || !scenePlays()) return
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  startCheck()
+}
+
+/**
+ * A pointer's click never signs in by itself where the scene plays; the hold does. A keyboard
+ * can't hold, so Enter plays the check through. Elsewhere the link is followed as usual.
+ */
+function onClick(event: MouseEvent) {
+  if (opensElsewhere(event) || !scenePlays()) return
+  event.preventDefault()
+  const fromKeyboard = event.detail === 0
+  if (fromKeyboard && frame.value === 'look' && !verified.value) startCheck()
+}
+
+/** Coming back with the browser's Back button restores the page as it was left; reset her. */
+function onPageShow(event: PageTransitionEvent) {
+  if (!event.persisted) return
+  clearTimers()
+  verified.value = false
+  interrupted.value = false
+  frame.value = 'look'
+}
+onMounted(() => window.addEventListener('pageshow', onPageShow))
+onBeforeUnmount(() => {
+  window.removeEventListener('pageshow', onPageShow)
+  clearTimers()
+})
+
 /** She refuses someone who isn't an administrator; any other failure only unsettles her. */
 const plana = computed<{ mood: PlanaMood; line: string }>(() => {
+  if (frame.value !== 'look') return { mood: 'standby', line: 'Verifying. Please hold still.' }
+  if (interrupted.value) {
+    return { mood: 'uneasy', line: 'Verification interrupted. Please hold until I finish.' }
+  }
   if (!code.value) return { mood: 'standby', line: 'Standing by. Please verify your identity.' }
   if (code.value === 'forbidden') {
     return { mood: 'stern', line: "Verification failed. I can't let you in." }
@@ -38,16 +127,54 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
 </script>
 
 <template>
+  <!-- The scene, inset on the left; App.vue moves the panel into the column beside it. -->
+  <div
+    class="pointer-events-none fixed inset-y-6 right-scene-panel left-6 -z-10 hidden overflow-hidden rounded-3xl bg-surface-container-low select-none large:block"
+    aria-hidden="true"
+  >
+    <img
+      v-for="f in FRAMES"
+      :key="f"
+      class="absolute inset-0 size-full object-cover object-[70%_40%] transition-opacity duration-300 ease-effects-slow"
+      :class="shown(f) ? 'opacity-100' : 'opacity-0'"
+      :src="sceneUrls[f]"
+      alt=""
+      decoding="async"
+    />
+  </div>
+
   <div class="flex w-full justify-center">
     <div
       class="flex w-full max-w-[420px] flex-col items-center gap-4 rounded-3xl bg-surface-container-low px-10 py-12 text-center shadow-level1"
     >
       <h1 class="sr-only">Sign in to Plana</h1>
-      <PlanaSays :mood="plana.mood" :size="128" layout="column">{{ plana.line }}</PlanaSays>
+      <PlanaSays :mood="plana.mood" layout="column">{{ plana.line }}</PlanaSays>
 
       <p v-if="error" class="alert alert-error">{{ error }}</p>
 
-      <a class="btn btn-filled mt-2 h-14 w-full text-title-medium" :href="loginHref">
+      <a
+        class="btn btn-md btn-filled isolate mt-2 w-full touch-none overflow-hidden [-webkit-touch-callout:none]"
+        :href="loginHref"
+        draggable="false"
+        :aria-disabled="verified"
+        @pointerdown="onPress"
+        @pointerup="cancelCheck"
+        @pointercancel="cancelCheck"
+        @lostpointercapture="cancelCheck"
+        @contextmenu="frame !== 'look' && $event.preventDefault()"
+        @click="onClick"
+      >
+        <!-- The hold's progress: fills left to right while held, and drains fast on letting go. -->
+        <span
+          class="absolute inset-0 -z-10 origin-left bg-on-primary/24"
+          :class="
+            frame === 'look'
+              ? 'scale-x-0 transition-transform duration-200 ease-effects'
+              : 'scale-x-100 transition-transform ease-linear'
+          "
+          :style="frame === 'look' ? undefined : { transitionDuration: `${HOLD_MS}ms` }"
+          aria-hidden="true"
+        />
         <svg viewBox="0 0 24 18" width="20" height="15" aria-hidden="true">
           <path
             fill="currentColor"

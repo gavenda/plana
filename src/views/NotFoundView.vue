@@ -9,7 +9,7 @@ import PlanaSays from '@/components/PlanaSays.vue'
     <div
       class="flex w-full max-w-[400px] flex-col items-center gap-4 rounded-3xl bg-surface-container-low px-10 py-12 text-center shadow-level1"
     >
-      <PlanaSays mood="puzzled" :size="128" layout="column">
+      <PlanaSays mood="puzzled" layout="column">
         This place is... I see. There's nothing here.
       </PlanaSays>
       <h1 class="text-display-large font-semibold text-primary">404</h1>

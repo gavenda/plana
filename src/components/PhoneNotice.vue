@@ -8,7 +8,7 @@ import PlanaPortrait from '@/components/PlanaPortrait.vue'
     role="alert"
     class="hidden min-h-full flex-col items-center justify-center gap-6 bg-surface px-8 py-12 text-center phone:flex"
   >
-    <PlanaPortrait mood="uneasy" :size="128" />
+    <PlanaPortrait mood="uneasy" />
 
     <div class="flex max-w-[360px] flex-col gap-2">
       <h1 class="text-headline-small">Phones aren't supported</h1>

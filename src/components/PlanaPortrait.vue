@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
 import { portraitUrl, type PlanaMood } from '@/lib/plana'
 
-/** `size` is the badge's width; her ribbon and halo reach past it. */
-const props = withDefaults(defineProps<{ mood: PlanaMood; size?: number }>(), { size: 96 })
+defineProps<{ mood: PlanaMood }>()
+
+/** The badge's width, the same everywhere she appears; her ribbon and halo reach past it. */
+const SIZE = 128
 
 // The canvas cut by scripts/brand_assets.py is 720x760 source pixels, with a 560px
 // badge at (80, 200) in it. Keep these in step with the script.
@@ -13,9 +13,9 @@ const CANVAS_HEIGHT = 760
 const BADGE = 560
 const BADGE_LEFT = 80
 
-const scale = computed(() => props.size / BADGE)
-const width = computed(() => Math.round(CANVAS_WIDTH * scale.value))
-const height = computed(() => Math.round(CANVAS_HEIGHT * scale.value))
+const scale = SIZE / BADGE
+const width = Math.round(CANVAS_WIDTH * scale)
+const height = Math.round(CANVAS_HEIGHT * scale)
 
 /**
  * M3's 9-sided cookie in a 100x100 box: nine rounded lobes, inner radius 0.8, one lobe
@@ -44,7 +44,7 @@ const COOKIE = cookiePath()
     <svg
       class="absolute bottom-0 fill-primary-container"
       viewBox="0 0 100 100"
-      :style="{ left: `${BADGE_LEFT * scale}px`, width: `${size}px`, height: `${size}px` }"
+      :style="{ left: `${BADGE_LEFT * scale}px`, width: `${SIZE}px`, height: `${SIZE}px` }"
     >
       <path :d="COOKIE" />
     </svg>

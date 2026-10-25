@@ -38,20 +38,27 @@ async function signOut() {
   <PhoneNotice />
 
   <!-- Sign-in and 404: the panel centred, with Schale's emblem in the footer beneath it, over a
-       faint backdrop of her seaside scene. -->
-  <div v-if="chromeless" class="relative isolate flex min-h-full flex-col p-6 phone:hidden">
+       faint backdrop of her seaside scene. A page with a scene (sign-in) draws its own art on the
+       left from the large class up, so the panel, the footer and the backdrop move aside for it. -->
+  <div v-if="chromeless" class="relative isolate flex min-h-full phone:hidden">
     <img
-      class="pointer-events-none fixed inset-0 -z-10 size-full object-cover opacity-24 select-none"
+      class="pointer-events-none fixed inset-0 -z-10 size-full object-cover opacity-50 blur-md select-none"
+      :class="{ 'large:hidden': route.meta.scene }"
       :src="backdropUrl"
       alt=""
       aria-hidden="true"
     />
-    <div class="grid flex-1 place-items-center">
-      <RouterView />
+    <div
+      class="flex flex-1 flex-col p-6"
+      :class="{ 'large:ml-auto large:w-scene-panel large:flex-none': route.meta.scene }"
+    >
+      <div class="grid flex-1 place-items-center">
+        <RouterView />
+      </div>
+      <footer class="flex justify-center pt-6">
+        <SchaleMark class="w-24 text-on-surface-variant" />
+      </footer>
     </div>
-    <footer class="flex justify-center pt-6">
-      <SchaleMark class="w-24 text-on-surface-variant" />
-    </footer>
   </div>
 
   <!-- No top app bar: the rail marks where you are. The page makes room for the rail (`.shell` in

@@ -378,7 +378,7 @@ async function toggleMode() {
                   :tabindex="cell === focusDay ? 0 : -1"
                   :aria-label="formatMonthDay(viewMonth, cell)"
                   :aria-current="viewMonth === todayMonth && cell === todayDay ? 'date' : undefined"
-                  class="state-layer mx-auto grid size-10 cursor-pointer place-items-center rounded-full text-body-large transition-[border-radius] duration-350 ease-spatial-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:rounded-md"
+                  class="state-layer mx-auto grid size-10 cursor-pointer place-items-center rounded-full-40 text-body-large transition-[border-radius] duration-350 ease-spatial-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:rounded-md"
                   :class="
                     viewMonth === draftMonth && cell === draftDay
                       ? 'bg-primary text-on-primary'
@@ -412,7 +412,7 @@ async function toggleMode() {
             type="button"
             role="option"
             :aria-selected="viewMonth === index + 1"
-            class="state-layer h-9 cursor-pointer rounded-full text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md"
+            class="state-layer h-9 cursor-pointer rounded-full-36 text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md"
             :class="
               viewMonth === index + 1
                 ? 'bg-primary text-on-primary'

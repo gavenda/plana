@@ -30,3 +30,11 @@ export const logoUrl = files['../assets/plana/logo.webp']!
 
 /** The faint seaside scene behind the stand-alone pages (sign-in, 404). */
 export const backdropUrl = files['../assets/plana/backdrop.webp']!
+
+/** The sign-in scene: her fingerprint check, frame by frame, in the order they play. */
+export const sceneUrls = {
+  look: files['../assets/plana/scene-look.webp']!,
+  raise: files['../assets/plana/scene-raise.webp']!,
+  scan: files['../assets/plana/scene-scan.webp']!,
+}
+export type SceneFrame = keyof typeof sceneUrls

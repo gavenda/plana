@@ -137,7 +137,7 @@ const version = __APP_VERSION__
 
 <template>
   <!-- Two panes on large windows: the form flexes, About is a fixed 360dp pane. -->
-  <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
+  <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_480px]">
     <section aria-labelledby="settings-roles">
       <div class="section-header">
         <div>

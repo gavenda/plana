@@ -25,7 +25,8 @@ Views use those tokens as Tailwind utilities; no component has a `<style>` block
    exclaims.
 3. **Her face is for a screen with nothing to show, a page that failed to load, a
    confirmation dialog, the sign-in panel, the 404 panel, the phone notice and About.**
-   It is never beside a figure, a list row, a form field or a chart.
+   It is never beside a figure, a list row, a form field or a chart. The one place she
+   appears in full, outside a badge, is [the sign-in scene](#the-sign-in-scene).
 4. **A badge masks her.** She stands in M3's 9-sided cookie in `primary-container`, the
    navy of her coat. She is cut off at its edge from its middle down, and her head, ribbon
    and halo flow out past it. Her eyes are its horizontal centre.
@@ -205,8 +206,8 @@ her from the chest up in a badge: M3's 9-sided cookie in `primary-container`, ni
 lobes with one pointing up, drawn as an SVG so it takes the theme's colour. The badge
 masks her. From its middle down she is cut off at its edge, and above it her head, her
 ribbon and her halo flow out past it, the ribbon well beyond its left side. The cookie is
-centred on her eyes. `size` is the badge's width, 96 unless given another; the whole
-portrait is 9/7 of that wide and 19/14 of it tall, to make room for what flows out. She is
+centred on her eyes. The badge is 128px wide everywhere she appears, and has no other
+size; the whole portrait is 9/7 of that wide and 19/14 of it tall, to make room for what flows out. She is
 hidden from screen readers (`alt=""`), since the words beside her say what the screen has
 to.
 
@@ -226,13 +227,13 @@ She is in these places and nowhere else.
 | **Sign-in failed**, any other code                         | `Uneasy`    | 128  | That didn't connect. Please try again.                   | The reason, in the error alert              |
 | **404 panel**                                              | `Puzzled`   | 128  | This place is... I see. There's nothing here.            | "Back to overview"                          |
 | **Phone notice**, in place of the devices icon             | `Uneasy`    | 128  | —                                                        | The existing headline and text              |
-| **Triage queue, empty**                                    | `Asleep`    | 96   | Standing by. No one is waiting in triage.                | —                                           |
-| **Birthdays, none saved**                                  | `Curious`   | 96   | No birthdays yet. I'll remember each one I'm told.       | "Members add theirs with `/birthday set`."  |
-| **Audit log, empty**                                       | `Standby`   | 96   | Nothing to report. I'll record every change here.        | —                                           |
-| **A page that failed to load** (`StateBlock` with `error`) | `Confused`  | 96   | I'm confused... This didn't load.                        | The reason, plain, and a "Try again" button |
-| **Sign-out dialog**                                        | `Hesitant`  | 96   | — (see [Dialogs](#dialogs))                              |                                             |
-| **Remove birthday dialog**                                 | `Attentive` | 96   | — (see [Dialogs](#dialogs))                              |                                             |
-| **About**, at the foot of Settings                         | `Content`   | 96   | Connection confirmed. I've been waiting for you, Sensei. | "Plana 1.0.0", then the credits             |
+| **Triage queue, empty**                                    | `Asleep`    | 128  | Standing by. No one is waiting in triage.                | —                                           |
+| **Birthdays, none saved**                                  | `Curious`   | 128  | No birthdays yet. I'll remember each one I'm told.       | "Members add theirs with `/birthday set`."  |
+| **Audit log, empty**                                       | `Standby`   | 128  | Nothing to report. I'll record every change here.        | —                                           |
+| **A page that failed to load** (`StateBlock` with `error`) | `Confused`  | 128  | I'm confused... This didn't load.                        | The reason, plain, and a "Try again" button |
+| **Sign-out dialog**                                        | `Hesitant`  | 128  | — (see [Dialogs](#dialogs))                              |                                             |
+| **Remove birthday dialog**                                 | `Attentive` | 128  | — (see [Dialogs](#dialogs))                              |                                             |
+| **About**, at the foot of Settings                         | `Content`   | 128  | Connection confirmed. I've been waiting for you, Sensei. | "Plana 1.0.0", then the credits             |
 
 Where she is not, on purpose:
 
@@ -284,7 +285,9 @@ Rules for halos:
 
 ### Cutting a new mood
 
-The sources are 1000×1905, all in one pose, so one box serves every face.
+The sources are lossless PNGs, all in one pose, so one box serves every face. The boxes
+are measured in the pixels of the older 1000×1905 WebPs; the script maps them onto the
+PNGs (`PNG_SCALE`, `PNG_OFFSET`) and resamples each cut once, straight to its final size.
 
 1. Add the mood and its source number to `MOODS` in `scripts/brand_assets.py`.
 2. Run `python3 scripts/brand_assets.py`, which needs Pillow. It cuts a 720×760 canvas
@@ -332,6 +335,32 @@ from Blue Archive. It is behind the stand-alone pages only (sign-in and 404), co
 window at 16% opacity over `surface`, so it tints the page lilac and blue without
 competing with the panel. `scripts/brand_assets.py` saves it as
 `src/assets/plana/backdrop.webp` (1600px wide). It never goes behind the dashboard itself.
+From the _large_ window class up (1200px), the sign-in page shows
+[its scene](#the-sign-in-scene) instead.
+
+## The sign-in scene
+
+Three frames from Blue Archive of her in an empty classroom, checking a fingerprint
+(`branding/BG_CS_StudentCouncil_03_*.jpg`). In order: she looks at you (`_1`), raises a
+finger (`_3`), and a scan grid comes up around it (`_2`). `scripts/brand_assets.py` saves
+them as `src/assets/plana/scene-look.webp`, `scene-raise.webp` and `scene-scan.webp`
+(1600px wide).
+
+- **Where.** The sign-in page only, from the _large_ window class up. The frames fill the
+  left of the window, inset 24px and in `rounded-3xl`, and the panel and Schale's emblem
+  move to a column on the right (`--spacing-scene-panel`). Below _large_ the scene is
+  hidden and the page is the centred panel over the backdrop, as on 404.
+- **At rest** she is on `look`, whatever the panel says, sign-in failures included. The
+  panel's badge keeps carrying her mood.
+- **Signing in is a hold**, like a finger held to a scanner. Pressing the button plays the
+  check: `raise`, then `scan` 350ms later, each fading in over 300ms (`ease-effects-slow`)
+  on top of the frame before, and her line is "Verifying. Please hold still." Meanwhile
+  the button fills left to right in `on-primary` at 24%. Held for 2.5s (`HOLD_MS`), the
+  browser leaves for Discord. Let go sooner and the fill drains in 200ms, and she turns
+  back to `look`, as after a failed sign-in, in `Uneasy`: "Verification interrupted.
+  Please hold until I finish." A keyboard can't hold, so Enter plays the check through.
+  With reduced motion, or with the scene hidden, the button is an ordinary link.
+- Nothing is drawn over the art. It is decorative and hidden from assistive tech.
 
 ## Dialogs
 
@@ -368,23 +397,29 @@ weight (`font-medium`) rather than inventing a size.
 
 The M3 shape scale replaces Tailwind's default radii:
 
-| Utility        | M3 token              | Size | Used for                                            |
-| -------------- | --------------------- | ---- | --------------------------------------------------- |
-| `rounded-xs`   | extra small           | 4px  | text fields, menu items                             |
-| `rounded-sm`   | small                 | 8px  | chips, pressed buttons                              |
-| `rounded-md`   | medium                | 12px | pressed icon buttons, selected menu item            |
-| `rounded-lg`   | large                 | 16px | banners, menus, speech bubbles                      |
-| `rounded-xl`   | extra large           | 28px | cards, stat tiles, dialogs                          |
-| `rounded-2xl`  | extra large increased | 32px | hovered stat tiles                                  |
-| `rounded-3xl`  | extra extra large     | 48px | sign-in and 404 panels                              |
-| `rounded-full` | full                  | —    | buttons at rest, rail indicators, avatars, the logo |
+| Utility                 | M3 token              | Size            | Used for                                                                                  |
+| ----------------------- | --------------------- | --------------- | ----------------------------------------------------------------------------------------- |
+| `rounded-xs`            | extra small           | 4px             | text fields, menu items                                                                   |
+| `rounded-sm`            | small                 | 8px             | chips, pressed buttons                                                                    |
+| `rounded-md`            | medium                | 12px            | pressed icon and medium buttons, selected menu item                                       |
+| `rounded-lg`            | large                 | 16px            | banners, menus, speech bubbles                                                            |
+| `rounded-xl`            | extra large           | 28px            | cards, stat tiles, dialogs                                                                |
+| `rounded-2xl`           | extra large increased | 32px            | hovered stat tiles                                                                        |
+| `rounded-3xl`           | extra extra large     | 48px            | sign-in and 404 panels                                                                    |
+| `rounded-full`          | full                  | —               | rail indicators, avatars, the logo                                                        |
+| `rounded-full-<height>` | full                  | half the height | anything that morphs from round: buttons at rest (32, 40, 56), date picker cells (36, 40) |
 
 Her portrait's badge is the one shape outside this scale: M3 Expressive's 9-sided cookie
 (see [Plana's portraits](#planas-portraits)).
 
 **Shape morphing** is the Expressive signature: buttons are pill-shaped at rest and
-square off to `rounded-sm` while pressed; clickable stat tiles round further on hover.
-Animate radius changes on the spatial spring.
+square off to `rounded-sm` while pressed (`rounded-md` for the 56px `.btn-md`); clickable
+stat tiles round further on hover. Animate radius changes on the spatial spring.
+
+A shape that morphs from round takes `rounded-full-<height>`, never `rounded-full`.
+Tailwind's `rounded-full` is an infinite radius, which can't be animated: a press holds
+round and then snaps square, and a release jumps straight back. A new height gets its own
+`--radius-full-<height>` token in `main.css`.
 
 ## Motion
 
@@ -535,14 +570,15 @@ emoji Discord copy already uses are kept there; the dashboard uses none.
 The originals are in `/branding`, which is kept out of git (it is Blue Archive's artwork,
 not the app's).
 
-| File                               | What it is                                                                                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `expressions/`                     | 21 full-length portraits, 1000×1905, in one pose with different faces and halos, numbered 1 to 20 and 99. The colours were sampled from number 1. |
-| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                |
-| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                |
-| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                  |
+| File                               | What it is                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `expressions/`                     | 21 full-length portraits in one pose with different faces and halos, numbered 1 to 20 and 99, as lossless PNGs (`Plana_<nn>.png`, 1000×1920; number 1 is `Plana_00.png`) and the older lossy WebPs (`Plana_Portrait_Expression_<n>.webp`, 1000×1905, slightly smaller in frame). The script cuts from the PNGs. The colours were sampled from WebP number 1. |
+| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                                                                                                                                                                                                                           |
+| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                           |
+| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                             |
 
-What ships is the logo and the ten cut portraits in `src/assets/plana/`. The Discord
+What ships is the logo, the ten cut portraits, the backdrop and the three sign-in scene
+frames in `src/assets/plana/`. The Discord
 avatar is written to `branding/out/` for uploading by hand. The badge, the speech bubble,
 the halo mark and the Schale mark are drawn in code.
 
