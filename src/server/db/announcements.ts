@@ -57,12 +57,14 @@ export function rememberAnnouncement(input: {
   memberId: string
   channelId: string
   messageId: string
+  /** When the card was posted. Its greeting is picked from this, so pass the same time. */
+  createdAt: number
 }): void {
   upsert.run({
     member_id: input.memberId,
     channel_id: input.channelId,
     message_id: input.messageId,
-    created_at: Date.now(),
+    created_at: input.createdAt,
   })
 }
 

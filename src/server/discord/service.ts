@@ -113,14 +113,19 @@ export async function announceTriage(member: GuildMember): Promise<Result<{ mess
   }
 
   const roles = await getAssignableRoles(settings)
-  const container = buildTriageAnnouncement(member, roles, guild.preferredLocale)
+  const postedAt = Date.now()
 
   try {
     const message = await channel.send({
-      components: [container],
+      components: buildTriageAnnouncement(member, roles, guild.preferredLocale, postedAt),
       flags: MessageFlags.IsComponentsV2,
     })
-    rememberAnnouncement({ memberId: member.id, channelId: channel.id, messageId: message.id })
+    rememberAnnouncement({
+      memberId: member.id,
+      channelId: channel.id,
+      messageId: message.id,
+      createdAt: postedAt,
+    })
     recordAudit({
       action: 'member.join',
       source: 'discord',
@@ -169,15 +174,14 @@ async function markAnnouncementResolved(options: {
 
     const message = await channel.messages.fetch(record.messageId)
     await message.edit({
-      components: [
-        buildResolvedAnnouncement({
-          member,
-          roleName,
-          actorName: actor.name,
-          source,
-          locale: member.guild.preferredLocale,
-        }),
-      ],
+      components: buildResolvedAnnouncement({
+        member,
+        postedAt: record.createdAt,
+        roleName,
+        actorName: actor.name,
+        source,
+        locale: member.guild.preferredLocale,
+      }),
       flags: MessageFlags.IsComponentsV2,
     })
   } catch (error) {

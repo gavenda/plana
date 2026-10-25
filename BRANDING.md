@@ -599,8 +599,19 @@ says "I", with the same status-first shape:
 | `reply.birthday_removed`            | Understood. I've forgotten your birthday.                             |
 | `reply.error_interaction_execution` | I'm confused... Something went wrong handling that. Please try again. |
 
-Announcements, triage cards and errors that name a permission stay as they are. The
-emoji Discord copy already uses are kept there; the dashboard uses none.
+**The triage card** is spoken to the members reading the channel, about the newcomer, never
+to the newcomer: "Welcome, @member" as its heading, then one of her greetings
+(`announcement.greetings`, picked from the member and when the card was posted, so the
+resolved card keeps the same line), such as "Arrival logged. Someone new has joined us." It
+has no container, and says nothing the members can't use: no account ID, username, or join
+and account dates. Its notes are `-#` small text with a capitalised label and no emoji:
+"**WARNING:** New account. Made 2 days ago." (only for an account under 7 days old, the
+dashboard's rule) and "**ACTION:** Awaiting a role. Assign one to admit them." A divider
+sits above the role buttons and the "Open triage" link to the dashboard. Once a role is
+given, the buttons give way to "-# Assigned **role** by **person**".
+
+Other announcements and errors that name a permission stay as they are. The emoji Discord
+copy already uses are kept there; the dashboard uses none.
 
 ### Left out on purpose
 

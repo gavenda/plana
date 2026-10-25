@@ -23,3 +23,9 @@ export function t(key: string, options?: Record<string, unknown>): string {
 export function tl(key: string, locale: string, options?: Record<string, unknown>): string {
   return t(key, { lng: locale, ...options })
 }
+
+/** A key that holds a list of lines, in the caller's locale. Empty if the key is missing. */
+export function tlList(key: string, locale: string): string[] {
+  const value: unknown = i18next.t(key, { lng: locale, returnObjects: true })
+  return Array.isArray(value) ? value.map(String) : []
+}

@@ -39,15 +39,28 @@
       "invalid_birthday": "That is not a real date."
     },
     "announcement": {
-      "welcome": "## Welcome {{member}}",
-      "identity": "**{{tag}}** — `{{id}}`",
-      "account_created": "Account created {{timestamp}}",
-      "joined": "Joined this server {{timestamp}}",
+      "welcome": "## Welcome, {{member}}",
+      "greetings": [
+        "New arrival confirmed. Please make them feel welcome.",
+        "Arrival logged. Someone new has joined us.",
+        "Roster updated. Please welcome our newest member.",
+        "Connection confirmed. A new member is here.",
+        "Entry recorded. Please say hello when you have a moment.",
+        "A new face... I see. Please be kind to them.",
+        "Headcount updated. One more has joined.",
+        "Scan complete. A new member has arrived. Please welcome them.",
+        "Arrival detected. Please give them a warm welcome.",
+        "Notice. A new member has entered the server.",
+        "New arrival recorded. Please show them around.",
+        "Status update. We have a new arrival."
+      ],
+      "new_account": "-# **WARNING:** New account. Made {{timestamp}}.",
       "avatar_alt": "{{username}}'s avatar",
-      "no_roles_configured": "-# ⚠️ No assignable roles are configured yet. Set them in the dashboard.",
-      "assign_prompt": "Assign a role to move them out of triage:",
-      "resolved": "✅ Assigned **{{role}}** by **{{actor}}** {{timestamp}}",
-      "resolved_via_dashboard": "✅ Assigned **{{role}}** by **{{actor}}** via the dashboard {{timestamp}}"
+      "assign_prompt": "-# **ACTION:** Awaiting a role. Assign one to admit them.",
+      "no_roles_configured": "-# **ACTION:** No assignable roles are configured. Set them in the dashboard.",
+      "open_triage": "Open triage",
+      "resolved": "-# Assigned **{{role}}** by **{{actor}}** {{timestamp}}",
+      "resolved_via_dashboard": "-# Assigned **{{role}}** by **{{actor}}** via the dashboard {{timestamp}}"
     },
     "command": {
       "broadcast": {
