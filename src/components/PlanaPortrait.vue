@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 
-import { portraitUrl, type PlanaMood } from '@/lib/plana'
+import type { PlanaMood } from '@/lib/plana'
 import { LivePortrait, livePortraitsSupported } from '@/lib/plana-live'
 
 const props = defineProps<{ mood: PlanaMood }>()
@@ -9,8 +9,8 @@ const props = defineProps<{ mood: PlanaMood }>()
 /** The badge's width, the same everywhere she appears; her ribbon and halo reach past it. */
 const SIZE = 192
 
-// The canvas cut by scripts/brand_assets.py is 720x760 source pixels, with a 560px
-// badge at (80, 200) in it. Keep these in step with the script.
+// Her canvas is 720x760 units, with a 560 unit badge at (80, 200) in it. Keep these in step
+// with src/lib/plana-framing.json, which places her rig in it.
 const CANVAS_WIDTH = 720
 const CANVAS_HEIGHT = 760
 const BADGE = 560
@@ -23,7 +23,7 @@ const height = Math.round(CANVAS_HEIGHT * scale)
 
 /**
  * M3's 9-sided cookie: nine rounded lobes, inner radius 0.8, one lobe pointing up, centred on
- * (cx, cy). Must match cookie9() in scripts/brand_assets.py, which cuts her to it.
+ * (cx, cy).
  */
 function cookiePath(cx: number, cy: number, radius: number, steps = 180): string {
   const points: string[] = []
@@ -38,8 +38,8 @@ function cookiePath(cx: number, cy: number, radius: number, steps = 180): string
 const COOKIE = cookiePath(50, 50, 50)
 
 /**
- * The live portrait is cut as the still ones are: inside the cookie, plus everything above its
- * middle, so her head, ribbon and halo stand clear of it.
+ * She is cut to the badge: inside the cookie, plus everything above its middle, so her head,
+ * ribbon and halo stand clear of it.
  */
 const centreY = BADGE_TOP + BADGE / 2
 const MASK = `url("data:image/svg+xml,${encodeURIComponent(
@@ -111,16 +111,7 @@ function endPat() {
     >
       <path :d="COOKIE" />
     </svg>
-    <!-- The still portrait shows until the live one is drawn, then fades out under it. -->
-    <img
-      class="absolute inset-0 size-full transition-opacity duration-300 ease-effects-slow"
-      :class="live ? 'opacity-0' : 'opacity-100'"
-      :src="portraitUrl(mood)"
-      alt=""
-      :width="width"
-      :height="height"
-      draggable="false"
-    />
+    <!-- She fades in once her rig is drawn; until then the badge stands alone. -->
     <canvas
       ref="canvas"
       class="absolute inset-0 size-full transition-opacity duration-300 ease-effects-slow"

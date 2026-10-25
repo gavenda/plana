@@ -15,4 +15,4 @@ Patched to play Spine 3.8 rigs as Spine does (each patch is marked `Plana patch`
 - `atlasTextures` takes `{ mipmaps: true }`. A portrait draws the 2048×1024 atlas at a
   fraction of its size, which without mipmaps leaves her edges jagged.
 
-Not formatted or linted with the app's code.
+Not formatted or linted with the app's code (`.prettierignore`, `eslint.config.ts`).

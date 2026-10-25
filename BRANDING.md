@@ -209,7 +209,7 @@ masks her. From its middle down she is cut off at its edge, and above it her hea
 ribbon and her halo flow out past it, the ribbon well beyond its left side. The cookie is
 centred on her eyes. The badge is 192px wide everywhere she appears, and has no other
 size; the whole portrait is 9/7 of that wide and 19/14 of it tall, to make room for what flows out. She is
-hidden from screen readers (`alt=""`), since the words beside her say what the screen has
+hidden from screen readers (`aria-hidden`), since the words beside her say what the screen has
 to.
 
 `PlanaSays` puts her portrait beside a speech bubble (`SpeechBubble`): a `rounded-lg`
@@ -256,7 +256,7 @@ DoReMi, from Blue Archive."
 
 ### Moods
 
-Twenty-one faces are in the sources, each with its own halo. Ten are cut. A new place
+Twenty-one faces are in the sources, each with its own halo. Ten are moods. A new place
 picks from these first, by face and by halo.
 
 | Mood        | Face                          | Halo             | Source | Used for                                 |
@@ -272,7 +272,7 @@ picks from these first, by face and by halo.
 | `Confused`  | A spiral eye, flustered       | Glitched         | 13     | A page that failed to load               |
 | `Stern`     | A frown                       | Shattered        | 11     | Sign-in refused (not an administrator)   |
 
-Not cut: 2 neutral, lips apart; 3 a faint smile; 4 sweat, glitched halo; 5 surprised "o",
+Not moods: 2 neutral, lips apart; 3 a faint smile; 4 sweat, glitched halo; 5 surprised "o",
 shattered halo; 10 shouting, shattered halo; 12 troubled, glitched halo; 14 a ">" wink,
 warped halo; 15 speaking; 17 eyes closed and blushing, a **heart halo**; 19 shadowed
 eyes, shattered halo; 20 shadowed eyes, mouth open, glitched halo.
@@ -285,41 +285,35 @@ Rules for halos:
   ships it yet; it is the first choice if one is added.
 - A ring halo is the default. Prefer it unless the moment is uneasy.
 
-### Cutting a new mood
+### Adding a mood
 
-The portraits are rendered from her [live rig](#live-portraits), on the frame a live
-portrait starts on (her idle animation and the mood's face, both at their start), so the
-still a live portrait replaces is the same picture. The expression numbers are the rig's
-face animations.
+A mood is one of her rig's face animations; the expression numbers are those animations.
 
-1. Add the mood and its expression number to `MOODS` in `scripts/brand_assets.py`, and to
-   `MOOD_ANIMATION` in `src/lib/plana-live.ts`.
-2. Run `python3 scripts/brand_assets.py`. It needs Pillow, Bun, and a Chromium for
-   Playwright (`bunx playwright install chromium`, or `CHROMIUM_PATH`):
-   `scripts/render_portraits.mjs` draws each mood with the app's own runtime, at twice the
-   saved size. The canvas is 720×760 units, framed on her eyes by
-   `src/lib/plana-framing.json`, which the live portraits read too. The badge is a 560 unit
-   square in it, 200 down, so its middle sits just under her eyes, and the canvas around it
-   holds her ribbon and halo. The script masks her to the cookie below that middle and
-   saves the canvas at 540×570 as WebP to `src/assets/plana/<mood>.webp`, which Vite
-   fingerprints and serves.
+1. Add the mood and its expression number to `MOODS` in `scripts/brand_assets.py` (so the
+   rig keeps that animation) and to `MOOD_ANIMATION` in `src/lib/plana-live.ts`.
+2. Run `python3 scripts/brand_assets.py`, which needs Pillow and Bun.
 3. Add it to `PlanaMood` in `src/lib/plana.ts`.
 
-The cookie's outline is the same formula in the script (`cookie9`) and the component
-(`cookiePath`), and the canvas and badge sizes are written in both; change them together.
-The logo and the Discord avatar are still cut from the lossless PNG expressions, by the
-same script.
+The logo and the Discord avatar are cut from the lossless PNG expressions by the same
+script.
 
 ### Live portraits
 
-Every portrait comes alive once it is on screen: her rig from the game, cut to the badge
-exactly as the still portraits are (inside the cookie, and everything above its middle). The
-still portrait shows until the rig is drawn, then fades out under it over 300ms
-(`ease-effects-slow`). With reduced motion, or without WebGL, the still portrait stays.
+Every portrait is her rig from the game, drawn live in the badge. There are no still
+portraits: the badge shows on its own until her rig is drawn, then she fades in over 300ms
+(`ease-effects-slow`). She comes alive the first time she is on screen, so a hidden portrait
+(the phone notice on a large window) never loads. With reduced motion she is drawn but held
+on her first frame, with no breathing or blinking; patting her still works, since Sensei
+asked for it. Without WebGL the badge stays empty.
 
-- **At rest** she breathes (`Idle_01`) and blinks every 2.5 to 6 seconds, wearing her mood's
-  face: the same number as the cut portrait (`MOOD_ANIMATION` in `src/lib/plana-live.ts`).
-  She doesn't blink with a face whose eye is already closed (14, 15, 16, 17 and 99).
+Her canvas is 720×760 units, framed on her eyes by `src/lib/plana-framing.json`. The badge
+is a 560 unit square in it, 200 down, so its middle sits just under her eyes, and the canvas
+around it holds her ribbon and halo. She is masked to the cookie below that middle
+(`PlanaPortrait.vue`).
+
+- **At rest** she breathes (`Idle_01`) and blinks every 2.5 to 6 seconds, wearing her
+  mood's face (`MOOD_ANIMATION` in `src/lib/plana-live.ts`). She doesn't blink with a face
+  whose eye is already closed (14, 15, 16, 17 and 99).
 - **She doesn't follow the pointer.** The rig can (`Look_01_M` with the `Touch_Point`
   bone), but it is turned off; she only looks towards the pointer while patted.
 - **Pressing and holding on her pats her**: her head tilts towards the pointer, and her face
@@ -334,9 +328,7 @@ and writes `src/assets/plana/rig/` (`plana.json`, `plana.atlas`, `plana.webp`; a
 compressed). It plays on [Rigby2D](https://github.com/jaisurya-dev-art/rigby2d)'s runtime
 (MIT or Apache-2.0), vendored and patched in `src/lib/rigby/`; nothing from Spine ships.
 The rig and the runtime (25 KB compressed) load on the first portrait and are shared; each
-portrait draws to its own canvas, and only while it's on screen. Where the rig sits in the
-badge (`src/lib/plana-framing.json`) is shared with the still portraits' renderer, so
-changing it moves both. While the still fades out under her, she holds that first frame.
+portrait draws to its own canvas, and only while it's on screen.
 
 ## The halo
 
@@ -604,16 +596,16 @@ emoji Discord copy already uses are kept there; the dashboard uses none.
 The originals are in `/branding`, which is kept out of git (it is Blue Archive's artwork,
 not the app's).
 
-| File                               | What it is                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `expressions/`                     | 21 full-length portraits in one pose with different faces and halos, numbered 1 to 20 and 99, as lossless PNGs (`Plana_<nn>.png`, 1000×1920; number 1 is `Plana_00.png`) and the older lossy WebPs (`Plana_Portrait_Expression_<n>.webp`, 1000×1905, slightly smaller in frame). The logo is cut from the PNGs; the portraits are rendered from `NP0035_spr/`. The colours were sampled from WebP number 1. |
-| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                                                                                                                                                                                                                                                                          |
-| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                                                                          |
-| `NP0035_spr/`                      | Her rig from the game (Spine 3.8): `.skel`, `.atlas` and the 2048×1024 atlas page. The source of [her live portraits](#live-portraits).                                                                                                                                                                                                                                                                     |
-| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                                                                            |
+| File                               | What it is                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `expressions/`                     | 21 full-length portraits in one pose with different faces and halos, numbered 1 to 20 and 99, as lossless PNGs (`Plana_<nn>.png`, 1000×1920; number 1 is `Plana_00.png`) and the older lossy WebPs (`Plana_Portrait_Expression_<n>.webp`, 1000×1905, slightly smaller in frame). The logo is cut from the PNGs. The colours were sampled from WebP number 1. |
+| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                                                                                                                                                                                                                           |
+| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                           |
+| `NP0035_spr/`                      | Her rig from the game (Spine 3.8): `.skel`, `.atlas` and the 2048×1024 atlas page. The source of [her portraits](#live-portraits).                                                                                                                                                                                                                           |
+| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                             |
 
-What ships is the logo, the ten cut portraits, the backdrop, the three sign-in scene
-frames and her live rig (`rig/`) in `src/assets/plana/`. The Discord
+What ships is the logo, the backdrop, the three sign-in scene frames and her live rig
+(`rig/`) in `src/assets/plana/`. The Discord
 avatar is written to `branding/out/` for uploading by hand. The badge, the speech bubble,
 the halo mark and the Schale mark are drawn in code.
 

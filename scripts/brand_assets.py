@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cuts Plana's portraits, logo, backdrop, sign-in scene, live rig and Discord avatar from the art in /branding.
+"""Writes Plana's live rig, logo, backdrop, sign-in scene and Discord avatar from the art in /branding.
 
 Run from the repository root: python3 scripts/brand_assets.py (needs Pillow).
 Every shipped image comes from here; never edit the outputs by hand. See BRANDING.md.
@@ -8,7 +8,6 @@ Every shipped image comes from here; never edit the outputs by hand. See BRANDIN
 import json
 import math
 import subprocess
-import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -42,7 +41,8 @@ RIG_ANIMATIONS = [
     "17",  # the heart halo, while she is patted
 ]
 
-# Mood name -> source expression number. Expression 1 is Plana_00.png; the rest are Plana_<nn>.png.
+# Mood name -> expression number: the face animation the rig keeps for each mood (the same as
+# MOOD_ANIMATION in src/lib/plana-live.ts). The logo is cut from Standby's PNG, Plana_00.png.
 MOODS = {
     "standby": 1,
     "content": 16,
@@ -68,13 +68,6 @@ PNG_PAD = 32  # transparent margin, since the canvas starts slightly above the P
 # the one under her fringe, mirrored across her nose (x=536).
 EYES_X = 536
 
-# The canvas is wider than the badge so her ribbon and halo can flow out past it.
-CANVAS_WIDTH, CANVAS_HEIGHT = 720, 760
-CANVAS = (EYES_X - CANVAS_WIDTH // 2, 0, EYES_X + CANVAS_WIDTH // 2, CANVAS_HEIGHT)
-BADGE_WIDTH = 560  # the M3 9-sided cookie she stands in
-BADGE_LEFT, BADGE_TOP = EYES_X - BADGE_WIDTH // 2, 200
-OUT_WIDTH = 540  # saved width of the whole canvas: over 2x its 247px on screen
-
 # The logo is a tighter square on her face, so it still reads at 16px.
 LOGO_WIDTH = 440
 LOGO_BOX = (EYES_X - LOGO_WIDTH // 2, 220, EYES_X + LOGO_WIDTH // 2, 220 + LOGO_WIDTH)
@@ -96,59 +89,6 @@ def cut(n: int, box: tuple[float, float, float, float], size: tuple[int, int]) -
     dx, dy = PNG_OFFSET[0] + PNG_PAD, PNG_OFFSET[1] + PNG_PAD
     png_box = (x0 * PNG_SCALE + dx, y0 * PNG_SCALE + dy, x1 * PNG_SCALE + dx, y1 * PNG_SCALE + dy)
     return source(n).resize(size, Image.LANCZOS, box=png_box)
-
-
-def cookie9(cx: float, cy: float, radius: float, steps: int = 720) -> list[tuple[float, float]]:
-    """M3's 9-sided cookie: nine rounded lobes, inner radius 0.8, one lobe pointing up.
-
-    Must match cookiePath() in src/components/PlanaPortrait.vue.
-    """
-    points = []
-    for i in range(steps):
-        theta = 2 * math.pi * i / steps
-        r = radius * (0.9 + 0.1 * math.cos(9 * theta))
-        # theta 0 is straight up; y grows downwards.
-        points.append((cx + r * math.sin(theta), cy - r * math.cos(theta)))
-    return points
-
-
-def rendered_portraits() -> dict[str, Image.Image]:
-    """Each mood rendered from her live rig, on the frame a live portrait starts on.
-
-    Rendered at twice the saved size by scripts/render_portraits.mjs, then shrunk, so the
-    still portrait a live one replaces is the same picture. The framing is shared with the
-    app in src/lib/plana-framing.json.
-    """
-    width, height = OUT_WIDTH, round(CANVAS_HEIGHT * OUT_WIDTH / CANVAS_WIDTH)
-    with tempfile.TemporaryDirectory() as tmp:
-        subprocess.run(
-            ["bun", str(ROOT / "scripts" / "render_portraits.mjs"), tmp, str(width * 2), str(height * 2)]
-            + [f"{mood}={n:02d}" for mood, n in MOODS.items()],
-            check=True,
-        )
-        out = {}
-        for mood in MOODS:
-            # Shrink with premultiplied alpha, so no dark fringe creeps in at her edges.
-            art = Image.open(Path(tmp) / f"{mood}.png").convert("RGBa")
-            out[mood] = art.resize((width, height), Image.LANCZOS).convert("RGBA")
-        return out
-
-
-def portrait(crop: Image.Image) -> Image.Image:
-    """Her, cut off at the cookie's edge from its middle down; everything above stands clear."""
-    k = OUT_WIDTH / CANVAS_WIDTH
-    half = BADGE_WIDTH / 2 * k
-    cx = (BADGE_LEFT - CANVAS[0]) * k + half
-    cy = (BADGE_TOP - CANVAS[1]) * k + half
-    ss = 4  # draw the mask large and shrink it, for a smooth edge
-    mask = Image.new("L", (crop.width * ss, crop.height * ss), 0)
-    draw = ImageDraw.Draw(mask)
-    draw.polygon([(x * ss, y * ss) for x, y in cookie9(cx, cy, half)], fill=255)
-    draw.rectangle((0, 0, mask.width, cy * ss), fill=255)
-    mask = mask.resize(crop.size, Image.LANCZOS)
-    out = Image.new("RGBA", crop.size, (0, 0, 0, 0))
-    out.paste(crop, (0, 0), mask)
-    return out
 
 
 def logo(size: int) -> Image.Image:
@@ -206,11 +146,8 @@ def main() -> None:
     PORTRAITS.mkdir(parents=True, exist_ok=True)
     AVATAR.parent.mkdir(parents=True, exist_ok=True)
 
-    # The rig first: the still portraits are rendered from it.
+    # Her portraits are live: the rig, played in the badge by the app (src/lib/plana-live.ts).
     rig()
-    stills = rendered_portraits()
-    for mood in MOODS:
-        portrait(stills[mood]).save(PORTRAITS / f"{mood}.webp", quality=90, method=6)
 
     # The mark at the top of the navigation rail.
     logo(128).save(PORTRAITS / "logo.webp", quality=90, method=6)
@@ -225,7 +162,7 @@ def main() -> None:
     # Uploaded by hand as the bot's avatar in the Developer Portal; the favicon is that avatar.
     logo(1024).save(AVATAR)
 
-    print(f"Wrote {len(MOODS)} portraits, the logo, the backdrop, {len(SCENE)} scene frames, the rig and {AVATAR.relative_to(ROOT)}.")
+    print(f"Wrote the rig, the logo, the backdrop, {len(SCENE)} scene frames and {AVATAR.relative_to(ROOT)}.")
 
 
 if __name__ == "__main__":

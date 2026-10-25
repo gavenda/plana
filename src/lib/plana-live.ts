@@ -44,12 +44,6 @@ const { origin: ORIGIN, scale: CANVAS_SCALE, canvasWidth: CANVAS_WIDTH } = frami
 const TRACK = { idle: 0, face: 1, look: 2, pat: 3, blink: 4 } as const
 const MIX = 0.2
 
-/**
- * She holds her first frame, which is the still portrait, while the still fades out under her
- * (PlanaPortrait.vue's 300ms), so the swap doesn't show.
- */
-const HOLD_STILL_MS = 300
-
 /** How far her head tilts towards the pointer while patted, in rig units, and the distance (px) to full tilt. */
 const REACH_PATTED = 55
 const FULL_TURN_PX = 280
@@ -83,10 +77,9 @@ function loadRig(): Promise<Rig> {
   return rig
 }
 
-/** Live portraits only play where motion is welcome and WebGL is there. */
+/** Live portraits need WebGL; with reduced motion they are drawn but held still. */
 export function livePortraitsSupported(): boolean {
   if (typeof window === 'undefined') return false
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false
   return 'WebGLRenderingContext' in window
 }
 
@@ -148,7 +141,8 @@ export class LivePortrait {
   private timers = new Map<number, number>()
   private blinkTimer = 0
   private disposed = false
-  private holdUntil = 0
+  /** With reduced motion she holds her first frame: no breathing, no blinking. */
+  private still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   /** Resolves once she is drawn, so the still portrait can make way. */
   readonly ready: Promise<void>
@@ -189,8 +183,7 @@ export class LivePortrait {
     this.state.setAnimation(skeleton, TRACK.idle, 'Idle_01', true, 0)
     this.face = MOOD_ANIMATION[this.mood]
     this.state.setAnimation(skeleton, TRACK.face, this.face, true, 0)
-    this.scheduleBlink()
-    this.holdUntil = performance.now() + HOLD_STILL_MS
+    if (!this.still) this.scheduleBlink()
     track(this)
     this.frame(0)
   }
@@ -278,7 +271,8 @@ export class LivePortrait {
 
   frame(dt: number) {
     if (!this.state || !this.visible) return
-    if (performance.now() < this.holdUntil) dt = 0
+    // Held still, she moves only while patted, which Sensei asked for by pressing on her.
+    if (this.still && !this.patting && !this.timers.has(TRACK.pat)) dt = 0
     const { canvas, gl, skeleton, pose, state } = this
     const rect = canvas.getBoundingClientRect()
     if (!rect.width || !rect.height) return

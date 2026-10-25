@@ -14,7 +14,8 @@ export default defineConfigWithVueTs(
     files: ['**/*.{ts,mts,tsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  // src/lib/rigby is a vendored copy of the Rigby2D runtime, kept as upstream wrote it.
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'src/lib/rigby/**']),
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
