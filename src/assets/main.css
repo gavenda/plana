@@ -647,3 +647,30 @@
 .shell[data-rail-still='true'] .rail * {
   transition: none !important;
 }
+
+/*
+ * Where the snackbar (AppSnackbar) sits: 24px above the foot of the window, centred in the page
+ * beside the rail, so it follows the page as the rail opens and shuts.
+ */
+.snackbar-host {
+  position: fixed;
+  right: 0;
+  bottom: 24px;
+  left: 96px;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+  pointer-events: none;
+  transition: left 300ms var(--ease-emphasized-decelerate);
+}
+
+@media (min-width: 840px) {
+  .shell[data-rail-open='true'] .snackbar-host {
+    left: var(--rail-open);
+  }
+}
+
+.shell[data-rail-still='true'] .snackbar-host {
+  transition: none;
+}

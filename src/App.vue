@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 
 import AppDialog from '@/components/AppDialog.vue'
 import AppNavigationRail from '@/components/AppNavigationRail.vue'
+import AppSnackbar from '@/components/AppSnackbar.vue'
 import PhoneNotice from '@/components/PhoneNotice.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SchaleMark from '@/components/SchaleMark.vue'
@@ -76,6 +77,8 @@ async function signOut() {
       <h1 class="sr-only">{{ route.meta.title }}</h1>
       <RouterView />
     </main>
+
+    <AppSnackbar />
 
     <AppDialog v-model:open="confirmingSignOut" headline="You mean that?">
       <template #hero><PlanaPortrait mood="hesitant" /></template>

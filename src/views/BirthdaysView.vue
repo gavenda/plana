@@ -11,6 +11,7 @@ import { apiFetch } from '@/lib/api'
 import { formatMonthDay } from '@/lib/dates'
 import { discordTextColor, roleColor } from '@/lib/discord'
 import type { SelectOption } from '@/lib/select'
+import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -38,9 +39,8 @@ const memberId = ref<string | null>(null)
 const month = ref<number | null>(null)
 const day = ref<number | null>(null)
 
+const snackbar = useSnackbar()
 const busy = ref(false)
-const actionError = ref<string | null>(null)
-const notice = ref<string | null>(null)
 
 /** The remove dialog, and the birthday it asks about (kept while it animates closed). */
 const removeOpen = ref(false)
@@ -101,8 +101,6 @@ function formatUntil(days: number): string {
 
 function edit(entry: BirthdayEntry) {
   memberId.value = entry.id
-  notice.value = null
-  actionError.value = null
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -115,19 +113,19 @@ async function save() {
 
   const member = members.value.find((candidate) => candidate.id === memberId.value)
   busy.value = true
-  actionError.value = null
-  notice.value = null
   try {
     await apiFetch(`/api/birthdays/${memberId.value}`, {
       method: 'PUT',
       body: { month: month.value, day: day.value },
     })
     const whose = member ? `${member.displayName}'s` : 'the'
-    notice.value = `Saved ${whose} birthday as ${formatDate({ month: month.value, day: day.value })}.`
+    snackbar.show(
+      `Saved ${whose} birthday as ${formatDate({ month: month.value, day: day.value })}.`,
+    )
     await overview.run()
     clearForm()
   } catch (cause) {
-    actionError.value = cause instanceof Error ? cause.message : 'Could not save the birthday.'
+    snackbar.showError(cause, 'Could not save the birthday.')
   } finally {
     busy.value = false
   }
@@ -139,15 +137,13 @@ async function remove() {
   if (!entry) return
 
   busy.value = true
-  actionError.value = null
-  notice.value = null
   try {
     await apiFetch(`/api/birthdays/${entry.id}`, { method: 'DELETE' })
-    notice.value = `Removed ${entry.displayName}'s birthday.`
+    snackbar.show(`Removed ${entry.displayName}'s birthday.`)
     if (memberId.value === entry.id) clearForm()
     await overview.run()
   } catch (cause) {
-    actionError.value = cause instanceof Error ? cause.message : 'Could not remove the birthday.'
+    snackbar.showError(cause, 'Could not remove the birthday.')
   } finally {
     busy.value = false
   }
@@ -163,9 +159,6 @@ async function remove() {
         >Choose a channel →</RouterLink
       >
     </div>
-
-    <p v-if="actionError" class="alert alert-error">{{ actionError }}</p>
-    <p v-else-if="notice" class="alert alert-success">{{ notice }}</p>
 
     <section aria-labelledby="birthday-form">
       <div class="section-header">

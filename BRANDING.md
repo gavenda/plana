@@ -240,8 +240,8 @@ Where she is not, on purpose:
 
 - **Small empty messages in place of a short list**, such as Overview's "Nobody is waiting."
   and "No activity recorded.", stay plain text. Overview is figures, and she is never beside one.
-- **Alerts after an action** ("Settings saved.", "Discord rejected the role change.") stay
-  plain banners. Her face is for a state the screen is in, not a reply to a click.
+- **Replies to an action** ("Settings saved.", "Discord rejected the role change.") are
+  plain [snackbars](#snackbar). Her face is for a state the screen is in, not a reply to a click.
 - **Loading.** Her halo stands for her (see [The halo](#the-halo)); her face does not.
 - **The rail's destinations, lists, forms, the broadcast preview.**
 
@@ -409,6 +409,24 @@ Only the sign-out dialog speaks in her voice: it is about Sensei leaving her. A
 destructive confirmation states the consequence plainly, and her face is there to look
 at the person deciding, not to persuade them.
 
+## Snackbar
+
+The result of an action, success or failure, is an M3 snackbar, never an inline banner.
+`AppSnackbar` sits once in the shell; a view calls `useSnackbar()` from
+[`src/lib/snackbar.ts`](src/lib/snackbar.ts): `show(text, { action })` for what happened,
+`showError(cause, fallback)` for why it failed.
+
+- `inverse-surface` with `inverse-on-surface` text in `text-body-medium`, `rounded-xs`,
+  `shadow-level3`, 344–672dp wide, centred 24px above the foot of the page beside the rail.
+- At most one action, a text button in `inverse-primary` ("Open in Discord"). An error
+  adds a close icon button.
+- One at a time: a new message replaces the one showing. It leaves after 4s, or 8s with an
+  action or for an error, and holds while the pointer or focus is on it.
+- It slides up on `ease-spatial-fast` and fades out on `ease-effects`. Errors are read out
+  assertively, the rest politely.
+- Plain text only: names are written out ("Gave Hoshino the Unit Owner role."), not drawn
+  as Discord mentions, whose colours are tuned for the dark surfaces.
+
 ## Typography
 
 The M3 type scale as Tailwind font-size utilities, each carrying its line height,
@@ -497,7 +515,7 @@ Shared components in `main.css`, named after their M3 counterparts:
 | `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-danger`, `.icon-btn-narrow`          | Icon button (standard or tonal; default or narrow width). Row actions in a list are narrow tonal; one that deletes or removes adds `.icon-btn-danger` for the error colours.                                                                                                                                       |
 | `.card`, `.card-header`, `.card-body`                                            | Filled card                                                                                                                                                                                                                                                                                                        |
 | `.chip` + `.chip-accent` / `-tertiary` / `-success` / `-danger` / `-warn`        | Chips (non-interactive, as status labels)                                                                                                                                                                                                                                                                          |
-| `.alert` + `.alert-error` / `-success` / `-warn`                                 | Banner-style inline message                                                                                                                                                                                                                                                                                        |
+| `.alert` + `.alert-error` / `-success` / `-warn`                                 | Banner-style inline message, for a state the screen is in (setup unfinished, a load failed). Never the reply to an action: that is a [snackbar](#snackbar).                                                                                                                                                        |
 | `.segmented-list`, `.segmented-item`, `.segmented-header`                        | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). Used wherever rows of records would otherwise be a table: the Audit log is one per day; Triage, Birthdays, and Overview's triage and recent activity are one each. No data tables. |
 
 Vue components, where M3 needs behaviour CSS can't give:
@@ -508,6 +526,7 @@ Vue components, where M3 needs behaviour CSS can't give:
 | [`AppSelect`](src/components/AppSelect.vue)         | Exposed dropdown menu (outlined field + menu)                                                                                         |
 | [`AppTextArea`](src/components/AppTextArea.vue)     | Outlined text field, multi-line, with character counter                                                                               |
 | `AppDialog`                                         | Basic dialog, with an optional hero (see [Dialogs](#dialogs))                                                                         |
+| `AppSnackbar`                                       | Snackbar, the one reply to an action (see [Snackbar](#snackbar))                                                                      |
 | `PlanaPortrait`, `PlanaSays`, `SpeechBubble`        | Her portrait, and her portrait with a line (see [Plana's portraits](#planas-portraits))                                               |
 | `HaloMark`                                          | Circular progress indicator, indeterminate, in her halo's shape                                                                       |
 | `StateBlock`                                        | Loading, error and empty states around a block (see below)                                                                            |

@@ -6,6 +6,7 @@ import PlanaSays from '@/components/PlanaSays.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { roleColor } from '@/lib/discord'
 import { groupOptions, type SelectOption } from '@/lib/select'
+import { useSnackbar } from '@/lib/snackbar'
 import { useGuildStore } from '@/stores/guild'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
 
@@ -21,9 +22,8 @@ const draft = reactive<GuildSettings>({
   triageReminderDays: null,
 })
 
+const snackbar = useSnackbar()
 const saving = ref(false)
-const saved = ref(false)
-const saveError = ref<string | null>(null)
 
 type RoleKey = 'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId'
 
@@ -114,13 +114,11 @@ function channelWarningFor(key: 'announceChannelId' | 'birthdayChannelId'): stri
 
 async function submit() {
   saving.value = true
-  saved.value = false
-  saveError.value = null
   try {
     await store.save({ ...draft })
-    saved.value = true
+    snackbar.show('Settings saved.')
   } catch (cause) {
-    saveError.value = cause instanceof Error ? cause.message : 'Could not save settings.'
+    snackbar.showError(cause, 'Could not save settings.')
   } finally {
     saving.value = false
   }
@@ -128,8 +126,6 @@ async function submit() {
 
 function reset() {
   Object.assign(draft, store.settings)
-  saved.value = false
-  saveError.value = null
 }
 
 const version = __APP_VERSION__
@@ -205,11 +201,6 @@ const version = __APP_VERSION__
                 supporting-text="Plana lists members still waiting this long in the announcement channel, once each, without pinging them."
               />
             </div>
-
-            <p v-if="saveError" class="alert alert-error expanded:col-span-2">{{ saveError }}</p>
-            <p v-else-if="saved && !dirty" class="alert alert-success expanded:col-span-2">
-              Settings saved.
-            </p>
 
             <div class="flex gap-2.5 expanded:col-span-2">
               <button class="btn btn-filled" type="submit" :disabled="!dirty || saving">

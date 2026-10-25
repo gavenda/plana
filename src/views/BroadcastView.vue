@@ -8,6 +8,7 @@ import DiscordMessage from '@/components/DiscordMessage.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { groupOptions, type SelectOption } from '@/lib/select'
+import { useSnackbar } from '@/lib/snackbar'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
 
@@ -17,12 +18,11 @@ type BroadcastResult = { channelName: string; url: string }
 
 const guild = useGuildStore()
 const session = useSessionStore()
+const snackbar = useSnackbar()
 
 const channelId = ref<string | null>(null)
 const content = ref('')
 const sending = ref(false)
-const result = ref<BroadcastResult | null>(null)
-const error = ref<string | null>(null)
 
 onMounted(() => {
   void guild.load()
@@ -54,16 +54,17 @@ async function send() {
   if (!canSend.value || !channelId.value) return
 
   sending.value = true
-  error.value = null
-  result.value = null
   try {
-    result.value = await apiFetch<BroadcastResult>('/api/broadcast', {
+    const result = await apiFetch<BroadcastResult>('/api/broadcast', {
       method: 'POST',
       body: { channelId: channelId.value, content: content.value },
     })
     content.value = ''
+    snackbar.show(`Posted to #${result.channelName}.`, {
+      action: { label: 'Open in Discord', href: result.url },
+    })
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : 'Could not send the message.'
+    snackbar.showError(cause, 'Could not send the message.')
   } finally {
     sending.value = false
   }
@@ -98,19 +99,6 @@ async function send() {
                 :maxlength="MAX_LENGTH"
                 supporting-text="Discord markdown is supported."
               />
-
-              <p v-if="error" class="alert alert-error">{{ error }}</p>
-              <p v-else-if="result" class="alert alert-success">
-                Posted to <DiscordMention kind="channel" :name="result.channelName" /> —
-                <a
-                  class="font-medium underline underline-offset-2"
-                  :href="result.url"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  open in Discord
-                </a>
-              </p>
 
               <div>
                 <button class="btn btn-filled" type="submit" :disabled="!canSend || sending">

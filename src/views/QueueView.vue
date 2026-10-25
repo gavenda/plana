@@ -2,11 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
-import DiscordMention from '@/components/DiscordMention.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor, roleColor } from '@/lib/discord'
 import { absoluteTime, relativeTime } from '@/lib/format'
+import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
 import { useSettingsStore } from '@/stores/settings'
@@ -31,9 +31,8 @@ const guild = useGuildStore()
 const settings = useSettingsStore()
 
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
+const snackbar = useSnackbar()
 const busyId = ref<string | null>(null)
-const actionError = ref<string | null>(null)
-const lastAssigned = ref<{ member: string; role: string; color: string | null } | null>(null)
 
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
@@ -68,20 +67,15 @@ function overdue(member: PendingMember): boolean {
 
 async function assign(member: PendingMember, roleId: string) {
   busyId.value = member.id
-  actionError.value = null
   try {
     const result = await apiFetch<{ roleName: string; memberName: string }>(
       `/api/members/${member.id}/assign`,
       { method: 'POST', body: { roleId } },
     )
     pending.data.value = members.value.filter((candidate) => candidate.id !== member.id)
-    lastAssigned.value = {
-      member: result.memberName,
-      role: result.roleName,
-      color: assignable.value.find((role) => role.id === roleId)?.color ?? null,
-    }
+    snackbar.show(`Gave ${result.memberName} the ${result.roleName} role.`)
   } catch (cause) {
-    actionError.value = cause instanceof Error ? cause.message : 'Could not assign the role.'
+    snackbar.showError(cause, 'Could not assign the role.')
   } finally {
     busyId.value = null
   }
@@ -96,14 +90,6 @@ async function assign(member: PendingMember, roleId: string) {
         >Finish setup →</RouterLink
       >
     </div>
-
-    <p v-if="actionError" class="alert alert-error">{{ actionError }}</p>
-    <p v-else-if="lastAssigned" class="alert alert-success">
-      <span>
-        Gave {{ lastAssigned.member }}
-        <DiscordMention kind="role" :name="lastAssigned.role" :color="lastAssigned.color" />.
-      </span>
-    </p>
 
     <section aria-labelledby="queue-pending">
       <div class="section-header">
