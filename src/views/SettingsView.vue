@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
+import AppSelect from '@/components/AppSelect.vue'
+import PlanaSays from '@/components/PlanaSays.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import { groupOptions, type SelectOption } from '@/lib/select'
 import { useGuildStore } from '@/stores/guild'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
 
@@ -54,8 +57,27 @@ const dirty = computed(() =>
 )
 
 /** Roles Discord will actually let the bot grant, plus whatever is already selected. */
-function optionsFor(key: keyof GuildSettings) {
-  return guild.roles.filter((role) => role.assignable || role.id === draft[key])
+function roleOptions(key: keyof GuildSettings): SelectOption<string | null>[] {
+  return [
+    { value: null, label: 'Not set' },
+    ...guild.roles
+      .filter((role) => role.assignable || role.id === draft[key])
+      .map((role) => ({ value: role.id, label: role.name })),
+  ]
+}
+
+/** Channels grouped by category, after an option for leaving the setting empty. */
+function channelOptions(emptyLabel: string): SelectOption<string | null>[] {
+  return [
+    { value: null, label: emptyLabel },
+    ...groupOptions(
+      guild.channels.map((channel) => ({
+        value: channel.id,
+        label: `#${channel.name}`,
+        group: channel.category ?? 'No category',
+      })),
+    ),
+  ]
 }
 
 function warningFor(key: keyof GuildSettings): string | null {
@@ -97,71 +119,64 @@ function reset() {
   saved.value = false
   saveError.value = null
 }
+
+const version = __APP_VERSION__
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <div class="rounded-lg border border-line bg-surface">
-      <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+  <div class="flex flex-col gap-4">
+    <div class="card">
+      <div class="card-header">
         <div>
-          <p class="text-[15px] font-semibold">Roles and channels</p>
-          <p class="text-[13px] text-faint">
+          <p class="text-title-medium">Roles and channels</p>
+          <p class="text-body-medium text-on-surface-variant">
             These drive the join announcement and the triage queue.
           </p>
         </div>
-        <span class="badge" :class="store.configured ? 'badge-success' : 'badge-warn'">
+        <span class="chip" :class="store.configured ? 'chip-success' : 'chip-warn'">
           {{ store.configured ? 'Configured' : 'Incomplete' }}
         </span>
       </div>
 
-      <div class="p-5">
-        <StateBlock :loading="store.loading && !store.loaded" :error="store.error">
-          <form class="flex max-w-[520px] flex-col gap-5" @submit.prevent="submit">
-            <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1.5">
-              <label class="text-[13px] font-semibold" :for="field.key">{{ field.label }}</label>
-              <select :id="field.key" v-model="draft[field.key]" class="select">
-                <option :value="null">Not set</option>
-                <option v-for="role in optionsFor(field.key)" :key="role.id" :value="role.id">
-                  {{ role.name }}
-                </option>
-              </select>
-              <p class="text-[12.5px] text-muted">{{ field.hint }}</p>
-              <p v-if="warningFor(field.key)" class="text-[12.5px] text-warn">
+      <div class="card-body">
+        <StateBlock
+          :loading="store.loading && !store.loaded"
+          :error="store.error"
+          :retry="() => store.load(true)"
+        >
+          <form class="flex max-w-[560px] flex-col gap-6" @submit.prevent="submit">
+            <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1">
+              <AppSelect
+                v-model="draft[field.key]"
+                :label="field.label"
+                :options="roleOptions(field.key)"
+                :supporting-text="field.hint"
+              />
+              <p v-if="warningFor(field.key)" class="supporting-text text-warning">
                 {{ warningFor(field.key) }}
               </p>
             </div>
 
-            <div class="flex flex-col gap-1.5">
-              <label class="text-[13px] font-semibold" for="announceChannelId">
-                Announcement channel
-              </label>
-              <select id="announceChannelId" v-model="draft.announceChannelId" class="select">
-                <option :value="null">Not set</option>
-                <option v-for="channel in guild.channels" :key="channel.id" :value="channel.id">
-                  #{{ channel.name }}{{ channel.category ? ` — ${channel.category}` : '' }}
-                </option>
-              </select>
-              <p class="text-[12.5px] text-muted">Where new member cards are posted.</p>
-              <p v-if="channelWarningFor('announceChannelId')" class="text-[12.5px] text-warn">
+            <div class="flex flex-col gap-1">
+              <AppSelect
+                v-model="draft.announceChannelId"
+                label="Announcement channel"
+                :options="channelOptions('Not set')"
+                supporting-text="Where new member cards are posted."
+              />
+              <p v-if="channelWarningFor('announceChannelId')" class="supporting-text text-warning">
                 {{ channelWarningFor('announceChannelId') }}
               </p>
             </div>
 
-            <div class="flex flex-col gap-1.5">
-              <label class="text-[13px] font-semibold" for="birthdayChannelId">
-                Birthday channel
-              </label>
-              <select id="birthdayChannelId" v-model="draft.birthdayChannelId" class="select">
-                <option :value="null">Off</option>
-                <option v-for="channel in guild.channels" :key="channel.id" :value="channel.id">
-                  #{{ channel.name }}{{ channel.category ? ` — ${channel.category}` : '' }}
-                </option>
-              </select>
-              <p class="text-[12.5px] text-muted">
-                Where Plana wishes members happy birthday. Members add theirs with
-                <code>/birthday set</code>. Optional.
-              </p>
-              <p v-if="channelWarningFor('birthdayChannelId')" class="text-[12.5px] text-warn">
+            <div class="flex flex-col gap-1">
+              <AppSelect
+                v-model="draft.birthdayChannelId"
+                label="Birthday channel"
+                :options="channelOptions('Off')"
+                supporting-text="Where Plana wishes members happy birthday. Members add theirs with /birthday set. Optional."
+              />
+              <p v-if="channelWarningFor('birthdayChannelId')" class="supporting-text text-warning">
                 {{ channelWarningFor('birthdayChannelId') }}
               </p>
             </div>
@@ -170,11 +185,11 @@ function reset() {
             <p v-else-if="saved && !dirty" class="alert alert-success">Settings saved.</p>
 
             <div class="flex gap-2.5">
-              <button class="btn btn-primary" type="submit" :disabled="!dirty || saving">
+              <button class="btn btn-filled" type="submit" :disabled="!dirty || saving">
                 {{ saving ? 'Saving…' : 'Save changes' }}
               </button>
               <button
-                class="btn btn-ghost"
+                class="btn btn-text"
                 type="button"
                 :disabled="!dirty || saving"
                 @click="reset"
@@ -186,5 +201,17 @@ function reset() {
         </StateBlock>
       </div>
     </div>
+
+    <!-- About: the last thing in Settings, with no card and no heading. -->
+    <section aria-label="About" class="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center">
+      <PlanaSays mood="content">Connection confirmed. I've been waiting for you, Sensei.</PlanaSays>
+      <p class="mt-2 text-title-medium">Plana {{ version }}</p>
+      <p class="text-body-medium text-on-surface-variant">
+        Kept by <span class="text-tertiary">Plana</span>, system administrator of the Shittim Chest
+      </p>
+      <p class="text-body-small text-on-surface-variant">
+        Character design by DoReMi, from Blue Archive.
+      </p>
+    </section>
   </div>
 </template>

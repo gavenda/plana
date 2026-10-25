@@ -58,46 +58,47 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <div class="rounded-lg border border-line bg-surface">
-      <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+  <div class="flex flex-col gap-4">
+    <div class="card">
+      <div class="card-header">
         <div>
-          <p class="text-[15px] font-semibold">Activity</p>
-          <p class="text-[13px] text-faint">
+          <p class="text-title-medium">Activity</p>
+          <p class="text-body-medium text-on-surface-variant">
             {{ total }} recorded {{ total === 1 ? 'event' : 'events' }}.
           </p>
         </div>
-        <button class="btn btn-ghost btn-sm" :disabled="loading" @click="load">Refresh</button>
+        <button class="btn btn-text btn-sm" :disabled="loading" @click="load">Refresh</button>
       </div>
 
       <StateBlock
         :loading="loading && entries.length === 0"
         :error="error"
         :empty="entries.length === 0"
-        empty-text="Nothing has happened yet."
+        empty-text="Nothing to report. I'll record every change here."
+        empty-mood="standby"
+        :retry="load"
       >
         <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
+          <table class="data-table">
             <thead>
-              <tr
-                class="[&>th]:border-b [&>th]:border-line [&>th]:px-5 [&>th]:py-2.5 [&>th]:text-left [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wider [&>th]:text-faint [&>th]:uppercase"
-              >
+              <tr>
                 <th>Event</th>
                 <th>Details</th>
                 <th>Source</th>
                 <th>When</th>
               </tr>
             </thead>
-            <tbody
-              class="[&>tr:last-child>td]:border-b-0 [&>tr>td]:border-b [&>tr>td]:border-line [&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:align-middle"
-            >
+            <tbody>
               <tr v-for="row in rows" :key="row.entry.id">
                 <td>
                   <span :class="toneClass(row.description.tone)">{{ row.description.label }}</span>
                 </td>
                 <td class="break-words">{{ row.description.summary }}</td>
-                <td class="text-muted">{{ row.entry.source }}</td>
-                <td :title="absoluteTime(row.entry.createdAt)" class="whitespace-nowrap text-muted">
+                <td class="text-on-surface-variant">{{ row.entry.source }}</td>
+                <td
+                  :title="absoluteTime(row.entry.createdAt)"
+                  class="whitespace-nowrap text-on-surface-variant"
+                >
                   {{ relativeTime(row.entry.createdAt) }}
                 </td>
               </tr>
@@ -105,8 +106,11 @@ onMounted(load)
           </table>
         </div>
 
-        <div v-if="cursor != null" class="flex justify-center border-t border-line p-4">
-          <button class="btn btn-secondary btn-sm" :disabled="loadingMore" @click="loadMore">
+        <div
+          v-if="cursor != null"
+          class="flex justify-center border-t border-outline-variant px-6 py-4"
+        >
+          <button class="btn btn-tonal btn-sm" :disabled="loadingMore" @click="loadMore">
             {{ loadingMore ? 'Loading…' : 'Load more' }}
           </button>
         </div>

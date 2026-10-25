@@ -2,8 +2,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import AppDialog from '@/components/AppDialog.vue'
+import AppSelect from '@/components/AppSelect.vue'
+import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
+import type { SelectOption } from '@/lib/select'
 import { useAsync } from '@/lib/useAsync'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -51,6 +55,15 @@ const busy = ref(false)
 const actionError = ref<string | null>(null)
 const notice = ref<string | null>(null)
 
+/** The remove dialog, and the birthday it asks about (kept while it animates closed). */
+const removeOpen = ref(false)
+const removing = ref<BirthdayEntry | null>(null)
+
+function confirmRemove(entry: BirthdayEntry) {
+  removing.value = entry
+  removeOpen.value = true
+}
+
 onMounted(() => {
   void settings.load()
   void overview.run()
@@ -62,6 +75,29 @@ const byMember = computed(() => new Map(birthdays.value.map((entry) => [entry.id
 
 const existing = computed(() => (memberId.value ? byMember.value.get(memberId.value) : undefined))
 const dayOptions = computed(() => (month.value ? DAYS_IN_MONTH[month.value - 1]! : 31))
+
+const memberOptions = computed<SelectOption<string | null>[]>(() =>
+  members.value.map((member) => {
+    const saved = byMember.value.get(member.id)
+    return {
+      value: member.id,
+      label: member.displayName,
+      trailing: saved ? `${member.username} · ${formatDate(saved)}` : member.username,
+    }
+  }),
+)
+
+const monthOptions: SelectOption<number | null>[] = MONTHS.map((name, index) => ({
+  value: index + 1,
+  label: name,
+}))
+
+const dayChoices = computed<SelectOption<number | null>[]>(() =>
+  Array.from({ length: dayOptions.value }, (_, index) => ({
+    value: index + 1,
+    label: String(index + 1),
+  })),
+)
 
 // Picking a member who already has a birthday loads it, so the form edits it in place.
 watch(memberId, () => {
@@ -127,8 +163,10 @@ async function save() {
   }
 }
 
-async function remove(entry: BirthdayEntry) {
-  if (!window.confirm(`Remove ${entry.displayName}'s birthday?`)) return
+async function remove() {
+  const entry = removing.value
+  removeOpen.value = false
+  if (!entry) return
 
   busy.value = true
   actionError.value = null
@@ -147,71 +185,64 @@ async function remove(entry: BirthdayEntry) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-4">
     <div v-if="settings.loaded && !settings.settings.birthdayChannelId" class="alert alert-warn">
       Birthday announcements are off until a birthday channel is chosen. Birthdays saved here are
       kept for when they are switched on.
-      <RouterLink to="/settings" class="underline">Choose a channel →</RouterLink>
+      <RouterLink to="/settings" class="font-medium underline underline-offset-2"
+        >Choose a channel →</RouterLink
+      >
     </div>
 
     <p v-if="actionError" class="alert alert-error">{{ actionError }}</p>
     <p v-else-if="notice" class="alert alert-success">{{ notice }}</p>
 
-    <div class="rounded-lg border border-line bg-surface">
-      <div class="border-b border-line px-5 py-4">
-        <p class="text-[15px] font-semibold">
+    <div class="card">
+      <div class="card-header">
+        <p class="text-title-medium">
           {{ existing ? 'Change a birthday' : 'Add a birthday' }}
         </p>
-        <p class="text-[13px] text-faint">
+        <p class="text-body-medium text-on-surface-variant">
           Only the month and day are stored. Members can also use <code>/birthday set</code>.
         </p>
       </div>
 
-      <form class="flex flex-col gap-4 p-5 md:flex-row md:items-end" @submit.prevent="save">
-        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-          <label class="text-[13px] font-semibold" for="birthday-member">Member</label>
-          <select
-            id="birthday-member"
-            v-model="memberId"
-            class="select"
-            :disabled="overview.loading.value && members.length === 0"
-          >
-            <option :value="null">Choose a member</option>
-            <option v-for="member in members" :key="member.id" :value="member.id">
-              {{ member.displayName }} ({{ member.username }}){{
-                byMember.has(member.id) ? ` — ${formatDate(byMember.get(member.id)!)}` : ''
-              }}
-            </option>
-          </select>
-        </div>
+      <form
+        class="card-body flex flex-col gap-4 expanded:flex-row expanded:items-end"
+        @submit.prevent="save"
+      >
+        <AppSelect
+          v-model="memberId"
+          class="min-w-0 flex-1"
+          label="Member"
+          :options="memberOptions"
+          :disabled="overview.loading.value && members.length === 0"
+        />
 
         <div class="flex gap-4">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-[13px] font-semibold" for="birthday-month">Month</label>
-            <select id="birthday-month" v-model="month" class="select" :disabled="!memberId">
-              <option :value="null" disabled>Month</option>
-              <option v-for="(name, index) in MONTHS" :key="name" :value="index + 1">
-                {{ name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <label class="text-[13px] font-semibold" for="birthday-day">Day</label>
-            <select id="birthday-day" v-model="day" class="select" :disabled="!memberId">
-              <option :value="null" disabled>Day</option>
-              <option v-for="value in dayOptions" :key="value" :value="value">{{ value }}</option>
-            </select>
-          </div>
+          <AppSelect
+            v-model="month"
+            class="w-44"
+            label="Month"
+            :options="monthOptions"
+            :disabled="!memberId"
+          />
+          <AppSelect
+            v-model="day"
+            class="w-28"
+            label="Day"
+            :options="dayChoices"
+            :disabled="!memberId"
+          />
         </div>
 
-        <div class="flex gap-2.5">
-          <button class="btn btn-primary" type="submit" :disabled="!canSave">
+        <div class="flex h-14 items-center gap-2.5">
+          <button class="btn btn-filled" type="submit" :disabled="!canSave">
             {{ busy ? 'Saving…' : 'Save' }}
           </button>
           <button
             v-if="memberId"
-            class="btn btn-ghost"
+            class="btn btn-text"
             type="button"
             :disabled="busy"
             @click="clearForm"
@@ -222,66 +253,71 @@ async function remove(entry: BirthdayEntry) {
       </form>
     </div>
 
-    <div class="rounded-lg border border-line bg-surface">
-      <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+    <div class="card">
+      <div class="card-header">
         <div>
-          <p class="text-[15px] font-semibold">Saved birthdays</p>
-          <p class="text-[13px] text-faint">
+          <p class="text-title-medium">Saved birthdays</p>
+          <p class="text-body-medium text-on-surface-variant">
             Soonest first. Announced just after midnight
             <template v-if="overview.data.value">({{ overview.data.value.timeZone }})</template>.
           </p>
         </div>
-        <span v-if="birthdays.length > 0" class="badge">{{ birthdays.length }}</span>
+        <span v-if="birthdays.length > 0" class="chip">{{ birthdays.length }}</span>
       </div>
 
       <StateBlock
         :loading="overview.loading.value && birthdays.length === 0"
         :error="overview.error.value"
         :empty="birthdays.length === 0"
-        empty-text="No birthdays saved yet."
+        empty-text="No birthdays yet. I'll remember each one I'm told."
+        empty-mood="curious"
+        :retry="overview.run"
       >
+        <template #empty>Members add theirs with <code>/birthday set</code>.</template>
         <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
+          <table class="data-table">
             <thead>
-              <tr
-                class="[&>th]:border-b [&>th]:border-line [&>th]:px-5 [&>th]:py-2.5 [&>th]:text-left [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wider [&>th]:text-faint [&>th]:uppercase"
-              >
+              <tr>
                 <th>Member</th>
                 <th>Birthday</th>
                 <th>Next</th>
-                <th class="!text-right">Actions</th>
+                <th class="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody
-              class="[&>tr:last-child>td]:border-b-0 [&>tr>td]:border-b [&>tr>td]:border-line [&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:align-middle"
-            >
+            <tbody>
               <tr v-for="entry in birthdays" :key="entry.id">
                 <td>
-                  <div class="flex items-center gap-[11px]">
+                  <div class="flex items-center gap-3">
                     <img
-                      class="shrink-0 rounded-full bg-raised object-cover"
+                      class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
                       :src="entry.avatarUrl"
                       :alt="entry.displayName"
-                      width="34"
-                      height="34"
+                      width="40"
+                      height="40"
                     />
                     <div class="flex flex-col leading-tight">
-                      <span class="font-medium">{{ entry.displayName }}</span>
-                      <span class="font-mono text-xs text-muted">{{ entry.username }}</span>
+                      <span class="text-body-large">{{ entry.displayName }}</span>
+                      <span class="font-mono text-body-small text-on-surface-variant">{{
+                        entry.username
+                      }}</span>
                     </div>
                   </div>
                 </td>
                 <td>{{ formatDate(entry) }}</td>
                 <td>
-                  <span v-if="entry.daysUntil === 0" class="badge badge-success">Today 🎉</span>
+                  <span v-if="entry.daysUntil === 0" class="chip chip-tertiary">Today</span>
                   <span v-else>{{ formatUntil(entry.daysUntil) }}</span>
                 </td>
                 <td class="text-right">
                   <div class="inline-flex justify-end gap-2">
-                    <button class="btn btn-secondary btn-sm" :disabled="busy" @click="edit(entry)">
+                    <button class="btn btn-tonal btn-sm" :disabled="busy" @click="edit(entry)">
                       Edit
                     </button>
-                    <button class="btn btn-ghost btn-sm" :disabled="busy" @click="remove(entry)">
+                    <button
+                      class="btn btn-text btn-sm"
+                      :disabled="busy"
+                      @click="confirmRemove(entry)"
+                    >
                       Remove
                     </button>
                   </div>
@@ -292,5 +328,14 @@ async function remove(entry: BirthdayEntry) {
         </div>
       </StateBlock>
     </div>
+
+    <AppDialog v-model:open="removeOpen" headline="Remove birthday?">
+      <template #hero><PlanaPortrait mood="attentive" /></template>
+      {{ removing?.displayName }}'s birthday will be deleted and won't be announced.
+      <template #actions>
+        <button class="btn btn-text" type="button" @click="removeOpen = false">Cancel</button>
+        <button class="btn btn-text" type="button" @click="remove">Remove</button>
+      </template>
+    </AppDialog>
   </div>
 </template>

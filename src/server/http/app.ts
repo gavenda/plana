@@ -4,7 +4,7 @@ import { logger } from 'hono/logger'
 
 import { cacheStatus } from '../cache'
 import { getSettings, isConfigured } from '../db/settings'
-import { isReady } from '../discord/client'
+import { client, isReady } from '../discord/client'
 import { isProduction } from '../env'
 import { api } from './api'
 import { authRoutes } from './auth'
@@ -27,6 +27,14 @@ export function createHttpApp(renderer: Renderer): Hono {
       uptime: Math.round(process.uptime()),
     }),
   )
+
+  // The favicon is the bot's own Discord avatar, so changing it in the Developer Portal
+  // changes the tab icon too. Until the gateway is up there is nothing to point at.
+  app.get('/favicon.ico', (c) => {
+    if (!client.isReady()) return c.body(null, 404)
+    c.header('Cache-Control', 'public, max-age=3600')
+    return c.redirect(client.user.displayAvatarURL({ extension: 'png', size: 64 }), 302)
+  })
 
   app.route('/auth', authRoutes)
   app.route('/api', api)

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
@@ -8,6 +9,10 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // The Bun server (src/server) is the front door on PORT. In development it proxies
 // asset + HMR requests through to this Vite dev server, so Vite never needs to be
 // the thing the browser talks to for navigation requests.
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string
+}
+
 const VITE_DEV_PORT = Number(process.env.VITE_DEV_PORT ?? 5174)
 
 // https://vite.dev/config/
@@ -18,6 +23,10 @@ export default defineConfig(({ isSsrBuild }) => ({
     // The devtools plugin injects client-only code; keep it out of the SSR bundle.
     ...(isSsrBuild ? [] : [vueDevTools()]),
   ],
+  define: {
+    // Shown in About, at the foot of Settings.
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -270,7 +270,7 @@ src/
   app.ts                   Vue app factory (shared by both entries)
   entry-client.ts          hydration
   entry-server.ts          renderToString
-  assets/main.css          Tailwind theme tokens and component layer
+  assets/main.css          M3 Expressive tokens and component layer (see BRANDING.md)
   views/ components/ stores/ lib/
 deploy/quadlet/            Podman systemd units
 .github/workflows/         lint, type-check, build and publish to GHCR
@@ -339,15 +339,19 @@ warning and serves everything live; it does not fail requests and does not crash
 
 ## Styling
 
-Tailwind CSS v4, configured entirely in `src/assets/main.css` — there is no
-`tailwind.config.js`. The `@theme` block defines the palette, and every token there
-generates utilities, so `--color-surface` gives `bg-surface`, `text-surface` and
-`border-surface`. Translucent tints use the opacity modifier (`bg-accent/15`) rather
-than separate tokens.
+The dashboard follows **Material 3 Expressive**; [BRANDING.md](BRANDING.md) is the
+design reference (color roles, type, shape, motion, components, and the
+tablet-and-desktop-only rule).
 
-Layout, spacing and typography are utilities in the markup; no component has a
-`<style>` block. A small `@layer components` block holds only the primitives that carry
-variants and repeat across many views — `.btn`, form controls, `.badge` and `.alert`.
+Tailwind CSS v4, configured entirely in `src/assets/main.css` — there is no
+`tailwind.config.js`. The `@theme` block defines the M3 tokens, and every token there
+generates utilities, so `--color-on-surface` gives `text-on-surface` and
+`--text-title-medium` gives `text-title-medium`. Translucent tints use the opacity
+modifier (`bg-on-surface/12`) rather than separate tokens.
+
+Layout and spacing are utilities in the markup; no component has a `<style>` block. A
+small `@layer components` block holds only the primitives that carry variants and repeat
+across many views — buttons, cards, form controls, chips, alerts and data tables.
 
 `bun run format` sorts class lists via `prettier-plugin-tailwindcss`, pinned to the
 `0.6` line because 0.7 and 0.8 crash on every file with Prettier 3.6.

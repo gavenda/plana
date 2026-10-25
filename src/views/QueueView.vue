@@ -61,22 +61,26 @@ async function assign(member: PendingMember, roleId: string) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-4">
     <div v-if="settings.loaded && !settings.configured" class="alert alert-warn">
       Some roles are not configured yet.
-      <RouterLink to="/settings" class="underline">Finish setup →</RouterLink>
+      <RouterLink to="/settings" class="font-medium underline underline-offset-2"
+        >Finish setup →</RouterLink
+      >
     </div>
 
     <p v-if="actionError" class="alert alert-error">{{ actionError }}</p>
     <p v-else-if="lastAssigned" class="alert alert-success">Assigned {{ lastAssigned }}.</p>
 
-    <div class="rounded-lg border border-line bg-surface">
-      <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+    <div class="card">
+      <div class="card-header">
         <div>
-          <p class="text-[15px] font-semibold">Members awaiting a role</p>
-          <p class="text-[13px] text-faint">Everyone currently holding the triage role.</p>
+          <p class="text-title-medium">Members awaiting a role</p>
+          <p class="text-body-medium text-on-surface-variant">
+            Everyone currently holding the triage role.
+          </p>
         </div>
-        <button class="btn btn-ghost btn-sm" :disabled="pending.loading.value" @click="pending.run">
+        <button class="btn btn-text btn-sm" :disabled="pending.loading.value" @click="pending.run">
           Refresh
         </button>
       </div>
@@ -85,36 +89,36 @@ async function assign(member: PendingMember, roleId: string) {
         :loading="pending.loading.value && members.length === 0"
         :error="pending.error.value"
         :empty="members.length === 0"
-        empty-text="No one is waiting in triage."
+        empty-text="Standing by. No one is waiting in triage."
+        empty-mood="asleep"
+        :retry="pending.run"
       >
         <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
+          <table class="data-table">
             <thead>
-              <tr
-                class="[&>th]:border-b [&>th]:border-line [&>th]:px-5 [&>th]:py-2.5 [&>th]:text-left [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wider [&>th]:text-faint [&>th]:uppercase"
-              >
+              <tr>
                 <th>Member</th>
                 <th>Joined</th>
                 <th>Account age</th>
-                <th class="!text-right">Assign</th>
+                <th class="text-right">Assign</th>
               </tr>
             </thead>
-            <tbody
-              class="[&>tr:last-child>td]:border-b-0 [&>tr>td]:border-b [&>tr>td]:border-line [&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:align-middle"
-            >
+            <tbody>
               <tr v-for="member in members" :key="member.id">
                 <td>
-                  <div class="flex items-center gap-[11px]">
+                  <div class="flex items-center gap-3">
                     <img
-                      class="shrink-0 rounded-full bg-raised object-cover"
+                      class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
                       :src="member.avatarUrl"
                       :alt="member.displayName"
-                      width="34"
-                      height="34"
+                      width="40"
+                      height="40"
                     />
                     <div class="flex flex-col leading-tight">
-                      <span class="font-medium">{{ member.displayName }}</span>
-                      <span class="font-mono text-xs text-muted">{{ member.username }}</span>
+                      <span class="text-body-large">{{ member.displayName }}</span>
+                      <span class="font-mono text-body-small text-on-surface-variant">{{
+                        member.username
+                      }}</span>
                     </div>
                   </div>
                 </td>
@@ -129,7 +133,7 @@ async function assign(member: PendingMember, roleId: string) {
                   </span>
                   <span
                     v-if="Date.now() - member.createdAt < NEW_ACCOUNT_MS"
-                    class="badge badge-warn ml-2"
+                    class="chip chip-warn ml-2"
                   >
                     New
                   </span>
@@ -140,13 +144,16 @@ async function assign(member: PendingMember, roleId: string) {
                       v-for="(role, index) in assignable"
                       :key="role.id"
                       class="btn btn-sm"
-                      :class="index === 0 ? 'btn-primary' : 'btn-secondary'"
+                      :class="index === 0 ? 'btn-filled' : 'btn-tonal'"
                       :disabled="busyId === member.id"
                       @click="assign(member, role.id)"
                     >
                       {{ role.name }}
                     </button>
-                    <span v-if="assignable.length === 0" class="text-[13px] text-faint">
+                    <span
+                      v-if="assignable.length === 0"
+                      class="text-body-medium text-on-surface-variant"
+                    >
                       No roles configured
                     </span>
                   </div>

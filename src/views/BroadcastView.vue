@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import AppSelect from '@/components/AppSelect.vue'
+import AppTextArea from '@/components/AppTextArea.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
+import { groupOptions, type SelectOption } from '@/lib/select'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
 
@@ -23,17 +26,18 @@ onMounted(() => {
   void guild.load()
 })
 
-/** Grouped so a long channel list stays navigable. */
-const grouped = computed(() => {
-  const groups = new Map<string, typeof guild.channels>()
-  for (const channel of guild.channels) {
-    const key = channel.category ?? 'No category'
-    const bucket = groups.get(key) ?? []
-    bucket.push(channel)
-    groups.set(key, bucket)
-  }
-  return [...groups.entries()]
-})
+/** Grouped by category so a long channel list stays navigable. */
+const channelOptions = computed<SelectOption<string | null>[]>(() =>
+  groupOptions(
+    guild.channels.map((channel) => ({
+      value: channel.id,
+      label: `#${channel.name}`,
+      trailing: channel.sendable ? undefined : 'No access',
+      disabled: !channel.sendable,
+      group: channel.category ?? 'No category',
+    })),
+  ),
+)
 
 const selected = computed(
   () => guild.channels.find((channel) => channel.id === channelId.value) ?? null,
@@ -65,94 +69,81 @@ async function send() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <div class="rounded-lg border border-line bg-surface">
-      <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+  <div class="flex flex-col gap-4">
+    <div class="card">
+      <div class="card-header">
         <div>
-          <p class="text-[15px] font-semibold">Send a message as the bot</p>
-          <p class="text-[13px] text-faint">
-            Equivalent to the <code class="font-mono text-xs">/broadcast</code> command.
+          <p class="text-title-medium">Send a message as the bot</p>
+          <p class="text-body-medium text-on-surface-variant">
+            Equivalent to the <code>/broadcast</code> command.
           </p>
         </div>
       </div>
 
-      <div class="p-5">
-        <StateBlock :loading="guild.loading && !guild.directory" :error="guild.error">
+      <div class="card-body">
+        <StateBlock
+          :loading="guild.loading && !guild.directory"
+          :error="guild.error"
+          :retry="() => guild.load(true)"
+        >
           <div
-            class="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]"
+            class="grid grid-cols-1 items-start gap-7 large:grid-cols-[minmax(0,1fr)_minmax(0,380px)]"
           >
-            <form class="flex flex-col gap-[18px]" @submit.prevent="send">
-              <div class="flex flex-col gap-1.5">
-                <label class="text-[13px] font-semibold" for="channel">Channel</label>
-                <select id="channel" v-model="channelId" class="select">
-                  <option :value="null" disabled>Choose a channel…</option>
-                  <optgroup v-for="[category, list] in grouped" :key="category" :label="category">
-                    <option
-                      v-for="channel in list"
-                      :key="channel.id"
-                      :value="channel.id"
-                      :disabled="!channel.sendable"
-                    >
-                      #{{ channel.name }}{{ channel.sendable ? '' : ' (no access)' }}
-                    </option>
-                  </optgroup>
-                </select>
-              </div>
+            <form class="flex flex-col gap-6" @submit.prevent="send">
+              <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 
-              <div class="flex flex-col gap-1.5">
-                <label class="text-[13px] font-semibold" for="content">Message</label>
-                <textarea
-                  id="content"
-                  v-model="content"
-                  class="textarea"
-                  placeholder="Discord markdown is supported."
-                  :maxlength="MAX_LENGTH"
-                ></textarea>
-                <p class="text-[12.5px]" :class="remaining < 0 ? 'text-danger' : 'text-muted'">
-                  {{ remaining }} characters remaining
-                </p>
-              </div>
+              <AppTextArea
+                v-model="content"
+                label="Message"
+                :maxlength="MAX_LENGTH"
+                supporting-text="Discord markdown is supported."
+              />
 
               <p v-if="error" class="alert alert-error">{{ error }}</p>
               <p v-else-if="result" class="alert alert-success">
                 Posted to #{{ result.channelName }} —
-                <a class="underline" :href="result.url" target="_blank" rel="noopener">
+                <a
+                  class="font-medium underline underline-offset-2"
+                  :href="result.url"
+                  target="_blank"
+                  rel="noopener"
+                >
                   open in Discord
                 </a>
               </p>
 
               <div>
-                <button class="btn btn-primary" type="submit" :disabled="!canSend || sending">
+                <button class="btn btn-filled" type="submit" :disabled="!canSend || sending">
                   {{ sending ? 'Sending…' : 'Send message' }}
                 </button>
               </div>
             </form>
 
             <aside class="flex flex-col gap-2.5">
-              <p class="text-[13px] font-semibold">Preview</p>
+              <p class="text-title-small">Preview</p>
 
-              <div class="flex gap-3 rounded-md border border-line bg-canvas p-3.5">
+              <div class="flex gap-3 rounded-lg bg-surface-container-lowest p-4">
                 <div
-                  class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent font-bold text-white"
+                  class="grid size-10 shrink-0 place-items-center rounded-full bg-primary font-bold text-on-primary"
                   aria-hidden="true"
                 >
                   P
                 </div>
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-semibold">Plana</span>
-                    <span class="badge badge-accent">BOT</span>
-                    <span class="text-[13px] text-faint">
+                    <span class="text-title-small">Plana</span>
+                    <span class="chip chip-accent">BOT</span>
+                    <span class="text-body-medium text-on-surface-variant">
                       in {{ selected ? `#${selected.name}` : 'no channel selected' }}
                     </span>
                   </div>
-                  <p class="mt-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-ink">
+                  <p class="mt-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-on-surface">
                     {{ content || 'Your message will appear here.' }}
                   </p>
                 </div>
               </div>
 
-              <p class="text-[13px] text-faint">
+              <p class="text-body-medium text-on-surface-variant">
                 Sent by {{ session.user?.displayName }} and recorded in the audit log.
               </p>
             </aside>

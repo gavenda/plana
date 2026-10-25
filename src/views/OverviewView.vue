@@ -32,10 +32,26 @@ const CHECKLIST: { key: keyof GuildSettings; label: string }[] = [
 
 const missing = computed(() => CHECKLIST.filter((item) => settings.settings[item.key] == null))
 
+/** Each tile takes a different tonal container, per M3 Expressive's color emphasis. */
 const stats = computed(() => [
-  { label: 'Awaiting a role', value: pending.data.value?.length ?? '—', to: '/queue' },
-  { label: 'Server members', value: guild.directory?.guild.memberCount ?? '—', to: null },
-  { label: 'Events logged', value: activity.data.value?.total ?? '—', to: '/audit' },
+  {
+    label: 'Awaiting a role',
+    value: pending.data.value?.length ?? '—',
+    to: '/queue',
+    tone: 'bg-primary-container text-on-primary-container',
+  },
+  {
+    label: 'Server members',
+    value: guild.directory?.guild.memberCount ?? '—',
+    to: null,
+    tone: 'bg-secondary-container text-on-secondary-container',
+  },
+  {
+    label: 'Events logged',
+    value: activity.data.value?.total ?? '—',
+    to: '/audit',
+    tone: 'bg-tertiary-container text-on-tertiary-container',
+  },
 ])
 
 const recent = computed(() =>
@@ -47,20 +63,18 @@ const recent = computed(() =>
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-4">
     <div
       v-if="settings.loaded && missing.length > 0"
-      class="rounded-lg border border-warn/40 bg-warn/15 p-5"
+      class="flex flex-col items-start gap-2 rounded-xl bg-warning-container p-6 text-on-warning-container"
     >
-      <div class="flex flex-col items-start gap-2">
-        <p class="text-[15px] font-semibold">Finish setting up</p>
-        <p class="text-muted">
-          The join flow stays inactive until these are configured:
-          <strong>{{ missing.map((item) => item.label).join(', ') }}</strong
-          >.
-        </p>
-        <RouterLink class="btn btn-primary btn-sm mt-1" to="/settings">Open settings</RouterLink>
-      </div>
+      <p class="text-title-medium">Finish setting up</p>
+      <p class="text-body-medium">
+        The join flow stays inactive until these are configured:
+        <strong class="font-medium">{{ missing.map((item) => item.label).join(', ') }}</strong
+        >.
+      </p>
+      <RouterLink class="btn btn-filled mt-2" to="/settings">Open settings</RouterLink>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
@@ -69,66 +83,72 @@ const recent = computed(() =>
         v-for="stat in stats"
         :key="stat.label"
         :to="stat.to ?? undefined"
-        class="flex flex-col gap-0.5 rounded-lg border border-line bg-surface px-5 py-[18px]"
-        :class="stat.to ? 'transition-colors hover:border-line-strong hover:bg-raised' : ''"
+        class="flex flex-col gap-1 rounded-xl px-6 py-5 transition-[border-radius] duration-350 ease-spatial-fast"
+        :class="[stat.tone, stat.to && 'state-layer hover:rounded-2xl active:rounded-lg']"
       >
-        <span class="text-[28px] font-semibold tracking-tight">{{ stat.value }}</span>
-        <span class="text-[13px] text-faint">{{ stat.label }}</span>
+        <span class="text-display-small font-medium">{{ stat.value }}</span>
+        <span class="text-label-large opacity-80">{{ stat.label }}</span>
       </component>
     </div>
 
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-5">
-      <div class="rounded-lg border border-line bg-surface">
-        <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
-          <p class="text-[15px] font-semibold">Waiting in triage</p>
-          <RouterLink class="btn btn-ghost btn-sm" to="/queue">View all</RouterLink>
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-4">
+      <div class="card">
+        <div class="card-header">
+          <p class="text-title-medium">Waiting in triage</p>
+          <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
         </div>
         <StateBlock
           :loading="pending.loading.value"
           :error="pending.error.value"
           :empty="(pending.data.value?.length ?? 0) === 0"
           empty-text="Nobody is waiting."
+          compact
         >
-          <ul class="m-0 list-none p-0 [&>li:last-child]:border-b-0">
+          <ul class="pb-2">
             <li
               v-for="member in pending.data.value?.slice(0, 5)"
               :key="member.id"
-              class="flex items-center gap-[11px] border-b border-line px-5 py-3 text-sm"
+              class="flex min-h-14 items-center gap-4 px-6 py-2"
             >
               <img
-                class="shrink-0 rounded-full bg-raised object-cover"
+                class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
                 :src="member.avatarUrl"
                 :alt="member.displayName"
-                width="30"
-                height="30"
+                width="40"
+                height="40"
               />
-              <span class="min-w-0 flex-1">{{ member.displayName }}</span>
-              <span class="text-[13px] text-faint">{{ relativeTime(member.joinedAt) }}</span>
+              <span class="min-w-0 flex-1 truncate text-body-large">{{ member.displayName }}</span>
+              <span class="text-label-medium text-on-surface-variant">
+                {{ relativeTime(member.joinedAt) }}
+              </span>
             </li>
           </ul>
         </StateBlock>
       </div>
 
-      <div class="rounded-lg border border-line bg-surface">
-        <div class="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
-          <p class="text-[15px] font-semibold">Recent activity</p>
-          <RouterLink class="btn btn-ghost btn-sm" to="/audit">Full log</RouterLink>
+      <div class="card">
+        <div class="card-header">
+          <p class="text-title-medium">Recent activity</p>
+          <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
         </div>
         <StateBlock
           :loading="activity.loading.value"
           :error="activity.error.value"
           :empty="recent.length === 0"
           empty-text="No activity recorded."
+          compact
         >
-          <ul class="m-0 list-none p-0 [&>li:last-child]:border-b-0">
+          <ul class="pb-2">
             <li
               v-for="row in recent"
               :key="row.entry.id"
-              class="flex items-center gap-[11px] border-b border-line px-5 py-3 text-sm"
+              class="flex min-h-14 items-center gap-4 px-6 py-2"
             >
               <span :class="toneClass(row.description.tone)">{{ row.description.label }}</span>
-              <span class="min-w-0 flex-1 truncate">{{ row.description.summary }}</span>
-              <span class="text-[13px] whitespace-nowrap text-faint">
+              <span class="min-w-0 flex-1 truncate text-body-medium">
+                {{ row.description.summary }}
+              </span>
+              <span class="text-label-medium whitespace-nowrap text-on-surface-variant">
                 {{ relativeTime(row.entry.createdAt) }}
               </span>
             </li>

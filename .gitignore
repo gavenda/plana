@@ -39,3 +39,6 @@ __screenshots__/
 .env
 .env.local
 data/
+
+# Blue Archive artwork, the source for scripts/brand_assets.py (see BRANDING.md)
+/branding

@@ -111,5 +111,5 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
 }
 
 export function toneClass(tone: AuditDescription['tone']): string {
-  return tone === 'neutral' ? 'badge' : `badge badge-${tone}`
+  return tone === 'neutral' ? 'chip' : `chip chip-${tone}`
 }
