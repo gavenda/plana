@@ -11,6 +11,10 @@ export type GuildSettings = {
   birthdayChannelId: string | null
   /** Days in triage before staff are reminded; null is off. */
   triageReminderDays: number | null
+  /** Can use the dashboard and triage, but not change settings; null is administrators only. */
+  moderatorRoleId: string | null
+  /** Held by members only on their birthday; null is off. */
+  birthdayRoleId: string | null
 }
 
 type SettingsResponse = { settings: GuildSettings; configured: boolean }
@@ -22,6 +26,8 @@ const EMPTY: GuildSettings = {
   announceChannelId: null,
   birthdayChannelId: null,
   triageReminderDays: null,
+  birthdayRoleId: null,
+  moderatorRoleId: null,
 }
 
 export const useSettingsStore = defineStore('settings', () => {

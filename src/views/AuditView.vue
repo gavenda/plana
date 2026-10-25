@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
+import AppSearchBar from '@/components/AppSearchBar.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
+import FilterChip from '@/components/FilterChip.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import {
+  AUDIT_CATEGORIES,
   auditIcon,
   describeAudit,
   toneContainerClass,
+  type AuditCategory,
   type AuditEntry,
   type AuditPage,
 } from '@/lib/audit'
@@ -21,33 +26,108 @@ const loading = ref(false)
 const loadingMore = ref(false)
 const error = ref<string | null>(null)
 
+const route = useRoute()
+const router = useRouter()
+
+const CATEGORY_IDS = AUDIT_CATEGORIES.map((category) => category.id) as readonly string[]
+
+/** The search and filters live in the URL, so a filtered view survives a reload and can be shared. */
+function categoriesFromQuery(): AuditCategory[] {
+  const raw = typeof route.query.categories === 'string' ? route.query.categories : ''
+  return raw.split(',').filter((id): id is AuditCategory => CATEGORY_IDS.includes(id))
+}
+
+const search = ref(typeof route.query.q === 'string' ? route.query.q : '')
+const categories = ref<AuditCategory[]>(categoriesFromQuery())
+
+const filtering = computed(() => search.value.trim() !== '' || categories.value.length > 0)
+
+function isSelected(category: AuditCategory): boolean {
+  return categories.value.includes(category)
+}
+
+function setSelected(category: AuditCategory, selected: boolean) {
+  categories.value = selected
+    ? AUDIT_CATEGORIES.map((entry) => entry.id).filter(
+        (id) => id === category || categories.value.includes(id),
+      )
+    : categories.value.filter((id) => id !== category)
+}
+
+function clearFilters() {
+  search.value = ''
+  categories.value = []
+}
+
 async function fetchPage(before?: number) {
   const query = new URLSearchParams({ limit: '50' })
   if (before != null) query.set('before', String(before))
+  const text = search.value.trim()
+  if (text) query.set('search', text)
+  if (categories.value.length > 0) query.set('categories', categories.value.join(','))
   return apiFetch<AuditPage>(`/api/audit?${query}`)
 }
 
+/** Bumped on every fresh load, so a slow response to an older search cannot overwrite a newer one. */
+let generation = 0
+
 async function load() {
+  const current = ++generation
   loading.value = true
   error.value = null
   try {
     const page = await fetchPage()
+    if (current !== generation) return
     entries.value = page.entries
     cursor.value = page.nextCursor
     total.value = page.total
   } catch (cause) {
+    if (current !== generation) return
     error.value = cause instanceof Error ? cause.message : 'Could not load the audit log.'
   } finally {
-    loading.value = false
+    if (current === generation) loading.value = false
   }
 }
+
+function syncQuery() {
+  const text = search.value.trim()
+  void router.replace({
+    query: {
+      ...route.query,
+      q: text || undefined,
+      categories: categories.value.length > 0 ? categories.value.join(',') : undefined,
+    },
+  })
+}
+
+/** Typing waits for a pause before searching; a chip applies at once. */
+const SEARCH_DEBOUNCE_MS = 250
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(search, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    syncQuery()
+    void load()
+  }, SEARCH_DEBOUNCE_MS)
+})
+
+watch(categories, () => {
+  clearTimeout(searchTimer)
+  syncQuery()
+  void load()
+})
+
+onBeforeUnmount(() => clearTimeout(searchTimer))
 
 async function loadMore() {
   if (cursor.value == null || loadingMore.value) return
 
   loadingMore.value = true
   try {
+    const current = generation
     const page = await fetchPage(cursor.value)
+    if (current !== generation) return
     entries.value = [...entries.value, ...page.entries]
     cursor.value = page.nextCursor
   } catch (cause) {
@@ -97,8 +177,8 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between gap-4 px-4">
-      <p class="text-headline-medium text-on-surface">
-        {{ total }} recorded {{ total === 1 ? 'event' : 'events' }}
+      <p class="text-headline-medium text-on-surface" aria-live="polite">
+        {{ total }} {{ filtering ? 'matching' : 'recorded' }} {{ total === 1 ? 'event' : 'events' }}
       </p>
       <button
         class="icon-btn icon-btn-tonal icon-btn-narrow"
@@ -112,11 +192,36 @@ onMounted(() => {
       </button>
     </div>
 
+    <div role="search" class="flex flex-col gap-3">
+      <AppSearchBar
+        v-model="search"
+        placeholder="Search names, messages, channels and reasons"
+        label="Search the audit log"
+      />
+
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Filter by kind">
+        <FilterChip
+          v-for="category in AUDIT_CATEGORIES"
+          :key="category.id"
+          :label="category.label"
+          :model-value="isSelected(category.id)"
+          @update:model-value="setSelected(category.id, $event)"
+        />
+        <button v-if="filtering" class="btn btn-text btn-sm" type="button" @click="clearFilters">
+          Clear all
+        </button>
+      </div>
+    </div>
+
     <StateBlock
       :loading="loading && entries.length === 0"
       :error="error"
       :empty="entries.length === 0"
-      empty-text="Nothing to report. I'll record every change here."
+      :empty-text="
+        filtering
+          ? 'No records match. Try fewer filters or another word.'
+          : 'Nothing to report. I\'ll record every change here.'
+      "
       empty-mood="standby"
       :retry="load"
     >
@@ -140,6 +245,17 @@ onMounted(() => {
               <p class="text-body-medium text-on-surface-variant">
                 {{ description.label }} · {{ SOURCE_LABEL[entry.source] ?? entry.source }}
               </p>
+              <div
+                v-for="quote in description.quotes ?? []"
+                :key="quote.label"
+                class="mt-2 rounded-lg bg-surface-container-highest px-3 py-2"
+              >
+                <p class="text-label-medium text-on-surface-variant">{{ quote.label }}</p>
+                <p
+                  class="max-h-60 overflow-y-auto text-body-medium [overflow-wrap:anywhere] whitespace-pre-wrap"
+                  v-text="quote.text"
+                />
+              </div>
             </div>
 
             <time

@@ -6,16 +6,22 @@ export type SessionUser = {
   username: string
   displayName: string
   avatar: string | null
+  /**
+   * What they may do, checked live against Discord when the page is served. Only shapes what
+   * the dashboard shows: the API re-checks every request.
+   */
+  access?: 'admin' | 'moderator' | null
 }
 
 export const useSessionStore = defineStore('session', () => {
   const user = ref<SessionUser | null>(null)
 
   const isAuthenticated = computed(() => user.value !== null)
+  const isAdmin = computed(() => user.value?.access === 'admin')
 
   function setUser(next: SessionUser | null) {
     user.value = next
   }
 
-  return { user, isAuthenticated, setUser }
+  return { user, isAuthenticated, isAdmin, setUser }
 })

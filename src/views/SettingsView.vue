@@ -20,30 +20,63 @@ const draft = reactive<GuildSettings>({
   announceChannelId: null,
   birthdayChannelId: null,
   triageReminderDays: null,
+  birthdayRoleId: null,
+  moderatorRoleId: null,
 })
 
 const snackbar = useSnackbar()
 const saving = ref(false)
 
-type RoleKey = 'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId'
+type RoleKey =
+  | 'triageRoleId'
+  | 'unitOwnerRoleId'
+  | 'boardersRoleId'
+  | 'moderatorRoleId'
+  | 'birthdayRoleId'
 
-const ROLE_FIELDS = [
+type RoleField = {
+  key: RoleKey
+  label: string
+  hint: string
+  /** Label for leaving it unset. */
+  empty: string
+  /** Plana only reads who holds it, so any role will do, not just ones the bot can grant. */
+  readOnly?: boolean
+}
+
+const ROLE_FIELDS: RoleField[] = [
   {
     key: 'triageRoleId',
     label: 'Triage role',
     hint: 'Assigned by Discord when someone joins. Plana removes it once a role is assigned.',
+    empty: 'Not set',
   },
   {
     key: 'unitOwnerRoleId',
     label: 'Unit Owner role',
     hint: 'First button on the join announcement.',
+    empty: 'Not set',
   },
   {
     key: 'boardersRoleId',
     label: 'Boarders role',
     hint: 'Second button on the join announcement.',
+    empty: 'Not set',
   },
-] as const
+  {
+    key: 'moderatorRoleId',
+    label: 'Moderator role',
+    hint: 'Can sign in here and handle triage, but cannot change settings or broadcast. Administrators always have full access.',
+    empty: 'Administrators only',
+    readOnly: true,
+  },
+  {
+    key: 'birthdayRoleId',
+    label: 'Birthday role',
+    hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: Plana removes it from everyone else.',
+    empty: 'Off',
+  },
+]
 
 onMounted(() => {
   void guild.load()
@@ -69,11 +102,12 @@ const REMINDER_OPTIONS: SelectOption<number | null>[] = [
 ]
 
 /** Roles Discord will actually let the bot grant, plus whatever is already selected. */
-function roleOptions(key: RoleKey): SelectOption<string | null>[] {
+function roleOptions(field: RoleField): SelectOption<string | null>[] {
+  const key = field.key
   return [
-    { value: null, label: 'Not set' },
+    { value: null, label: field.empty },
     ...guild.roles
-      .filter((role) => role.assignable || role.id === draft[key])
+      .filter((role) => field.readOnly || role.assignable || role.id === draft[key])
       .map((role) => ({ value: role.id, label: role.name, swatch: roleColor(role.color) })),
   ]
 }
@@ -92,13 +126,14 @@ function channelOptions(emptyLabel: string): SelectOption<string | null>[] {
   ]
 }
 
-function warningFor(key: RoleKey): string | null {
-  const id = draft[key]
+function warningFor(field: RoleField): string | null {
+  const id = draft[field.key]
   if (!id || guild.roles.length === 0) return null
 
   const role = guild.roles.find((candidate) => candidate.id === id)
   if (!role) return 'This role no longer exists in the server.'
-  if (!role.assignable) return 'The bot cannot manage this role — move its own role higher.'
+  if (!field.readOnly && !role.assignable)
+    return 'The bot cannot manage this role — move its own role higher.'
   return null
 }
 
@@ -164,11 +199,11 @@ const version = __APP_VERSION__
               <AppSelect
                 v-model="draft[field.key]"
                 :label="field.label"
-                :options="roleOptions(field.key)"
+                :options="roleOptions(field)"
                 :supporting-text="field.hint"
               />
-              <p v-if="warningFor(field.key)" class="supporting-text text-warning">
-                {{ warningFor(field.key) }}
+              <p v-if="warningFor(field)" class="supporting-text text-warning">
+                {{ warningFor(field) }}
               </p>
             </div>
 

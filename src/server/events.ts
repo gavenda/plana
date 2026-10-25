@@ -5,6 +5,7 @@ import { channelUpdateEvent } from './events/channel-update.event'
 import { chatInputCommandInteractionEvent } from './events/chat-input-command-interaction.event'
 import { clientReadyEvent } from './events/client-ready.event'
 import { errorEvent } from './events/error.event'
+import { guildAuditLogEntryCreateEvent } from './events/guild-audit-log-entry-create.event'
 import { guildMemberAddEvent } from './events/guild-member-add.event'
 import { guildMemberRemoveEvent } from './events/guild-member-remove.event'
 import { guildMemberUpdateEvent } from './events/guild-member-update.event'
@@ -15,7 +16,11 @@ import type { Client } from 'discord.js'
 
 import type { AppContext } from './context'
 import type { AnyAppEvent } from './events/event'
+import { messageBulkDeleteEvent } from './events/message-bulk-delete.event'
+import { messageDeleteEvent } from './events/message-delete.event'
+import { messageUpdateEvent } from './events/message-update.event'
 import { modalSubmitInteractionEvent } from './events/modal-submit-interaction.event'
+import { voiceStateUpdateEvent } from './events/voice-state-update.event'
 
 export const events: AnyAppEvent[] = [
   clientReadyEvent,
@@ -32,6 +37,12 @@ export const events: AnyAppEvent[] = [
   channelCreateEvent,
   channelUpdateEvent,
   channelDeleteEvent,
+
+  messageDeleteEvent,
+  messageBulkDeleteEvent,
+  messageUpdateEvent,
+  guildAuditLogEntryCreateEvent,
+  voiceStateUpdateEvent,
 
   chatInputCommandInteractionEvent,
   buttonInteractionEvent,

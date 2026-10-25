@@ -101,3 +101,19 @@ export function listDueBirthdays(date: { year: number; month: number; day: numbe
 export function markBirthdayAnnounced(memberId: string, year: number): void {
   markAnnounced.run({ member_id: memberId, year })
 }
+
+const selectOn = db.query<Row, { month: number; day: number }>(
+  'SELECT * FROM birthdays WHERE month = :month AND day = :day',
+)
+
+/**
+ * Every birthday falling on a calendar date, announced or not. In a non-leap year,
+ * 29 February birthdays fall on the 28th, as in `listDueBirthdays`.
+ */
+export function listBirthdaysOn(date: { year: number; month: number; day: number }): Birthday[] {
+  const rows = selectOn.all({ month: date.month, day: date.day })
+  if (date.month === 2 && date.day === 28 && !isLeapYear(date.year)) {
+    rows.push(...selectOn.all({ month: 2, day: 29 }))
+  }
+  return rows.map(toBirthday)
+}

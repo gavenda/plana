@@ -1,3 +1,5 @@
+import { absoluteTime } from './format'
+
 export type AuditAction =
   | 'member.join'
   | 'role.assign'
@@ -6,7 +8,24 @@ export type AuditAction =
   | 'birthday.announce'
   | 'birthday.set'
   | 'birthday.remove'
+  | 'birthday.role'
   | 'triage.remind'
+  | 'moderation.ban'
+  | 'moderation.unban'
+  | 'moderation.kick'
+  | 'moderation.timeout'
+  | 'moderation.untimeout'
+  | 'moderation.mute'
+  | 'moderation.unmute'
+  | 'moderation.deafen'
+  | 'moderation.undeafen'
+  | 'moderation.move'
+  | 'moderation.disconnect'
+  | 'moderation.roles'
+  | 'moderation.nickname'
+  | 'message.delete'
+  | 'message.edit'
+  | 'message.bulk_delete'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -20,6 +39,18 @@ export type AuditEntry = {
   targetName: string | null
   detail: Record<string, unknown> | null
 }
+
+/** The audit log's filter groups, in chip order. The server maps each onto its actions. */
+export const AUDIT_CATEGORIES = [
+  { id: 'triage', label: 'Triage' },
+  { id: 'moderation', label: 'Moderation' },
+  { id: 'messages', label: 'Messages' },
+  { id: 'birthdays', label: 'Birthdays' },
+  { id: 'broadcasts', label: 'Broadcasts' },
+  { id: 'settings', label: 'Settings' },
+] as const
+
+export type AuditCategory = (typeof AUDIT_CATEGORIES)[number]['id']
 
 export type AuditPage = {
   entries: AuditEntry[]
@@ -45,7 +76,11 @@ export type AuditDescription = {
   parts: SummaryPart[]
   /** The same summary as plain text, for tooltips and anywhere mentions can't be drawn. */
   summary: string
+  /** Message text the entry kept, shown in full under the summary. */
+  quotes?: AuditQuote[]
 }
+
+export type AuditQuote = { label: string; text: string }
 
 function text(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.length > 0 ? value : fallback
@@ -95,6 +130,8 @@ const SETTING_NAMES: Record<string, { label: string; kind: 'role' | 'channel' }>
   boardersRoleId: { label: 'the Boarders role', kind: 'role' },
   announceChannelId: { label: 'the announcement channel', kind: 'channel' },
   birthdayChannelId: { label: 'the birthday channel', kind: 'channel' },
+  birthdayRoleId: { label: 'the birthday role', kind: 'role' },
+  moderatorRoleId: { label: 'the moderator role', kind: 'role' },
 }
 
 /** Settings that hold a number of days rather than an ID. */
@@ -119,6 +156,43 @@ function settingChange(key: string, change: unknown): SummaryPart[] {
     `set ${setting.label} to `,
     setting.kind === 'role' ? { role: null, roleId: to } : { channel: null, channelId: to },
   ]
+}
+
+function names(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((name): name is string => typeof name === 'string')
+    : []
+}
+
+/** ` (“reason”)` when a moderator gave one. */
+function reason(detail: AuditEntry['detail']): string {
+  const given = text(detail?.reason, '')
+  return given ? ` (“${truncate(given)}”)` : ''
+}
+
+/** A deleted message's text, plus the names of any files it carried. */
+function messageText(content: unknown, attachments: unknown): string {
+  const files = names(attachments)
+  const body = text(content, '')
+  if (files.length === 0) return body || '(no text)'
+  return [body, `Attachments: ${files.join(', ')}`].filter(Boolean).join('\n')
+}
+
+/** Moderation actions that read "<moderator> <verb> <member>". Undoing ones are neutral. */
+const MODERATION: Record<string, { label: string; verb: string; undo?: boolean }> = {
+  'moderation.ban': { label: 'Ban', verb: ' banned ' },
+  'moderation.unban': { label: 'Unban', verb: ' unbanned ', undo: true },
+  'moderation.kick': { label: 'Kick', verb: ' kicked ' },
+  'moderation.untimeout': { label: 'Timeout', verb: ' lifted the timeout on ', undo: true },
+  'moderation.mute': { label: 'Voice', verb: ' server-muted ' },
+  'moderation.unmute': { label: 'Voice', verb: ' unmuted ', undo: true },
+  'moderation.deafen': { label: 'Voice', verb: ' server-deafened ' },
+  'moderation.undeafen': { label: 'Voice', verb: ' undeafened ', undo: true },
+}
+
+/** A voice channel kept on an entry, drawn like a channel mention. */
+function voiceChannel(name: unknown, channelId: unknown): SummaryPart {
+  return { channel: text(name, '') || null, channelId: id(channelId) }
 }
 
 /** Turns a stored audit row into something a human can read at a glance. */
@@ -217,6 +291,175 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       )
     }
 
+    case 'birthday.role': {
+      const role: SummaryPart = {
+        role: id(entry.detail?.roleName),
+        roleId: id(entry.detail?.roleId),
+      }
+      const added = names(entry.detail?.added).map((name): SummaryPart[] => [{ user: name }])
+      const removed = names(entry.detail?.removed).map((name): SummaryPart[] => [{ user: name }])
+      const parts: SummaryPart[] = []
+      if (added.length > 0) parts.push('Gave ', ...list(added), ' the ', role, ' role')
+      if (removed.length > 0) {
+        if (added.length > 0) parts.push(', and took it back from ', ...list(removed))
+        else parts.push('Took the ', role, ' role back from ', ...list(removed))
+      }
+      return describe('Birthday', 'success', ...parts)
+    }
+
+    case 'moderation.ban':
+    case 'moderation.unban':
+    case 'moderation.kick':
+    case 'moderation.untimeout':
+    case 'moderation.mute':
+    case 'moderation.unmute':
+    case 'moderation.deafen':
+    case 'moderation.undeafen': {
+      const kind = MODERATION[entry.action]!
+      return describe(
+        kind.label,
+        kind.undo ? 'neutral' : 'warn',
+        actor,
+        kind.verb,
+        target,
+        reason(entry.detail),
+      )
+    }
+
+    case 'moderation.move': {
+      // The moved member is unknown when their channel change could not be matched up.
+      const who = entry.targetName ? target : 'a member'
+      const from = entry.detail?.fromChannelName
+      return describe(
+        'Voice',
+        'neutral',
+        actor,
+        ' moved ',
+        who,
+        ...(from ? [' from ', voiceChannel(from, entry.detail?.fromChannelId)] : []),
+        ' to ',
+        voiceChannel(entry.detail?.channelName, entry.detail?.channelId),
+      )
+    }
+
+    case 'moderation.disconnect': {
+      const who = entry.targetName ? target : 'a member'
+      const from = entry.detail?.channelName
+      return describe(
+        'Voice',
+        'warn',
+        actor,
+        ' disconnected ',
+        who,
+        ...(from ? [' from ', voiceChannel(from, entry.detail?.channelId)] : []),
+      )
+    }
+
+    case 'moderation.roles': {
+      const roles = (value: unknown): SummaryPart[][] =>
+        (Array.isArray(value) ? (value as { id?: unknown; name?: unknown }[]) : []).map((role) => [
+          { role: id(role.name), roleId: id(role.id) },
+        ])
+      const added = roles(entry.detail?.added)
+      const removed = roles(entry.detail?.removed)
+      const parts: SummaryPart[] = [actor]
+      if (added.length > 0) parts.push(' gave ', target, ' ', ...list(added))
+      if (removed.length > 0) {
+        parts.push(added.length > 0 ? ' and removed ' : ' removed ', ...list(removed), ' from ')
+        if (added.length === 0) parts.push(target)
+        else parts.push('them')
+      }
+      return describe('Roles', 'neutral', ...parts, reason(entry.detail))
+    }
+
+    case 'moderation.nickname': {
+      const to = text(entry.detail?.to, '')
+      return to
+        ? describe('Nickname', 'neutral', actor, ' renamed ', target, ` to “${to}”`)
+        : describe('Nickname', 'neutral', actor, ' cleared ', ...whose, ' nickname')
+    }
+
+    case 'moderation.timeout': {
+      const until =
+        typeof entry.detail?.until === 'number' ? absoluteTime(entry.detail.until) : null
+      return describe(
+        'Timeout',
+        'warn',
+        actor,
+        ' timed out ',
+        target,
+        until ? ` until ${until}` : '',
+        reason(entry.detail),
+      )
+    }
+
+    case 'message.delete': {
+      const channel: SummaryPart = {
+        channel: text(entry.detail?.channelName, '').replace(/^#/, '') || null,
+        channelId: id(entry.detail?.channelId),
+      }
+      return {
+        ...describe(
+          'Message deleted',
+          'warn',
+          'A message by ',
+          target,
+          ' was deleted in ',
+          channel,
+        ),
+        quotes: [
+          { label: 'Message', text: messageText(entry.detail?.content, entry.detail?.attachments) },
+        ],
+      }
+    }
+
+    case 'message.edit': {
+      const channel: SummaryPart = {
+        channel: text(entry.detail?.channelName, '').replace(/^#/, '') || null,
+        channelId: id(entry.detail?.channelId),
+      }
+      return {
+        ...describe('Message edited', 'neutral', actor, ' edited a message in ', channel),
+        quotes: [
+          { label: 'Before', text: text(entry.detail?.before, '(no text)') },
+          { label: 'After', text: text(entry.detail?.after, '(no text)') },
+        ],
+      }
+    }
+
+    case 'message.bulk_delete': {
+      const count = typeof entry.detail?.count === 'number' ? entry.detail.count : 0
+      const kept = Array.isArray(entry.detail?.messages)
+        ? (entry.detail.messages as Record<string, unknown>[])
+        : []
+      const transcript = kept
+        .map(
+          (message) =>
+            `${text(message.authorName, 'Unknown')}: ${text(message.content, '(no text)')}`,
+        )
+        .join('\n')
+      const unseen = count - kept.length
+      return {
+        ...describe(
+          'Messages deleted',
+          'warn',
+          `${count} ${count === 1 ? 'message was' : 'messages were'} deleted at once in `,
+          targetChannel,
+        ),
+        quotes: transcript
+          ? [
+              {
+                label:
+                  unseen > 0
+                    ? `Messages (${unseen} not shown: from bots, or sent before Plana last started)`
+                    : 'Messages',
+                text: transcript,
+              },
+            ]
+          : [],
+      }
+    }
+
     default:
       return describe(entry.action, 'neutral', actor, ` performed ${entry.action}`)
   }
@@ -237,8 +480,31 @@ export function auditIcon(action: AuditAction): string {
     case 'birthday.set':
     case 'birthday.remove':
       return 'cake'
+    case 'birthday.role':
+      return 'cake'
     case 'triage.remind':
       return 'hourglass_top'
+    case 'moderation.ban':
+    case 'moderation.unban':
+    case 'moderation.kick':
+    case 'moderation.timeout':
+    case 'moderation.untimeout':
+    case 'moderation.roles':
+    case 'moderation.nickname':
+      return 'gavel'
+    case 'moderation.mute':
+    case 'moderation.unmute':
+    case 'moderation.deafen':
+    case 'moderation.undeafen':
+    case 'moderation.move':
+    case 'moderation.disconnect':
+      return 'headset_mic'
+    case 'message.delete':
+      return 'delete'
+    case 'message.edit':
+      return 'edit'
+    case 'message.bulk_delete':
+      return 'delete_sweep'
     default:
       return 'history'
   }

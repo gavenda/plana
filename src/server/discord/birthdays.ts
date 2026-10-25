@@ -7,6 +7,7 @@ import {
   isLeapYear,
   isValidBirthday,
   listBirthdays,
+  listBirthdaysOn,
   listDueBirthdays,
   markBirthdayAnnounced,
   removeBirthday,
@@ -119,6 +120,9 @@ export async function saveBirthday(input: {
     })
   }
 
+  // A date moved onto or off today should change the role now, not at the next check.
+  void syncBirthdayRole()
+
   return ok({ month, day })
 }
 
@@ -144,6 +148,8 @@ export async function deleteBirthday(input: {
     targetName: member?.displayName ?? null,
     detail: { from: label(before) },
   })
+
+  void syncBirthdayRole()
 
   return ok({ removed: true })
 }
@@ -287,5 +293,106 @@ export async function announceBirthdays(): Promise<void> {
     console.error('[birthdays] announcement failed:', error)
   } finally {
     running = false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Birthday role
+// ---------------------------------------------------------------------------
+
+/**
+ * Holders the sync will strip in one go before it decides the role is not a dedicated
+ * birthday role and leaves it alone. A real day never has more than a handful.
+ */
+export const MAX_BIRTHDAY_ROLE_REMOVALS = 10
+
+let syncing: Promise<void> = Promise.resolve()
+
+/**
+ * Gives the birthday role to everyone whose birthday is today and takes it from everyone
+ * else. It compares against who holds the role now, so it is safe to call as often as you
+ * like and catches up on its own after downtime or a changed date.
+ *
+ * `previousRoleId` is the role that was configured before a settings change: today's
+ * birthday members lose it, since Plana is the one who gave it to them.
+ *
+ * Calls queue behind each other, so two syncs never race on the same member.
+ */
+export function syncBirthdayRole(previousRoleId?: string | null): Promise<void> {
+  syncing = syncing.then(() => runBirthdayRoleSync(previousRoleId))
+  return syncing
+}
+
+async function runBirthdayRoleSync(previousRoleId?: string | null): Promise<void> {
+  if (!isReady()) return
+
+  try {
+    const { birthdayRoleId } = getSettings()
+    if (!birthdayRoleId && !previousRoleId) return
+
+    await primeMemberCache()
+    const guild = await getGuild()
+    const due = new Set(listBirthdaysOn(today()).map((birthday) => birthday.memberId))
+    const why = 'Plana — birthday role'
+
+    if (previousRoleId && previousRoleId !== birthdayRoleId) {
+      const previous = guild.roles.cache.get(previousRoleId)
+      if (previous?.editable) {
+        for (const member of previous.members.values()) {
+          if (due.has(member.id)) await member.roles.remove(previous, why).catch(() => null)
+        }
+      }
+    }
+
+    if (!birthdayRoleId) return
+
+    const role = guild.roles.cache.get(birthdayRoleId)
+    if (!role) {
+      console.warn('[birthdays] the configured birthday role no longer exists')
+      return
+    }
+    if (!role.editable) {
+      console.warn(`[birthdays] the bot cannot manage @${role.name}; move its own role higher`)
+      return
+    }
+
+    const stale = [...role.members.values()].filter((member) => !due.has(member.id))
+    if (stale.length > MAX_BIRTHDAY_ROLE_REMOVALS) {
+      console.warn(
+        `[birthdays] @${role.name} is held by ${stale.length} members without a birthday today, ` +
+          'so it does not look like a dedicated birthday role. Leaving it alone.',
+      )
+      return
+    }
+
+    const added: GuildMember[] = []
+    const removed: GuildMember[] = []
+
+    for (const member of stale) {
+      if (await member.roles.remove(role, why).catch(() => null)) removed.push(member)
+    }
+
+    for (const memberId of due) {
+      const member = guild.members.cache.get(memberId)
+      if (!member || member.user.bot || member.roles.cache.has(role.id)) continue
+      if (await member.roles.add(role, why).catch(() => null)) added.push(member)
+    }
+
+    if (added.length === 0 && removed.length === 0) return
+
+    recordAudit({
+      action: 'birthday.role',
+      source: 'system',
+      detail: {
+        roleId: role.id,
+        roleName: role.name,
+        added: added.map((member) => member.displayName),
+        removed: removed.map((member) => member.displayName),
+      },
+    })
+
+    console.log(`[birthdays] @${role.name}: gave ${added.length}, took back ${removed.length}`)
+  } catch (error) {
+    console.error('[birthdays] birthday role sync failed:', error)
   }
 }

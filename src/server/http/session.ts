@@ -3,7 +3,7 @@ import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
 
 import { createSession, destroySession, getSession, type SessionUser } from '../db/sessions'
 import { isReady } from '../discord/client'
-import { isGuildAdmin } from '../discord/service'
+import { getAccessLevel, type AccessLevel } from '../discord/service'
 import { env, isProduction } from '../env'
 
 export const SESSION_COOKIE = 'plana_session'
@@ -12,6 +12,7 @@ export const OAUTH_STATE_COOKIE = 'plana_oauth_state'
 export type AppEnv = {
   Variables: {
     user: SessionUser
+    access: AccessLevel
   }
 }
 
@@ -66,11 +67,11 @@ export async function takeStateCookie(c: Context): Promise<OAuthState | null> {
 }
 
 /**
- * Guards every mutating endpoint. Administrator status is re-checked against Discord
- * on each request rather than trusted from the session, so revoking someone's
- * permissions in Discord locks them out of the dashboard immediately.
+ * Guards every API endpoint: administrators and moderators only. Access is re-checked against
+ * Discord on each request rather than trusted from the session, so revoking someone's
+ * permissions or role in Discord locks them out of the dashboard immediately.
  */
-export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
+export const requireStaff: MiddlewareHandler<AppEnv> = async (c, next) => {
   const user = await readSession(c)
   if (!user) return c.json({ error: 'Not signed in.', code: 'unauthenticated' }, 401)
 
@@ -78,11 +79,24 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
     return c.json({ error: 'The bot is still connecting to Discord.', code: 'not_ready' }, 503)
   }
 
-  if (!(await isGuildAdmin(user.id))) {
+  const access = await getAccessLevel(user.id)
+  if (!access) {
     await endSession(c)
-    return c.json({ error: 'You are not an administrator of this server.', code: 'forbidden' }, 403)
+    return c.json(
+      { error: 'You are not an administrator or moderator of this server.', code: 'forbidden' },
+      403,
+    )
   }
 
   c.set('user', user)
+  c.set('access', access)
+  await next()
+}
+
+/** For the endpoints moderators may not use: changing settings and posting as the bot. Runs after `requireStaff`. */
+export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (c.get('access') !== 'admin') {
+    return c.json({ error: 'Only administrators can do that.', code: 'admin_only' }, 403)
+  }
   await next()
 }

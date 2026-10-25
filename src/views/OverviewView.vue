@@ -10,6 +10,7 @@ import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
+import { useSessionStore } from '@/stores/session'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
 
 type PendingMember = {
@@ -23,6 +24,7 @@ type PendingMember = {
 
 const guild = useGuildStore()
 const settings = useSettingsStore()
+const session = useSessionStore()
 
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
 const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
@@ -88,7 +90,10 @@ const recent = computed(() =>
           >.
         </p>
       </div>
-      <RouterLink class="btn btn-text text-on-warning-container" to="/settings"
+      <RouterLink
+        v-if="session.isAdmin"
+        class="btn btn-text text-on-warning-container"
+        to="/settings"
         >Open settings</RouterLink
       >
     </div>

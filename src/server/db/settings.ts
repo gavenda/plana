@@ -10,6 +10,10 @@ export type GuildSettings = {
   birthdayChannelId: string | null
   /** Days in triage before staff are reminded. Reminders are off while it is unset. */
   triageReminderDays: number | null
+  /** Optional. Members with it can use the dashboard and triage, but not change settings. */
+  moderatorRoleId: string | null
+  /** Optional. Held by members only on their birthday; off while unset. */
+  birthdayRoleId: string | null
 }
 
 /** Settings stored as numbers; every other setting is a Discord ID. */
@@ -22,6 +26,8 @@ export const SETTING_KEYS = [
   'announceChannelId',
   'birthdayChannelId',
   'triageReminderDays',
+  'birthdayRoleId',
+  'moderatorRoleId',
 ] as const satisfies readonly (keyof GuildSettings)[]
 
 /** The settings the triage flow cannot run without. */
@@ -39,6 +45,8 @@ const EMPTY: GuildSettings = {
   announceChannelId: null,
   birthdayChannelId: null,
   triageReminderDays: null,
+  birthdayRoleId: null,
+  moderatorRoleId: null,
 }
 
 const selectAll = db.query<{ key: string; value: string }, []>('SELECT key, value FROM settings')
@@ -88,6 +96,8 @@ export function seedSettingsFromEnv(): void {
     boardersRoleId: env.BOARDERS_ROLE_ID,
     announceChannelId: env.ANNOUNCE_CHANNEL_ID,
     birthdayChannelId: env.BIRTHDAY_CHANNEL_ID,
+    birthdayRoleId: env.BIRTHDAY_ROLE_ID,
+    moderatorRoleId: env.MODERATOR_ROLE_ID,
   }
 
   const patch: Partial<Record<keyof GuildSettings, unknown>> = {}

@@ -9,6 +9,7 @@ import { absoluteTime, relativeTime } from '@/lib/format'
 import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
+import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
 
 type PendingMember = {
@@ -29,6 +30,7 @@ const NEW_ACCOUNT_MS = 7 * DAY_MS
 
 const guild = useGuildStore()
 const settings = useSettingsStore()
+const session = useSessionStore()
 
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
 const snackbar = useSnackbar()
@@ -98,7 +100,10 @@ async function assign(member: PendingMember, roleId: string) {
             : 'No triage role is configured. Choose one to see who is waiting.'
         }}
       </p>
-      <RouterLink to="/settings" class="btn btn-text text-on-warning-container"
+      <RouterLink
+        v-if="session.isAdmin"
+        to="/settings"
+        class="btn btn-text text-on-warning-container"
         >Finish setup</RouterLink
       >
     </div>

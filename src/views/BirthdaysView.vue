@@ -13,6 +13,7 @@ import { discordTextColor, roleColor } from '@/lib/discord'
 import type { SelectOption } from '@/lib/select'
 import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
+import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
 
 type BirthdayMember = {
@@ -33,6 +34,7 @@ type BirthdayOverview = {
 }
 
 const settings = useSettingsStore()
+const session = useSessionStore()
 const overview = useAsync(() => apiFetch<BirthdayOverview>('/api/birthdays'))
 
 const memberId = ref<string | null>(null)
@@ -160,7 +162,10 @@ async function remove() {
         Birthday announcements are off until a birthday channel is chosen. Birthdays saved here are
         kept for when they are switched on.
       </p>
-      <RouterLink to="/settings" class="btn btn-text text-on-warning-container"
+      <RouterLink
+        v-if="session.isAdmin"
+        to="/settings"
+        class="btn btn-text text-on-warning-container"
         >Choose a channel</RouterLink
       >
     </div>

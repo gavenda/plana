@@ -3,7 +3,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 
 import { isReady } from '../discord/client'
-import { isGuildAdmin } from '../discord/service'
+import { getAccessLevel } from '../discord/service'
 import { env } from '../env'
 import { endSession, readSession, setStateCookie, startSession, takeStateCookie } from './session'
 import type { AppEnv } from './session'
@@ -114,7 +114,7 @@ authRoutes.get('/callback', async (c) => {
   if (!user) return loginError('profile')
 
   if (!isReady()) return loginError('not_ready')
-  if (!(await isGuildAdmin(user.id))) return loginError('forbidden')
+  if (!(await getAccessLevel(user.id))) return loginError('forbidden')
 
   await startSession(c, {
     id: user.id,
@@ -136,5 +136,6 @@ authRoutes.post('/logout', async (c) => {
 /** Unauthenticated probe used by the client to decide whether to show the app shell. */
 authRoutes.get('/me', async (c) => {
   const user = await readSession(c)
-  return c.json({ user })
+  const access = user && isReady() ? await getAccessLevel(user.id).catch(() => null) : null
+  return c.json({ user: user ? { ...user, access } : null })
 })

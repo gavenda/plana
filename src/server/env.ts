@@ -46,6 +46,8 @@ const schema = z.object({
   BOARDERS_ROLE_ID: snowflake.optional(),
   ANNOUNCE_CHANNEL_ID: snowflake.optional(),
   BIRTHDAY_CHANNEL_ID: snowflake.optional(),
+  BIRTHDAY_ROLE_ID: snowflake.optional(),
+  MODERATOR_ROLE_ID: snowflake.optional(),
 })
 
 export type Env = z.infer<typeof schema>

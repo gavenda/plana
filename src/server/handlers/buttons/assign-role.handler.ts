@@ -3,7 +3,7 @@ import { MessageFlags } from 'discord.js'
 import { ASSIGN_PREFIX, decodeAssignId } from '../../discord/ids'
 import { assignRole } from '../../discord/service'
 import { tl } from '../../i18n'
-import { isAdministrator } from '../../utils/is-administrator'
+import { isStaff } from '../../utils/is-administrator'
 import type { AppButtonHandler } from './button-handler'
 
 export const assignRoleHandler: AppButtonHandler = {
@@ -14,7 +14,7 @@ export const assignRoleHandler: AppButtonHandler = {
 
     const locale = interaction.locale
 
-    if (!isAdministrator(interaction)) {
+    if (!isStaff(interaction)) {
       await interaction.reply({
         content: tl('reply.not_administrator_assign', locale),
         flags: MessageFlags.Ephemeral,

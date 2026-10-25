@@ -12,7 +12,7 @@ const MESSAGES: Record<string, string> = {
   state: 'That sign-in link expired. Please try again.',
   exchange: 'Discord rejected the sign-in. Please try again.',
   profile: 'Could not read your Discord profile. Please try again.',
-  forbidden: 'That account is not an administrator of this server.',
+  forbidden: 'That account is not an administrator or moderator of this server.',
   not_ready: 'The bot is still connecting to Discord. Try again in a moment.',
 }
 
@@ -112,7 +112,7 @@ onBeforeUnmount(() => {
   clearTimers()
 })
 
-/** She refuses someone who isn't an administrator; any other failure only unsettles her. */
+/** She refuses someone who isn't staff; any other failure only unsettles her. */
 const plana = computed<{ mood: PlanaMood; line: string }>(() => {
   if (frame.value !== 'look') return { mood: 'standby', line: 'Verifying. Please hold still.' }
   if (interrupted.value) {

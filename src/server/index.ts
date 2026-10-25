@@ -2,7 +2,7 @@ import { closeCache, connectCache } from './cache'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
 import type { AppContext } from './context'
-import { announceBirthdays } from './discord/birthdays'
+import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
 import { primeMemberCache } from './discord/service'
 import { remindStaleTriage } from './discord/triage-reminders'
@@ -20,7 +20,7 @@ const SESSION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
  */
 const MEMBER_REFRESH_INTERVAL_MS = 30 * 60 * 1000
 
-/** How soon after midnight birthdays are posted. Each check is one SQLite query. */
+/** How soon after midnight birthdays are posted and the birthday role moves. */
 const BIRTHDAY_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 /** Reminders are measured in days, so an hour late is close enough. */
@@ -51,11 +51,11 @@ async function login(): Promise<void> {
 
     if (message.includes('disallowed intents')) {
       console.error(
-        '[discord] Discord refused the connection: this bot needs the Server Members Intent.\n' +
-          '          Enable it at https://discord.com/developers/applications\n' +
+        '[discord] Discord refused the connection: this bot needs two privileged intents.\n' +
+          '          Enable them at https://discord.com/developers/applications\n' +
           '          -> your application -> Bot -> Privileged Gateway Intents\n' +
-          '          -> Server Members Intent, then start again.\n' +
-          '          Without it the bot cannot see members join, so triage cannot work.',
+          '          -> Server Members Intent and Message Content Intent, then start again.\n' +
+          '          Triage needs the first; the audit log needs the second for message text.',
       )
       process.exit(1)
     }
@@ -101,7 +101,10 @@ const memberRefreshTimer = setInterval(() => {
   })
 }, MEMBER_REFRESH_INTERVAL_MS)
 
-const birthdayTimer = setInterval(() => void announceBirthdays(), BIRTHDAY_CHECK_INTERVAL_MS)
+const birthdayTimer = setInterval(() => {
+  void announceBirthdays()
+  void syncBirthdayRole()
+}, BIRTHDAY_CHECK_INTERVAL_MS)
 const triageReminderTimer = setInterval(() => void remindStaleTriage(), TRIAGE_REMINDER_INTERVAL_MS)
 
 async function shutdown(signal: string): Promise<void> {

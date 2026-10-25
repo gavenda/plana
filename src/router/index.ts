@@ -13,6 +13,8 @@ declare module 'vue-router' {
     title: string
     /** Reachable without a session. */
     public?: boolean
+    /** Administrators only; moderators are sent to the overview. */
+    adminOnly?: boolean
     /** Fills the left of the window with art and moves the page to a column on the right. */
     scene?: boolean
   }
@@ -41,7 +43,7 @@ const routes: RouteRecordRaw[] = [
     path: '/broadcast',
     name: 'broadcast',
     component: () => import('@/views/BroadcastView.vue'),
-    meta: { title: 'Broadcast' },
+    meta: { title: 'Broadcast', adminOnly: true },
   },
   {
     path: '/birthdays',
@@ -53,7 +55,7 @@ const routes: RouteRecordRaw[] = [
     path: '/settings',
     name: 'settings',
     component: () => import('@/views/SettingsView.vue'),
-    meta: { title: 'Settings' },
+    meta: { title: 'Settings', adminOnly: true },
   },
   {
     path: '/audit',
@@ -83,6 +85,9 @@ export function createAppRouter(history?: RouterHistory): Router {
       return { name: 'login', query: to.fullPath === '/' ? {} : { next: to.fullPath } }
     }
     if (to.name === 'login' && session.isAuthenticated) {
+      return { name: 'overview' }
+    }
+    if (to.meta.adminOnly && !session.isAdmin) {
       return { name: 'overview' }
     }
     return true

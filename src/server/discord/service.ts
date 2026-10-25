@@ -71,10 +71,21 @@ export async function getAssignableRoles(settings: GuildSettings = getSettings()
   return roles
 }
 
-export async function isGuildAdmin(userId: string): Promise<boolean> {
+/**
+ * Administrators can do everything. Moderators (the configured moderator role) can use the
+ * dashboard and triage, but cannot change settings or post as the bot.
+ */
+export type AccessLevel = 'admin' | 'moderator'
+
+export async function getAccessLevel(userId: string): Promise<AccessLevel | null> {
   const guild = await getGuild()
   const member = await guild.members.fetch(userId).catch(() => null)
-  return member?.permissions.has(PermissionFlagsBits.Administrator) ?? false
+  if (!member) return null
+  if (member.permissions.has(PermissionFlagsBits.Administrator)) return 'admin'
+
+  const { moderatorRoleId } = getSettings()
+  if (moderatorRoleId && member.roles.cache.has(moderatorRoleId)) return 'moderator'
+  return null
 }
 
 // ---------------------------------------------------------------------------

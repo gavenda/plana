@@ -4,6 +4,8 @@ import { resolve } from 'node:path'
 import type { Context } from 'hono'
 
 import { readSession } from './session'
+import { isReady } from '../discord/client'
+import { getAccessLevel } from '../discord/service'
 import { isProduction } from '../env'
 
 const VITE_DEV_PORT = Number(Bun.env.VITE_DEV_PORT ?? 5174)
@@ -47,7 +49,10 @@ function fillTemplate(template: string, result: RenderResult): string {
 }
 
 async function renderPage(c: Context, template: string, render: RenderFn): Promise<Response> {
-  const user = await readSession(c)
+  const session = await readSession(c)
+  // Live, like the API, so the dashboard shows only what this person may use.
+  const access = session && isReady() ? await getAccessLevel(session.id).catch(() => null) : null
+  const user = session ? { ...session, access } : null
   const result = await render({ url: c.req.path + (new URL(c.req.url).search || ''), user })
 
   if (result.redirect) return c.redirect(result.redirect, 302)

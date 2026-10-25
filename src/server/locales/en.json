@@ -1,7 +1,7 @@
 {
   "translation": {
     "reply": {
-      "not_administrator_assign": "Only administrators can assign roles from this message.",
+      "not_administrator_assign": "Only administrators and moderators can assign roles from this message.",
       "not_administrator_broadcast": "Only administrators can broadcast.",
       "role_assigned": "Assigned **{{role}}** to **{{member}}**.",
       "broadcast_posted": "Posted to <#{{channelId}}> — {{url}}",

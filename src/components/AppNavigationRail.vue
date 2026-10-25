@@ -7,22 +7,27 @@ import { railDocks, useRail } from '@/lib/rail'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
 
-type Destination = { to: string; label: string; icon: string }
+type Destination = { to: string; label: string; icon: string; adminOnly?: boolean }
 
 /** Icon names are Material Symbols; add new ones to the icon_names list in index.html. */
-const destinations: Destination[] = [
+const allDestinations: Destination[] = [
   { to: '/', label: 'Overview', icon: 'dashboard' },
   { to: '/queue', label: 'Triage', icon: 'how_to_reg' },
-  { to: '/broadcast', label: 'Broadcast', icon: 'campaign' },
+  { to: '/broadcast', label: 'Broadcast', icon: 'campaign', adminOnly: true },
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
   { to: '/audit', label: 'Audit log', icon: 'history' },
-  { to: '/settings', label: 'Settings', icon: 'settings' },
+  { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
 
 const emit = defineEmits<{ signOut: [] }>()
 
 const version = __APP_VERSION__
 const session = useSessionStore()
+
+/** Moderators see only the pages they can use. */
+const destinations = computed(() =>
+  allDestinations.filter((destination) => !destination.adminOnly || session.isAdmin),
+)
 const { expanded, toggle, collapse } = useRail()
 
 const guild = useGuildStore()
