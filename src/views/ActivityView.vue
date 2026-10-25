@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import FilterChip from '@/components/FilterChip.vue'
+import SupportingSheet from '@/components/SupportingSheet.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
@@ -121,6 +122,87 @@ const stats = computed(() => {
   ]
 })
 
+type GamePlayers = {
+  name: string
+  iconUrl: string | null
+  days: number
+  ms: number
+  players: (ActivityMember & { ms: number; playingSince: number | null })[]
+}
+
+/** The game whose players the supporting sheet shows. It lives in the URL, so a link opens it. */
+const chosenGame = computed(() =>
+  typeof route.query.game === 'string' && route.query.game ? route.query.game : null,
+)
+
+/** The name stays while the sheet animates closed. */
+const sheetGame = ref(chosenGame.value)
+watch(chosenGame, (game) => {
+  if (game) sheetGame.value = game
+})
+
+const sheetOpen = computed({
+  get: () => chosenGame.value != null,
+  set: (open) => {
+    if (!open) closeGame()
+  },
+})
+
+/** Whether opening the sheet pushed a history entry, so closing it can pop that instead. */
+let pushedChoice = false
+
+// Leaving by the browser's own Back leaves nothing to pop.
+watch(chosenGame, (game) => {
+  if (!game) pushedChoice = false
+})
+
+/** Opening is a step Back undoes; switching games while open just swaps what it shows. */
+function chooseGame(name: string) {
+  const query = { ...route.query, game: name }
+  if (chosenGame.value) {
+    void router.replace({ query })
+  } else {
+    pushedChoice = true
+    void router.push({ query })
+  }
+}
+
+function closeGame() {
+  if (pushedChoice) {
+    pushedChoice = false
+    router.back()
+  } else {
+    void router.replace({ query: { ...route.query, game: undefined } })
+  }
+}
+
+const gamePlayers = useAsync(() => {
+  const query = new URLSearchParams({ name: chosenGame.value ?? '', days: String(days.value) })
+  return apiFetch<GamePlayers>(`/api/activity/game?${query}`)
+})
+
+watch([chosenGame, days], () => {
+  if (chosenGame.value) void gamePlayers.run()
+})
+
+onMounted(() => {
+  if (chosenGame.value) void gamePlayers.run()
+})
+
+/** The answer for the game in the sheet only, so a slow earlier one never shows under a later name. */
+const detail = computed(() =>
+  gamePlayers.data.value?.name === sheetGame.value ? gamePlayers.data.value : null,
+)
+
+const sheetIcon = computed(
+  () =>
+    detail.value?.iconUrl ??
+    games.value.find((game) => game.name === sheetGame.value)?.iconUrl ??
+    null,
+)
+
+const periodLabel = computed(() => PERIODS.find((period) => period.days === days.value)?.label)
+
 const plural = (count: number, one: string, many: string) =>
   `${count.toLocaleString()} ${count === 1 ? one : many}`
 </script>
@@ -151,12 +233,7 @@ const plural = (count: number, one: string, many: string) =>
 
     <section aria-labelledby="activity-live">
       <div class="section-header">
-        <div>
-          <h2 id="activity-live" class="text-title-medium">Right now</h2>
-          <p class="text-body-medium text-on-surface-variant">
-            From members' Discord status. Members who hide their activity aren't counted.
-          </p>
-        </div>
+        <h2 id="activity-live" class="text-title-medium">Right now</h2>
         <span v-if="live.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
           live.length
         }}</span>
@@ -214,15 +291,12 @@ const plural = (count: number, one: string, many: string) =>
       </div>
     </section>
 
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-6">
+    <!-- Two columns from the expanded class however narrow a docked sheet makes them, so opening
+         a game never moves Spotify. -->
+    <div class="grid items-start gap-6 expanded:grid-cols-2">
       <section aria-labelledby="activity-games">
         <div class="section-header">
-          <div>
-            <h2 id="activity-games" class="text-title-medium">Most played games</h2>
-            <p class="text-body-medium text-on-surface-variant">
-              By hours played. Sessions under a minute aren't counted.
-            </p>
-          </div>
+          <h2 id="activity-games" class="text-title-medium">Most played games</h2>
         </div>
         <div :class="games.length === 0 && 'card'">
           <StateBlock
@@ -233,49 +307,59 @@ const plural = (count: number, one: string, many: string) =>
             compact
           >
             <ol class="segmented-list">
-              <li v-for="(game, index) in games" :key="game.name" class="segmented-item">
-                <span
-                  class="w-5 shrink-0 text-center text-label-large tabular-nums"
-                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
-                  >{{ index + 1 }}</span
+              <li v-for="(game, index) in games" :key="game.name" class="segmented-item p-0">
+                <button
+                  type="button"
+                  class="state-layer flex min-h-14 w-full min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left transition-colors duration-200 ease-effects-fast"
+                  :class="
+                    game.name === chosenGame && 'bg-secondary-container text-on-secondary-container'
+                  "
+                  :aria-current="game.name === chosenGame ? 'true' : undefined"
+                  @click="chooseGame(game.name)"
                 >
-                <img
-                  v-if="game.iconUrl"
-                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                  :src="game.iconUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-                <span
-                  v-else
-                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                  aria-hidden="true"
-                  ><span class="icon [--icon-size:20px]">sports_esports</span></span
-                >
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-                  <div class="flex items-center gap-2">
-                    <span class="flex -space-x-1.5">
-                      <img
-                        v-for="player in game.top"
-                        :key="player.id"
-                        class="size-5 rounded-full bg-surface-container-highest object-cover ring-2 ring-surface-container"
-                        :src="player.avatarUrl"
-                        :alt="player.displayName"
-                        :title="`${player.displayName} · ${formatDuration(player.ms)}`"
-                        width="20"
-                        height="20"
-                      />
-                    </span>
-                    <span class="truncate text-body-small text-on-surface-variant">{{
-                      plural(game.players, 'player', 'players')
-                    }}</span>
+                  <span
+                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    >#{{ index + 1 }}</span
+                  >
+                  <img
+                    v-if="game.iconUrl"
+                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                    :src="game.iconUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                  <span
+                    v-else
+                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                    aria-hidden="true"
+                    ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                  >
+                  <div class="min-w-0 flex-1 py-1">
+                    <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
+                    <div class="flex items-center gap-2">
+                      <span class="flex -space-x-1.5">
+                        <img
+                          v-for="player in game.top"
+                          :key="player.id"
+                          class="size-5 rounded-full bg-surface-container-highest object-cover ring-2 ring-surface-container"
+                          :src="player.avatarUrl"
+                          :alt="player.displayName"
+                          :title="`${player.displayName} · ${formatDuration(player.ms)}`"
+                          width="20"
+                          height="20"
+                        />
+                      </span>
+                      <span class="truncate text-body-small text-on-surface-variant">{{
+                        plural(game.players, 'player', 'players')
+                      }}</span>
+                    </div>
                   </div>
-                </div>
-                <span class="shrink-0 text-body-large tabular-nums">{{
-                  formatDuration(game.ms)
-                }}</span>
+                  <span class="shrink-0 text-body-large tabular-nums">{{
+                    formatDuration(game.ms)
+                  }}</span>
+                </button>
               </li>
             </ol>
           </StateBlock>
@@ -284,12 +368,7 @@ const plural = (count: number, one: string, many: string) =>
 
       <section aria-labelledby="activity-tracks">
         <div class="section-header">
-          <div>
-            <h2 id="activity-tracks" class="text-title-medium">Most played on Spotify</h2>
-            <p class="text-body-medium text-on-surface-variant">
-              By plays. A play is 30 seconds or more, as Spotify counts them.
-            </p>
-          </div>
+          <h2 id="activity-tracks" class="text-title-medium">Most played on Spotify</h2>
         </div>
         <div :class="tracks.length === 0 && 'card'">
           <StateBlock
@@ -349,5 +428,76 @@ const plural = (count: number, one: string, many: string) =>
         </div>
       </section>
     </div>
+
+    <SupportingSheet v-model:open="sheetOpen" :headline="sheetGame ?? ''">
+      <template #leading>
+        <img
+          v-if="sheetIcon"
+          class="size-14 shrink-0 rounded-md bg-surface-container-highest object-cover"
+          :src="sheetIcon"
+          alt=""
+          width="56"
+          height="56"
+        />
+        <span
+          v-else
+          class="grid size-14 shrink-0 place-items-center rounded-md bg-surface-container-highest text-on-surface-variant"
+          aria-hidden="true"
+          ><span class="icon">sports_esports</span></span
+        >
+      </template>
+      <template v-if="detail" #supporting>
+        {{ formatDuration(detail.ms) }} · {{ plural(detail.players.length, 'player', 'players') }} ·
+        {{ periodLabel }}
+      </template>
+      <StateBlock
+        :loading="gamePlayers.loading.value && !detail"
+        :error="gamePlayers.error.value"
+        :empty="detail?.players.length === 0"
+        empty-text="Nobody played this in this period."
+        compact
+      >
+        <ol class="segmented-list">
+          <li
+            v-for="(player, index) in detail?.players"
+            :key="player.id"
+            class="segmented-item bg-surface-container-high"
+          >
+            <span
+              class="w-7 shrink-0 text-center text-label-large tabular-nums"
+              :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+              >#{{ index + 1 }}</span
+            >
+            <img
+              class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+              :src="player.avatarUrl"
+              alt=""
+              width="40"
+              height="40"
+            />
+            <div class="min-w-0 flex-1 py-1">
+              <p
+                class="truncate text-body-large"
+                :style="{ color: discordTextColor(player.color) }"
+              >
+                {{ player.displayName }}
+              </p>
+              <p class="truncate font-mono text-body-small text-on-surface-variant">
+                {{ player.username }}
+              </p>
+            </div>
+            <div class="flex shrink-0 flex-col items-end">
+              <span class="text-body-large tabular-nums">{{ formatDuration(player.ms) }}</span>
+              <span
+                v-if="player.playingSince != null"
+                class="text-label-small text-tertiary"
+                :title="`Since ${absoluteTime(player.playingSince)}`"
+                >Playing now</span
+              >
+            </div>
+          </li>
+        </ol>
+      </StateBlock>
+    </SupportingSheet>
   </div>
 </template>

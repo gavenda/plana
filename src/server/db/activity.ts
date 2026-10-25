@@ -157,6 +157,27 @@ export function listGameTotals(since: number): GameTotal[] {
     .map((row) => ({ game: row.game, memberId: row.member_id, ms: row.ms }))
 }
 
+const selectGamePlayerTotals = db.query<
+  { member_id: string; ms: number },
+  { game: string; since: number; min: number }
+>(
+  `SELECT member_id, SUM(ended_at - MAX(started_at, :since)) AS ms
+   FROM game_sessions
+   WHERE game = :game AND ended_at > :since AND ended_at - started_at >= :min
+   GROUP BY member_id
+   ORDER BY ms DESC`,
+)
+
+/** Time per member on one game since a moment, most first. */
+export function listGamePlayerTotals(
+  game: string,
+  since: number,
+): { memberId: string; ms: number }[] {
+  return selectGamePlayerTotals
+    .all({ game, since, min: MIN_GAME_SESSION_MS })
+    .map((row) => ({ memberId: row.member_id, ms: row.ms }))
+}
+
 export type TrackTotal = Track & { memberId: string; plays: number; ms: number }
 
 const selectTrackTotals = db.query<

@@ -181,6 +181,8 @@
 
   /* The right-hand column of a page with a scene (sign-in), from the large class up. */
   --spacing-scene-panel: clamp(480px, 36vw, 640px);
+  /* A supporting side sheet (SupportingSheet): the widest M3 allows a side sheet. */
+  --spacing-sheet: 400px;
 }
 
 /* ------------------------------------------------------------ utilities --- */
@@ -624,7 +626,17 @@
  */
 .shell {
   padding-left: 96px;
-  transition: padding-left 300ms var(--ease-emphasized-decelerate);
+  transition:
+    padding-left 300ms var(--ease-emphasized-decelerate),
+    padding-right 300ms var(--ease-emphasized-decelerate);
+}
+
+/* From the large class a supporting side sheet is docked, not modal: the page makes room for it
+   (the sheet, plus the 16px it floats from the window's edge). */
+@media (min-width: 1200px) {
+  .shell:has(.supporting-sheet) {
+    padding-right: calc(var(--spacing-sheet) + 16px);
+  }
 }
 
 @media (min-width: 840px) {
@@ -654,12 +666,20 @@
   justify-content: center;
   padding: 0 24px;
   pointer-events: none;
-  transition: left 300ms var(--ease-emphasized-decelerate);
+  transition:
+    left 300ms var(--ease-emphasized-decelerate),
+    right 300ms var(--ease-emphasized-decelerate);
 }
 
 @media (min-width: 840px) {
   .shell[data-rail-open='true'] .snackbar-host {
     left: var(--rail-open);
+  }
+}
+
+@media (min-width: 1200px) {
+  .shell:has(.supporting-sheet) .snackbar-host {
+    right: calc(var(--spacing-sheet) + 16px);
   }
 }
 

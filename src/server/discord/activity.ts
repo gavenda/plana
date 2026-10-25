@@ -2,6 +2,7 @@ import { ActivityType, type GuildMember, type Presence } from 'discord.js'
 
 import { client, getGuild } from './client'
 import {
+  listGamePlayerTotals,
   listGameTotals,
   listTrackTotals,
   openGameSession,
@@ -283,5 +284,37 @@ export async function getActivityOverview(days: number): Promise<Result<Activity
     tracks: tracks.slice(0, TOP_ITEMS),
     playing,
     listening,
+  })
+}
+
+export type GamePlayers = {
+  name: string
+  iconUrl: string | null
+  days: number
+  ms: number
+  /** Most hours first; `playingSince` is set for whoever is playing it right now. */
+  players: (ActivityMember & { ms: number; playingSince: number | null })[]
+}
+
+/** Everyone who played one game over the last `days`, ranked by hours. */
+export async function getGamePlayers(name: string, days: number): Promise<Result<GamePlayers>> {
+  await primeMemberCache()
+  const guild = await getGuild()
+  const now = Date.now()
+
+  checkpointActivity(now)
+
+  const players = listGamePlayerTotals(name, now - days * DAY_MS).map((row) => ({
+    ...describe(guild.members.cache, row.memberId),
+    ms: row.ms,
+    playingSince: live.get(row.memberId)?.games.get(name)?.startedAt ?? null,
+  }))
+
+  return ok({
+    name,
+    iconUrl: gameIconUrl(name),
+    days,
+    ms: sum(players.map((player) => player.ms)),
+    players,
   })
 }

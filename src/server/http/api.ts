@@ -18,7 +18,7 @@ import {
   saveBirthday,
   syncBirthdayRole,
 } from '../discord/birthdays'
-import { ACTIVITY_RETENTION_DAYS, getActivityOverview } from '../discord/activity'
+import { ACTIVITY_RETENTION_DAYS, getActivityOverview, getGamePlayers } from '../discord/activity'
 import { getGuild } from '../discord/client'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
@@ -262,4 +262,14 @@ api.get('/activity', async (c) => {
   const parsed = activityQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'Invalid period.' }, 400)
   return respond(c, await getActivityOverview(parsed.data.days))
+})
+
+const gamePlayersQuerySchema = activityQuerySchema.extend({
+  name: z.string().trim().min(1).max(200),
+})
+
+api.get('/activity/game', async (c) => {
+  const parsed = gamePlayersQuerySchema.safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'A game name and a valid period are required.' }, 400)
+  return respond(c, await getGamePlayers(parsed.data.name, parsed.data.days))
 })
