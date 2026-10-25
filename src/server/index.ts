@@ -1,7 +1,13 @@
 import { closeCache, connectCache } from './cache'
+import { pruneActivity } from './db/activity'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
 import type { AppContext } from './context'
+import {
+  ACTIVITY_CHECKPOINT_INTERVAL_MS,
+  ACTIVITY_RETENTION_DAYS,
+  checkpointActivity,
+} from './discord/activity'
 import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
 import { primeMemberCache } from './discord/service'
@@ -51,11 +57,12 @@ async function login(): Promise<void> {
 
     if (message.includes('disallowed intents')) {
       console.error(
-        '[discord] Discord refused the connection: this bot needs two privileged intents.\n' +
+        '[discord] Discord refused the connection: this bot needs three privileged intents.\n' +
           '          Enable them at https://discord.com/developers/applications\n' +
           '          -> your application -> Bot -> Privileged Gateway Intents\n' +
-          '          -> Server Members Intent and Message Content Intent, then start again.\n' +
-          '          Triage needs the first; the audit log needs the second for message text.',
+          '          -> Presence Intent, Server Members Intent and Message Content Intent,\n' +
+          '          then start again. Games & music needs the first, triage the second, and the\n' +
+          '          audit log the third for message text.',
       )
       process.exit(1)
     }
@@ -93,7 +100,10 @@ if (!isConfigured(getSettings())) {
 const pruneTimer = setInterval(() => {
   const removed = pruneExpiredSessions()
   if (removed > 0) console.log(`[sessions] pruned ${removed} expired session(s)`)
+  pruneActivity(Date.now() - ACTIVITY_RETENTION_DAYS * 86_400_000)
 }, SESSION_PRUNE_INTERVAL_MS)
+
+const activityTimer = setInterval(() => checkpointActivity(), ACTIVITY_CHECKPOINT_INTERVAL_MS)
 
 const memberRefreshTimer = setInterval(() => {
   void primeMemberCache(true).catch((error: unknown) => {
@@ -113,6 +123,8 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(memberRefreshTimer)
   clearInterval(birthdayTimer)
   clearInterval(triageReminderTimer)
+  clearInterval(activityTimer)
+  checkpointActivity()
   await server.stop(true)
   await renderer.close()
   await client.destroy()

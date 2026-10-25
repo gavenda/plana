@@ -51,3 +51,11 @@ export function dayLabel(timestamp: number): string {
 export function clockTime(timestamp: number): string {
   return TIME.format(timestamp)
 }
+
+/** "45 min", "3.5 h" or "120 h": minutes under an hour, then hours, dropping decimals past ten. */
+export function formatDuration(ms: number): string {
+  const minutes = Math.round(ms / 60_000)
+  if (minutes < 60) return `${Math.max(1, minutes)} min`
+  const hours = ms / 3_600_000
+  return `${hours.toLocaleString('en', { maximumFractionDigits: hours < 10 ? 1 : 0 })} h`
+}

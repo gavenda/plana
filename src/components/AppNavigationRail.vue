@@ -15,6 +15,7 @@ const allDestinations: Destination[] = [
   { to: '/queue', label: 'Triage', icon: 'how_to_reg' },
   { to: '/broadcast', label: 'Broadcast', icon: 'campaign', adminOnly: true },
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
+  { to: '/activity', label: 'Games & music', icon: 'sports_esports' },
   { to: '/audit', label: 'Audit log', icon: 'history' },
   { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]

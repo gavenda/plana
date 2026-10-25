@@ -1,6 +1,7 @@
 import { Events } from 'discord.js'
 
 import { chatInputCommandData } from '../commands/chat-input'
+import { startActivityTracking } from '../discord/activity'
 import { announceBirthdays, syncBirthdayRole } from '../discord/birthdays'
 import { primeMemberCache } from '../discord/service'
 import { remindStaleTriage } from '../discord/triage-reminders'
@@ -24,6 +25,10 @@ export const clientReadyEvent: AppEvent<Events.ClientReady> = {
     // The single Request Guild Members call this process makes.
     await primeMemberCache().catch((error: unknown) => {
       console.error('[discord] member cache priming failed:', error)
+    })
+
+    await startActivityTracking().catch((error: unknown) => {
+      console.error('[activity] could not start tracking:', error)
     })
 
     // Catches up on a birthday missed while the bot was down.

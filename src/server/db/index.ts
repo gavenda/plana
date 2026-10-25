@@ -62,6 +62,31 @@ const migrations: string[] = [
   `
   ALTER TABLE join_announcements ADD COLUMN reminded_at INTEGER;
   `,
+  `
+  CREATE TABLE game_sessions (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id  TEXT NOT NULL,
+    game       TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    ended_at   INTEGER NOT NULL
+  );
+  CREATE INDEX game_sessions_member   ON game_sessions (member_id, game, ended_at DESC);
+  CREATE INDEX game_sessions_ended_at ON game_sessions (ended_at);
+
+  CREATE TABLE spotify_plays (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id  TEXT NOT NULL,
+    track_id   TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    artist     TEXT,
+    album      TEXT,
+    art_url    TEXT,
+    started_at INTEGER NOT NULL,
+    ended_at   INTEGER NOT NULL
+  );
+  CREATE INDEX spotify_plays_member   ON spotify_plays (member_id, ended_at DESC);
+  CREATE INDEX spotify_plays_ended_at ON spotify_plays (ended_at);
+  `,
 ]
 
 function migrate(database: Database): void {

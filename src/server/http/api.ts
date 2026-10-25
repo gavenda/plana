@@ -18,6 +18,7 @@ import {
   saveBirthday,
   syncBirthdayRole,
 } from '../discord/birthdays'
+import { ACTIVITY_RETENTION_DAYS, getActivityOverview } from '../discord/activity'
 import { getGuild } from '../discord/client'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
@@ -251,4 +252,14 @@ api.get('/audit', (c) => {
   const parsed = auditQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'Invalid audit log query.' }, 400)
   return c.json(listAudit(parsed.data))
+})
+
+const activityQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(ACTIVITY_RETENTION_DAYS).default(7),
+})
+
+api.get('/activity', async (c) => {
+  const parsed = activityQuerySchema.safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'Invalid period.' }, 400)
+  return respond(c, await getActivityOverview(parsed.data.days))
 })
