@@ -29,12 +29,13 @@ Views use those tokens as Tailwind utilities; no component has a `<style>` block
    appears in full, outside a badge, is [the sign-in scene](#the-sign-in-scene).
 4. **A badge masks her.** She stands in M3's 9-sided cookie in `primary-container`, the
    navy of her coat. She is cut off at its edge from its middle down, and her head, ribbon
-   and halo flow out past it. Her eyes are its horizontal centre.
+   and halo flow out past it. Her eyes are its horizontal centre. In the badge she is
+   [alive](#live-portraits): she breathes, blinks and can be patted.
 5. **Her halo carries her mood.** Each portrait keeps the halo drawn with that face, so a
    mood is chosen for its halo as much as its face. A broken halo means something is
    wrong.
 6. **Every image comes from one script**, `scripts/brand_assets.py`, and no image is
-   edited by hand.
+   edited by hand. So does her live rig.
 
 ## Names
 
@@ -206,7 +207,7 @@ her from the chest up in a badge: M3's 9-sided cookie in `primary-container`, ni
 lobes with one pointing up, drawn as an SVG so it takes the theme's colour. The badge
 masks her. From its middle down she is cut off at its edge, and above it her head, her
 ribbon and her halo flow out past it, the ribbon well beyond its left side. The cookie is
-centred on her eyes. The badge is 128px wide everywhere she appears, and has no other
+centred on her eyes. The badge is 192px wide everywhere she appears, and has no other
 size; the whole portrait is 9/7 of that wide and 19/14 of it tall, to make room for what flows out. She is
 hidden from screen readers (`alt=""`), since the words beside her say what the screen has
 to.
@@ -222,18 +223,18 @@ She is in these places and nowhere else.
 
 | Place                                                      | Mood        | Size | Her line                                                 | Plain text alongside                        |
 | ---------------------------------------------------------- | ----------- | ---- | -------------------------------------------------------- | ------------------------------------------- |
-| **Sign-in panel**, in place of the "P" tile                | `Standby`   | 128  | Standing by. Please verify your identity.                | The button, and nothing else                |
-| **Sign-in failed**, `forbidden`                            | `Stern`     | 128  | Verification failed. I can't let you in.                 | The reason, in the error alert              |
-| **Sign-in failed**, any other code                         | `Uneasy`    | 128  | That didn't connect. Please try again.                   | The reason, in the error alert              |
-| **404 panel**                                              | `Puzzled`   | 128  | This place is... I see. There's nothing here.            | "Back to overview"                          |
-| **Phone notice**, in place of the devices icon             | `Uneasy`    | 128  | —                                                        | The existing headline and text              |
-| **Triage queue, empty**                                    | `Asleep`    | 128  | Standing by. No one is waiting in triage.                | —                                           |
-| **Birthdays, none saved**                                  | `Curious`   | 128  | No birthdays yet. I'll remember each one I'm told.       | "Members add theirs with `/birthday set`."  |
-| **Audit log, empty**                                       | `Standby`   | 128  | Nothing to report. I'll record every change here.        | —                                           |
-| **A page that failed to load** (`StateBlock` with `error`) | `Confused`  | 128  | I'm confused... This didn't load.                        | The reason, plain, and a "Try again" button |
-| **Sign-out dialog**                                        | `Hesitant`  | 128  | — (see [Dialogs](#dialogs))                              |                                             |
-| **Remove birthday dialog**                                 | `Attentive` | 128  | — (see [Dialogs](#dialogs))                              |                                             |
-| **About**, at the foot of Settings                         | `Content`   | 128  | Connection confirmed. I've been waiting for you, Sensei. | "Plana 1.0.0", then the credits             |
+| **Sign-in panel**, in place of the "P" tile                | `Standby`   | 192  | Standing by. Please verify your identity.                | The button, and nothing else                |
+| **Sign-in failed**, `forbidden`                            | `Stern`     | 192  | Verification failed. I can't let you in.                 | The reason, in the error alert              |
+| **Sign-in failed**, any other code                         | `Uneasy`    | 192  | That didn't connect. Please try again.                   | The reason, in the error alert              |
+| **404 panel**                                              | `Puzzled`   | 192  | This place is... I see. There's nothing here.            | "Back to overview"                          |
+| **Phone notice**, in place of the devices icon             | `Uneasy`    | 192  | —                                                        | The existing headline and text              |
+| **Triage queue, empty**                                    | `Asleep`    | 192  | Standing by. No one is waiting in triage.                | —                                           |
+| **Birthdays, none saved**                                  | `Curious`   | 192  | No birthdays yet. I'll remember each one I'm told.       | "Members add theirs with `/birthday set`."  |
+| **Audit log, empty**                                       | `Standby`   | 192  | Nothing to report. I'll record every change here.        | —                                           |
+| **A page that failed to load** (`StateBlock` with `error`) | `Confused`  | 192  | I'm confused... This didn't load.                        | The reason, plain, and a "Try again" button |
+| **Sign-out dialog**                                        | `Hesitant`  | 192  | — (see [Dialogs](#dialogs))                              |                                             |
+| **Remove birthday dialog**                                 | `Attentive` | 192  | — (see [Dialogs](#dialogs))                              |                                             |
+| **About**, at the foot of Settings                         | `Content`   | 192  | Connection confirmed. I've been waiting for you, Sensei. | "Plana 1.0.0", then the credits             |
 
 Where she is not, on purpose:
 
@@ -247,7 +248,8 @@ Where she is not, on purpose:
 ### About
 
 The last thing in Settings (beside the form on large windows, below it otherwise), with no
-card and no heading: `PlanaSays` with her `Content` face and her line, then "Plana" with the version (`package.json`) underneath. Under the
+card and no heading: `PlanaSays` with her `Content` face and her line under her (`column`,
+so the line isn't squeezed beside a 192px badge in the narrow column), then "Plana" with the version (`package.json`) underneath. Under the
 version are two plain lines in the third person: "Kept by Plana, system administrator of
 the Shittim Chest", with her name alone in `tertiary`, and, quieter, "Character design by
 DoReMi, from Blue Archive."
@@ -285,24 +287,56 @@ Rules for halos:
 
 ### Cutting a new mood
 
-The sources are lossless PNGs, all in one pose, so one box serves every face. The boxes
-are measured in the pixels of the older 1000×1905 WebPs; the script maps them onto the
-PNGs (`PNG_SCALE`, `PNG_OFFSET`) and resamples each cut once, straight to its final size.
+The portraits are rendered from her [live rig](#live-portraits), on the frame a live
+portrait starts on (her idle animation and the mood's face, both at their start), so the
+still a live portrait replaces is the same picture. The expression numbers are the rig's
+face animations.
 
-1. Add the mood and its source number to `MOODS` in `scripts/brand_assets.py`.
-2. Run `python3 scripts/brand_assets.py`, which needs Pillow. It cuts a 720×760 canvas
-   from the top of the source, centred on her eyes (`EYES_X`, 536): the midpoint between
-   her visible pupil and the one under her fringe, mirrored across her nose. The badge is
-   a 560px square in it, 200px down, so its middle sits just under her eyes, and the
-   canvas around it holds her ribbon and halo. It masks her to the cookie below that
-   middle and saves the canvas at 360×380 as WebP to `src/assets/plana/<mood>.webp`,
-   which Vite fingerprints and serves.
+1. Add the mood and its expression number to `MOODS` in `scripts/brand_assets.py`, and to
+   `MOOD_ANIMATION` in `src/lib/plana-live.ts`.
+2. Run `python3 scripts/brand_assets.py`. It needs Pillow, Bun, and a Chromium for
+   Playwright (`bunx playwright install chromium`, or `CHROMIUM_PATH`):
+   `scripts/render_portraits.mjs` draws each mood with the app's own runtime, at twice the
+   saved size. The canvas is 720×760 units, framed on her eyes by
+   `src/lib/plana-framing.json`, which the live portraits read too. The badge is a 560 unit
+   square in it, 200 down, so its middle sits just under her eyes, and the canvas around it
+   holds her ribbon and halo. The script masks her to the cookie below that middle and
+   saves the canvas at 540×570 as WebP to `src/assets/plana/<mood>.webp`, which Vite
+   fingerprints and serves.
 3. Add it to `PlanaMood` in `src/lib/plana.ts`.
 
 The cookie's outline is the same formula in the script (`cookie9`) and the component
 (`cookiePath`), and the canvas and badge sizes are written in both; change them together.
-The same script writes the logo and the Discord avatar, so a change to a crop is a change
-to the script and a re-run.
+The logo and the Discord avatar are still cut from the lossless PNG expressions, by the
+same script.
+
+### Live portraits
+
+Every portrait comes alive once it is on screen: her rig from the game, cut to the badge
+exactly as the still portraits are (inside the cookie, and everything above its middle). The
+still portrait shows until the rig is drawn, then fades out under it over 300ms
+(`ease-effects-slow`). With reduced motion, or without WebGL, the still portrait stays.
+
+- **At rest** she breathes (`Idle_01`) and blinks every 2.5 to 6 seconds, wearing her mood's
+  face: the same number as the cut portrait (`MOOD_ANIMATION` in `src/lib/plana-live.ts`).
+  She doesn't blink with a face whose eye is already closed (14, 15, 16, 17 and 99).
+- **She doesn't follow the pointer.** The rig can (`Look_01_M` with the `Touch_Point`
+  bone), but it is turned off; she only looks towards the pointer while patted.
+- **Pressing and holding on her pats her**: her head tilts towards the pointer, and her face
+  becomes 17, eyes closed and blushing under the **heart halo**, the moment of affection
+  towards Sensei the heart is kept for. Letting go returns her to her mood. It has no
+  keyboard equivalent and carries no meaning: she is decorative and stays hidden from
+  assistive tech.
+
+The rig is `branding/NP0035_spr` (Spine 3.8). `scripts/brand_assets.py` converts it to
+Spine 3.8 JSON with `scripts/spine38_to_json.mjs`, keeps only the animations the app plays,
+and writes `src/assets/plana/rig/` (`plana.json`, `plana.atlas`, `plana.webp`; about 540 KB
+compressed). It plays on [Rigby2D](https://github.com/jaisurya-dev-art/rigby2d)'s runtime
+(MIT or Apache-2.0), vendored and patched in `src/lib/rigby/`; nothing from Spine ships.
+The rig and the runtime (25 KB compressed) load on the first portrait and are shared; each
+portrait draws to its own canvas, and only while it's on screen. Where the rig sits in the
+badge (`src/lib/plana-framing.json`) is shared with the still portraits' renderer, so
+changing it moves both. While the still fades out under her, she holds that first frame.
 
 ## The halo
 
@@ -570,15 +604,16 @@ emoji Discord copy already uses are kept there; the dashboard uses none.
 The originals are in `/branding`, which is kept out of git (it is Blue Archive's artwork,
 not the app's).
 
-| File                               | What it is                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `expressions/`                     | 21 full-length portraits in one pose with different faces and halos, numbered 1 to 20 and 99, as lossless PNGs (`Plana_<nn>.png`, 1000×1920; number 1 is `Plana_00.png`) and the older lossy WebPs (`Plana_Portrait_Expression_<n>.webp`, 1000×1905, slightly smaller in frame). The script cuts from the PNGs. The colours were sampled from WebP number 1. |
-| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                                                                                                                                                                                                                           |
-| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                           |
-| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                             |
+| File                               | What it is                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `expressions/`                     | 21 full-length portraits in one pose with different faces and halos, numbered 1 to 20 and 99, as lossless PNGs (`Plana_<nn>.png`, 1000×1920; number 1 is `Plana_00.png`) and the older lossy WebPs (`Plana_Portrait_Expression_<n>.webp`, 1000×1905, slightly smaller in frame). The logo is cut from the PNGs; the portraits are rendered from `NP0035_spr/`. The colours were sampled from WebP number 1. |
+| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                                                                                                                                                                                                                                                                          |
+| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                                                                          |
+| `NP0035_spr/`                      | Her rig from the game (Spine 3.8): `.skel`, `.atlas` and the 2048×1024 atlas page. The source of [her live portraits](#live-portraits).                                                                                                                                                                                                                                                                     |
+| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                                                                                                                                                                                                                                                                            |
 
-What ships is the logo, the ten cut portraits, the backdrop and the three sign-in scene
-frames in `src/assets/plana/`. The Discord
+What ships is the logo, the ten cut portraits, the backdrop, the three sign-in scene
+frames and her live rig (`rig/`) in `src/assets/plana/`. The Discord
 avatar is written to `branding/out/` for uploading by hand. The badge, the speech bubble,
 the halo mark and the Schale mark are drawn in code.
 

@@ -234,7 +234,9 @@ const version = __APP_VERSION__
       aria-label="About"
       class="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center large:pt-4"
     >
-      <PlanaSays mood="content">Connection confirmed. I've been waiting for you, Sensei.</PlanaSays>
+      <PlanaSays mood="content" layout="column"
+        >Connection confirmed. I've been waiting for you, Sensei.</PlanaSays
+      >
       <p class="mt-2 text-title-medium">Plana {{ version }}</p>
       <p class="text-body-medium text-on-surface-variant">
         Kept by <span class="text-tertiary">Plana</span>, system administrator of the Shittim Chest

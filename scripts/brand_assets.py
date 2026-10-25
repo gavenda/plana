@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Cuts Plana's portraits, logo, backdrop, sign-in scene and Discord avatar from the art in /branding.
+"""Cuts Plana's portraits, logo, backdrop, sign-in scene, live rig and Discord avatar from the art in /branding.
 
 Run from the repository root: python3 scripts/brand_assets.py (needs Pillow).
 Every shipped image comes from here; never edit the outputs by hand. See BRANDING.md.
 """
 
+import json
 import math
+import subprocess
+import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -28,6 +31,16 @@ SCENE = {
     "scene-scan": ROOT / "branding" / "BG_CS_StudentCouncil_03_2.jpg",
 }
 SCENE_WIDTH = 1600
+
+# Her live rig (Spine 3.8, from the game): the binary skeleton is converted to 3.8 JSON with
+# scripts/spine38_to_json.mjs and played by Rigby2D (src/lib/rigby). Only the animations the
+# app plays are kept, and values are rounded, to keep the download small.
+RIG_SOURCE = ROOT / "branding" / "NP0035_spr"
+RIG = PORTRAITS / "rig"
+RIG_ANIMATIONS = [
+    "Idle_01", "Eye_Close_01", "Look_01_M", "LookEnd_01_M", "Pat_01_M", "PatEnd_01_M",
+    "17",  # the heart halo, while she is patted
+]
 
 # Mood name -> source expression number. Expression 1 is Plana_00.png; the rest are Plana_<nn>.png.
 MOODS = {
@@ -60,7 +73,7 @@ CANVAS_WIDTH, CANVAS_HEIGHT = 720, 760
 CANVAS = (EYES_X - CANVAS_WIDTH // 2, 0, EYES_X + CANVAS_WIDTH // 2, CANVAS_HEIGHT)
 BADGE_WIDTH = 560  # the M3 9-sided cookie she stands in
 BADGE_LEFT, BADGE_TOP = EYES_X - BADGE_WIDTH // 2, 200
-OUT_WIDTH = 360  # saved width of the whole canvas
+OUT_WIDTH = 540  # saved width of the whole canvas: over 2x its 247px on screen
 
 # The logo is a tighter square on her face, so it still reads at 16px.
 LOGO_WIDTH = 440
@@ -99,10 +112,31 @@ def cookie9(cx: float, cy: float, radius: float, steps: int = 720) -> list[tuple
     return points
 
 
-def portrait(n: int) -> Image.Image:
+def rendered_portraits() -> dict[str, Image.Image]:
+    """Each mood rendered from her live rig, on the frame a live portrait starts on.
+
+    Rendered at twice the saved size by scripts/render_portraits.mjs, then shrunk, so the
+    still portrait a live one replaces is the same picture. The framing is shared with the
+    app in src/lib/plana-framing.json.
+    """
+    width, height = OUT_WIDTH, round(CANVAS_HEIGHT * OUT_WIDTH / CANVAS_WIDTH)
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run(
+            ["bun", str(ROOT / "scripts" / "render_portraits.mjs"), tmp, str(width * 2), str(height * 2)]
+            + [f"{mood}={n:02d}" for mood, n in MOODS.items()],
+            check=True,
+        )
+        out = {}
+        for mood in MOODS:
+            # Shrink with premultiplied alpha, so no dark fringe creeps in at her edges.
+            art = Image.open(Path(tmp) / f"{mood}.png").convert("RGBa")
+            out[mood] = art.resize((width, height), Image.LANCZOS).convert("RGBA")
+        return out
+
+
+def portrait(crop: Image.Image) -> Image.Image:
     """Her, cut off at the cookie's edge from its middle down; everything above stands clear."""
     k = OUT_WIDTH / CANVAS_WIDTH
-    crop = cut(n, CANVAS, (OUT_WIDTH, round(CANVAS_HEIGHT * k)))
     half = BADGE_WIDTH / 2 * k
     cx = (BADGE_LEFT - CANVAS[0]) * k + half
     cy = (BADGE_TOP - CANVAS[1]) * k + half
@@ -137,12 +171,46 @@ def fit_width(path: Path, width: int) -> Image.Image:
     return image
 
 
+def rounded(value, places: int = 4):
+    if isinstance(value, float):
+        return round(value, places)
+    if isinstance(value, list):
+        return [rounded(v, places) for v in value]
+    if isinstance(value, dict):
+        return {k: rounded(v, places) for k, v in value.items()}
+    return value
+
+
+def rig() -> None:
+    """Writes her rig for the live portraits: skeleton JSON, atlas, and the atlas page as WebP."""
+    RIG.mkdir(parents=True, exist_ok=True)
+    converted = RIG / "plana.full.json"
+    subprocess.run(
+        ["bun", str(ROOT / "scripts" / "spine38_to_json.mjs"), str(RIG_SOURCE / "NP0035_spr.skel"), str(converted)],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+    skeleton = json.loads(converted.read_text())
+    converted.unlink()
+    keep = RIG_ANIMATIONS + [f"{n:02d}" for n in MOODS.values()]
+    skeleton["animations"] = {k: v for k, v in skeleton["animations"].items() if k in keep}
+    (RIG / "plana.json").write_text(json.dumps(rounded(skeleton), separators=(",", ":")))
+
+    atlas = (RIG_SOURCE / "NP0035_spr.atlas").read_text()
+    (RIG / "plana.atlas").write_text(atlas.replace("NP0035_spr.png", "plana.webp"))  # the page's file
+    page = Image.open(RIG_SOURCE / "NP0035_spr.png").convert("RGBA")
+    page.save(RIG / "plana.webp", quality=90, alpha_quality=100, method=6)
+
+
 def main() -> None:
     PORTRAITS.mkdir(parents=True, exist_ok=True)
     AVATAR.parent.mkdir(parents=True, exist_ok=True)
 
-    for mood, n in MOODS.items():
-        portrait(n).save(PORTRAITS / f"{mood}.webp", quality=90, method=6)
+    # The rig first: the still portraits are rendered from it.
+    rig()
+    stills = rendered_portraits()
+    for mood in MOODS:
+        portrait(stills[mood]).save(PORTRAITS / f"{mood}.webp", quality=90, method=6)
 
     # The mark at the top of the navigation rail.
     logo(128).save(PORTRAITS / "logo.webp", quality=90, method=6)
@@ -157,7 +225,7 @@ def main() -> None:
     # Uploaded by hand as the bot's avatar in the Developer Portal; the favicon is that avatar.
     logo(1024).save(AVATAR)
 
-    print(f"Wrote {len(MOODS)} portraits, the logo, the backdrop, {len(SCENE)} scene frames and {AVATAR.relative_to(ROOT)}.")
+    print(f"Wrote {len(MOODS)} portraits, the logo, the backdrop, {len(SCENE)} scene frames, the rig and {AVATAR.relative_to(ROOT)}.")
 
 
 if __name__ == "__main__":

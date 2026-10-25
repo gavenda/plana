@@ -1,0 +1,7 @@
+{
+  "comment": "Where her rig sits in a portrait canvas (720x760 units, the badge's 560 at (80, 200)): the canvas's top-left corner in rig units, and canvas units per rig unit. Read by src/lib/plana-live.ts and scripts/render_portraits.mjs, so the still portraits and the live ones match.",
+  "origin": { "x": -414.6, "y": 1374.39 },
+  "scale": 0.8704,
+  "canvasWidth": 720,
+  "canvasHeight": 760
+}
