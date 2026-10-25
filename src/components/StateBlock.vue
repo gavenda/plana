@@ -31,11 +31,11 @@ defineProps<{
     <span>Processing…</span>
   </div>
 
-  <div v-else-if="error && compact" class="alert alert-error mx-6 my-4">{{ error }}</div>
+  <div v-else-if="error && compact" class="card card-error mx-6 my-4 px-4 py-3">{{ error }}</div>
 
   <div v-else-if="error" class="flex flex-col items-center gap-4 px-6 py-10">
     <PlanaSays mood="confused">I'm confused... This didn't load.</PlanaSays>
-    <p class="alert alert-error">{{ error }}</p>
+    <p class="card card-error px-4 py-3">{{ error }}</p>
     <button v-if="retry" class="btn btn-tonal" type="button" @click="retry()">Try again</button>
   </div>
 

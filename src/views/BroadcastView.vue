@@ -83,13 +83,14 @@ async function send() {
         </div>
       </div>
 
-      <div class="card card-body">
-        <StateBlock
-          :loading="guild.loading && !guild.directory"
-          :error="guild.error"
-          :retry="() => guild.load(true)"
-        >
-          <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
+      <!-- The form in its card; the preview beside it on the page, so it isn't a card in a card. -->
+      <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="card card-body">
+          <StateBlock
+            :loading="guild.loading && !guild.directory"
+            :error="guild.error"
+            :retry="() => guild.load(true)"
+          >
             <form class="flex flex-col gap-6" @submit.prevent="send">
               <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 
@@ -106,40 +107,43 @@ async function send() {
                 </button>
               </div>
             </form>
+          </StateBlock>
+        </div>
 
-            <aside class="flex flex-col gap-2.5">
-              <p class="text-title-small">Preview</p>
+        <aside class="flex flex-col gap-2.5">
+          <p class="px-4 text-title-small">Preview</p>
 
-              <div class="flex gap-3 rounded-lg bg-surface-container-lowest p-4">
-                <div
-                  class="grid size-10 shrink-0 place-items-center rounded-full bg-primary font-bold text-on-primary"
-                  aria-hidden="true"
+          <div class="flex gap-3 rounded-lg bg-surface-container-lowest p-4">
+            <div
+              class="grid size-10 shrink-0 place-items-center rounded-full bg-primary font-bold text-on-primary"
+              aria-hidden="true"
+            >
+              P
+            </div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-title-small">Plana</span>
+                <span
+                  class="rounded-xs bg-primary-container px-1 text-label-small text-on-primary-container"
+                  >BOT</span
                 >
-                  P
-                </div>
-                <div class="min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-title-small">Plana</span>
-                    <span class="chip chip-accent">BOT</span>
-                    <span class="text-body-medium text-on-surface-variant">
-                      in
-                      <DiscordMention v-if="selected" kind="channel" :name="selected.name" />
-                      <template v-else>no channel selected</template>
-                    </span>
-                  </div>
-                  <p class="mt-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-on-surface">
-                    <DiscordMessage v-if="content" :content="content" />
-                    <template v-else>Your message will appear here.</template>
-                  </p>
-                </div>
+                <span class="text-body-medium text-on-surface-variant">
+                  in
+                  <DiscordMention v-if="selected" kind="channel" :name="selected.name" />
+                  <template v-else>no channel selected</template>
+                </span>
               </div>
-
-              <p class="text-body-medium text-on-surface-variant">
-                Sent by {{ session.user?.displayName }} and recorded in the audit log.
+              <p class="mt-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-on-surface">
+                <DiscordMessage v-if="content" :content="content" />
+                <template v-else>Your message will appear here.</template>
               </p>
-            </aside>
+            </div>
           </div>
-        </StateBlock>
+
+          <p class="px-4 text-body-medium text-on-surface-variant">
+            Sent by {{ session.user?.displayName }} and recorded in the audit log.
+          </p>
+        </aside>
       </div>
     </section>
   </div>

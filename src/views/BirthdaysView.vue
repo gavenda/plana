@@ -152,11 +152,16 @@ async function remove() {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="settings.loaded && !settings.settings.birthdayChannelId" class="alert alert-warn">
-      Birthday announcements are off until a birthday channel is chosen. Birthdays saved here are
-      kept for when they are switched on.
-      <RouterLink to="/settings" class="font-medium underline underline-offset-2"
-        >Choose a channel →</RouterLink
+    <div
+      v-if="settings.loaded && !settings.settings.birthdayChannelId"
+      class="card card-warn flex items-center gap-4 py-3 pr-3 pl-6"
+    >
+      <p class="min-w-0 flex-1 text-body-medium">
+        Birthday announcements are off until a birthday channel is chosen. Birthdays saved here are
+        kept for when they are switched on.
+      </p>
+      <RouterLink to="/settings" class="btn btn-text text-on-warning-container"
+        >Choose a channel</RouterLink
       >
     </div>
 
@@ -218,11 +223,13 @@ async function remove() {
             <template v-if="overview.data.value">({{ overview.data.value.timeZone }})</template>.
           </p>
         </div>
-        <span v-if="birthdays.length > 0" class="chip">{{ birthdays.length }}</span>
+        <span v-if="birthdays.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
+          birthdays.length
+        }}</span>
       </div>
 
-      <!-- Loading, empty and error states sit in one item-coloured block in place of the list. -->
-      <div :class="birthdays.length === 0 && 'rounded-lg bg-surface-container'">
+      <!-- Loading, empty and error states sit in one card in place of the list. -->
+      <div :class="birthdays.length === 0 && 'card'">
         <StateBlock
           :loading="overview.loading.value && birthdays.length === 0"
           :error="overview.error.value"
@@ -256,10 +263,11 @@ async function remove() {
 
               <div class="flex shrink-0 flex-col items-end">
                 <span class="text-body-large">{{ formatDate(entry) }}</span>
-                <span v-if="entry.daysUntil === 0" class="chip chip-tertiary">Today</span>
-                <span v-else class="text-label-small text-on-surface-variant">{{
-                  formatUntil(entry.daysUntil)
-                }}</span>
+                <span
+                  class="text-label-small"
+                  :class="entry.daysUntil === 0 ? 'text-tertiary' : 'text-on-surface-variant'"
+                  >{{ formatUntil(entry.daysUntil) }}</span
+                >
               </div>
 
               <div class="flex shrink-0 gap-2">

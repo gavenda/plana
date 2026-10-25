@@ -51,7 +51,7 @@ const assignable = computed(() =>
 
 const members = computed(() => pending.data.value ?? [])
 
-/** Whole days in triage, or null under a day, when a chip would only be noise. */
+/** Whole days in triage, or null under a day, when the label would only be noise. */
 function waitingDays(member: PendingMember): number | null {
   if (member.waitingSince == null) return null
   const days = Math.floor((Date.now() - member.waitingSince) / DAY_MS)
@@ -84,10 +84,13 @@ async function assign(member: PendingMember, roleId: string) {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="settings.loaded && !settings.configured" class="alert alert-warn">
-      Some roles are not configured yet.
-      <RouterLink to="/settings" class="font-medium underline underline-offset-2"
-        >Finish setup →</RouterLink
+    <div
+      v-if="settings.loaded && !settings.configured"
+      class="card card-warn flex items-center gap-4 py-3 pr-3 pl-6"
+    >
+      <p class="min-w-0 flex-1 text-body-medium">Some roles are not configured yet.</p>
+      <RouterLink to="/settings" class="btn btn-text text-on-warning-container"
+        >Finish setup</RouterLink
       >
     </div>
 
@@ -111,8 +114,8 @@ async function assign(member: PendingMember, roleId: string) {
         </button>
       </div>
 
-      <!-- Loading, empty and error states sit in one item-coloured block in place of the list. -->
-      <div :class="members.length === 0 && 'rounded-lg bg-surface-container'">
+      <!-- Loading, empty and error states sit in one card in place of the list. -->
+      <div :class="members.length === 0 && 'card'">
         <StateBlock
           :loading="pending.loading.value && members.length === 0"
           :error="pending.error.value"
@@ -145,21 +148,23 @@ async function assign(member: PendingMember, roleId: string) {
 
               <div class="flex shrink-0 flex-col items-end text-right">
                 <span class="flex items-center gap-2 text-body-medium">
-                  <span
-                    v-if="waitingDays(member) != null"
-                    class="chip"
-                    :class="overdue(member) && 'chip-warn'"
-                    :title="`In triage since ${absoluteTime(member.waitingSince)}`"
-                    >Waiting {{ waitingDays(member) }}d</span
-                  >
+                  <template v-if="waitingDays(member) != null">
+                    <span
+                      :class="overdue(member) && 'text-warning'"
+                      :title="`In triage since ${absoluteTime(member.waitingSince)}`"
+                      >Waiting {{ waitingDays(member) }}d</span
+                    >
+                    <span aria-hidden="true">·</span>
+                  </template>
                   <span :title="absoluteTime(member.joinedAt)"
                     >Joined {{ relativeTime(member.joinedAt) }}</span
                   >
                 </span>
                 <span class="flex items-center gap-2 text-label-small text-on-surface-variant">
-                  <span v-if="Date.now() - member.createdAt < NEW_ACCOUNT_MS" class="chip chip-warn"
-                    >New</span
-                  >
+                  <template v-if="Date.now() - member.createdAt < NEW_ACCOUNT_MS">
+                    <span class="text-warning">New</span>
+                    <span aria-hidden="true">·</span>
+                  </template>
                   <span :title="absoluteTime(member.createdAt)"
                     >Account made {{ relativeTime(member.createdAt) }}</span
                   >

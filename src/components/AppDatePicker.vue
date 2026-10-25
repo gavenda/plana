@@ -378,7 +378,7 @@ async function toggleMode() {
                   :tabindex="cell === focusDay ? 0 : -1"
                   :aria-label="formatMonthDay(viewMonth, cell)"
                   :aria-current="viewMonth === todayMonth && cell === todayDay ? 'date' : undefined"
-                  class="state-layer mx-auto grid size-10 cursor-pointer place-items-center rounded-full-40 text-body-large transition-[border-radius] duration-350 ease-spatial-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:rounded-md"
+                  class="state-layer mx-auto grid size-10 cursor-pointer place-items-center rounded-full-40 text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-sm"
                   :class="
                     viewMonth === draftMonth && cell === draftDay
                       ? 'bg-primary text-on-primary'

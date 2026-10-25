@@ -145,12 +145,12 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
 
   <div class="flex w-full justify-center">
     <div
-      class="flex w-full max-w-[420px] flex-col items-center gap-4 rounded-3xl bg-surface-container-low px-10 py-12 text-center shadow-level1"
+      class="card card-elevated flex w-full max-w-[420px] flex-col items-center gap-4 px-10 py-12 text-center"
     >
       <h1 class="sr-only">Sign in to Plana</h1>
       <PlanaSays :mood="plana.mood" layout="column">{{ plana.line }}</PlanaSays>
 
-      <p v-if="error" class="alert alert-error">{{ error }}</p>
+      <p v-if="error" class="card card-error px-4 py-3">{{ error }}</p>
 
       <a
         class="btn btn-md btn-filled isolate mt-2 w-full touch-none overflow-hidden [-webkit-touch-callout:none]"

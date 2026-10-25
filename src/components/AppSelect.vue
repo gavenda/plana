@@ -317,7 +317,7 @@ function onKeydown(event: KeyboardEvent) {
           ref="menu"
           role="listbox"
           :aria-labelledby="labelId"
-          class="fixed z-50 overflow-y-auto overscroll-contain rounded-lg bg-surface-container-high p-1 shadow-level2"
+          class="fixed z-50 overflow-y-auto overscroll-contain rounded-lg bg-surface-container-low p-1 shadow-level2"
           :class="placement === 'top' ? 'origin-bottom' : 'origin-top'"
           :style="menuStyle"
           @mousedown.prevent

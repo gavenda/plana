@@ -87,8 +87,8 @@ Her [wiki page](https://bluearchive.wiki/wiki/Plana) gives the facts, her
   [`RailItem.vue`](src/components/RailItem.vue)), built the way Yuuka's is: slim (96dp, icon
   over label) by default, and open (icon beside label) from the menu button, as wide as its
   content needs between 220 and 360dp. Both states are one structure that morphs (see
-  [Motion](#motion)). The open rail adds "Sign out" under the destinations and an account card
-  (avatar, display name, username) at its foot. From 840px it pushes the page aside; below
+  [Motion](#motion)). The open rail adds "Sign out" under the destinations and the server and
+  account (avatar, display name, username) at its foot, as a segmented list. From 840px it pushes the page aside; below
   that it floats over the page behind a scrim and closes after a choice. The choice is
   remembered per browser, and only restored where it docks.
 - **There is no top app bar.** The rail shows where you are, so each page has a heading for
@@ -137,23 +137,26 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
 - **Lilac (secondary)** is navigation and selection: the active rail destination, tonal
   buttons, focus outlines.
 - **Halo pink (tertiary)** is for what wants a glance without being good or bad: the third
-  stat tile on Overview, today's birthdays (`.chip-tertiary`), the selected item in a menu,
+  stat tile on Overview, today's birthdays ("Today" in `tertiary`), the selected item in a menu,
   her name in About, and her halo wherever it is drawn in code.
 
 | Use                                    | Roles                                                                |
 | -------------------------------------- | -------------------------------------------------------------------- |
 | Page background, rail                  | `surface` / `on-surface`                                             |
 | Open rail floating over the page       | `surface-container`, `shadow-level2`, a 32% `scrim` behind           |
-| Account card in the open rail          | `surface-container-highest`                                          |
-| Cards, segmented list items            | `surface-container`                                                  |
+| Server and account in the open rail    | `surface-container-highest`                                          |
+| Cards                                  | `surface-container` (filled card)                                    |
+| Segmented list items                   | `surface-container`                                                  |
 | Avatar placeholders                    | `surface-container-highest`                                          |
-| Sign-in and 404 panels                 | `surface-container-low`                                              |
+| Sign-in and 404 panels                 | `surface-container-low`, `shadow-level1` (`.card-elevated`)          |
 | Dialogs                                | `surface-container-high`                                             |
 | Secondary text, icons, list headers    | `on-surface-variant`                                                 |
 | Field borders                          | `outline`; dividers use `outline-variant`                            |
 | Main action                            | `primary` / `on-primary`                                             |
 | Active rail destination, tonal buttons | `secondary-container` / `on-secondary-container`                     |
-| Emphasis tiles and chips               | `primary-`, `secondary-`, `tertiary-container` and their `on-` roles |
+| Emphasis tiles                         | `primary-`, `secondary-`, `tertiary-container` and their `on-` roles |
+| Status text (Today, Waiting, New)      | `tertiary`, `warning`, `success` as text colour                      |
+| Notices (setup unfinished, load error) | `warning-container`, `error-container` cards                         |
 | Her portrait's badge                   | `primary-container`                                                  |
 | Her speech bubble                      | `surface-container-highest` / `on-surface`                           |
 | Errors                                 | `error`, `error-container` / `on-error-container`                    |
@@ -224,8 +227,8 @@ She is in these places and nowhere else.
 | Place                                                      | Mood        | Size | Her line                                                 | Plain text alongside                        |
 | ---------------------------------------------------------- | ----------- | ---- | -------------------------------------------------------- | ------------------------------------------- |
 | **Sign-in panel**, in place of the "P" tile                | `Standby`   | 192  | Standing by. Please verify your identity.                | The button, and nothing else                |
-| **Sign-in failed**, `forbidden`                            | `Stern`     | 192  | Verification failed. I can't let you in.                 | The reason, in the error alert              |
-| **Sign-in failed**, any other code                         | `Uneasy`    | 192  | That didn't connect. Please try again.                   | The reason, in the error alert              |
+| **Sign-in failed**, `forbidden`                            | `Stern`     | 192  | Verification failed. I can't let you in.                 | The reason, in an error card                |
+| **Sign-in failed**, any other code                         | `Uneasy`    | 192  | That didn't connect. Please try again.                   | The reason, in an error card                |
 | **404 panel**                                              | `Puzzled`   | 192  | This place is... I see. There's nothing here.            | "Back to overview"                          |
 | **Phone notice**, in place of the devices icon             | `Uneasy`    | 192  | —                                                        | The existing headline and text              |
 | **Triage queue, empty**                                    | `Asleep`    | 192  | Standing by. No one is waiting in triage.                | —                                           |
@@ -441,24 +444,23 @@ weight (`font-medium`) rather than inventing a size.
 
 The M3 shape scale replaces Tailwind's default radii:
 
-| Utility                 | M3 token              | Size            | Used for                                                                                  |
-| ----------------------- | --------------------- | --------------- | ----------------------------------------------------------------------------------------- |
-| `rounded-xs`            | extra small           | 4px             | text fields, menu items                                                                   |
-| `rounded-sm`            | small                 | 8px             | chips, pressed buttons                                                                    |
-| `rounded-md`            | medium                | 12px            | pressed icon and medium buttons, selected menu item                                       |
-| `rounded-lg`            | large                 | 16px            | banners, menus, speech bubbles                                                            |
-| `rounded-xl`            | extra large           | 28px            | cards, stat tiles, dialogs                                                                |
-| `rounded-2xl`           | extra large increased | 32px            | hovered stat tiles                                                                        |
-| `rounded-3xl`           | extra extra large     | 48px            | sign-in and 404 panels                                                                    |
-| `rounded-full`          | full                  | —               | rail indicators, avatars, the logo                                                        |
-| `rounded-full-<height>` | full                  | half the height | anything that morphs from round: buttons at rest (32, 40, 56), date picker cells (36, 40) |
+| Utility                 | M3 token          | Size            | Used for                                                                                  |
+| ----------------------- | ----------------- | --------------- | ----------------------------------------------------------------------------------------- |
+| `rounded-xs`            | extra small       | 4px             | text fields, menu items                                                                   |
+| `rounded-sm`            | small             | 8px             | pressed buttons and icon buttons                                                          |
+| `rounded-md`            | medium            | 12px            | cards, stat tiles, sign-in and 404 panels, pressed medium buttons, selected menu item     |
+| `rounded-lg`            | large             | 16px            | menus, speech bubbles, segmented list ends                                                |
+| `rounded-xl`            | extra large       | 28px            | dialogs                                                                                   |
+| `rounded-3xl`           | extra extra large | 48px            | the sign-in scene                                                                         |
+| `rounded-full`          | full              | —               | rail indicators, avatars, the logo                                                        |
+| `rounded-full-<height>` | full              | half the height | anything that morphs from round: buttons at rest (32, 40, 56), date picker cells (36, 40) |
 
 Her portrait's badge is the one shape outside this scale: M3 Expressive's 9-sided cookie
 (see [Plana's portraits](#planas-portraits)).
 
 **Shape morphing** is the Expressive signature: buttons are pill-shaped at rest and
-square off to `rounded-sm` while pressed (`rounded-md` for the 56px `.btn-md`); clickable
-stat tiles round further on hover. Animate radius changes on the spatial spring.
+square off to `rounded-sm` while pressed (`rounded-md` for the 56px `.btn-md`). Cards don't
+morph: a clickable stat tile lifts to `shadow-level1` on hover instead. Animate radius changes on the spatial spring.
 
 A shape that morphs from round takes `rounded-full-<height>`, never `rounded-full`.
 Tailwind's `rounded-full` is an infinite radius, which can't be animated: a press holds
@@ -509,14 +511,14 @@ hovered filled/tonal buttons, floating panels and dialogs.
 
 Shared components in `main.css`, named after their M3 counterparts:
 
-| Class                                                                            | M3 component                                                                                                                                                                                                                                                                                                       |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.btn` + `.btn-filled` / `.btn-tonal` / `.btn-outlined` / `.btn-text`, `.btn-sm` | Buttons (small, and extra small with `.btn-sm`)                                                                                                                                                                                                                                                                    |
-| `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-danger`, `.icon-btn-narrow`          | Icon button (standard or tonal; default or narrow width). Row actions in a list are narrow tonal; one that deletes or removes adds `.icon-btn-danger` for the error colours.                                                                                                                                       |
-| `.card`, `.card-header`, `.card-body`                                            | Filled card                                                                                                                                                                                                                                                                                                        |
-| `.chip` + `.chip-accent` / `-tertiary` / `-success` / `-danger` / `-warn`        | Chips (non-interactive, as status labels)                                                                                                                                                                                                                                                                          |
-| `.alert` + `.alert-error` / `-success` / `-warn`                                 | Banner-style inline message, for a state the screen is in (setup unfinished, a load failed). Never the reply to an action: that is a [snackbar](#snackbar).                                                                                                                                                        |
-| `.segmented-list`, `.segmented-item`, `.segmented-header`                        | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). Used wherever rows of records would otherwise be a table: the Audit log is one per day; Triage, Birthdays, and Overview's triage and recent activity are one each. No data tables. |
+| Class                                                                   | M3 component                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.btn` + `.btn-filled` / `.btn-tonal` / `.btn-text`, `.btn-sm`          | Buttons (small, and extra small with `.btn-sm`)                                                                                                                                                                                                                                                                                                                    |
+| `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-danger`, `.icon-btn-narrow` | Icon button (standard or tonal; default or narrow width). Row actions in a list are narrow tonal; one that deletes or removes adds `.icon-btn-danger` for the error colours.                                                                                                                                                                                       |
+| `.card`, `.card-body`                                                   | Filled card                                                                                                                                                                                                                                                                                                                                                        |
+| `.card-elevated` on a `.card`                                           | Elevated card, for a panel on its own over a backdrop: the sign-in and 404 panels                                                                                                                                                                                                                                                                                  |
+| `.card-warn` / `.card-error` on a `.card`                               | A filled card in a tone's container colour, for a state the screen is in (setup unfinished, a load failed), with any way out as a text button at the right end, the text filling the rest of the row. Never the reply to an action: that is a [snackbar](#snackbar). M3 has no banner or chip-as-label; status is coloured text (`text-warning`, `text-tertiary`). |
+| `.segmented-list`, `.segmented-item`, `.segmented-header`               | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). Used wherever rows of records would otherwise be a table: the Audit log is one per day; Triage, Birthdays, and Overview's triage and recent activity are one each. No data tables.                                                 |
 
 Vue components, where M3 needs behaviour CSS can't give:
 
@@ -543,8 +545,8 @@ follow M3. Use `AppSelect` with a `SelectOption[]` list (`src/lib/select.ts`); o
 can carry `trailing` text, a colour `swatch`, be `disabled`, and share a `group` to form a labelled
 section (pass grouped lists through `groupOptions`).
 
-`AppSelect` menus follow M3 Expressive menus: a `rounded-lg` container on
-`surface-container-high` (one step above the cards it opens over) at `shadow-level2`,
+`AppSelect` menus follow M3 Expressive standard menus: a `rounded-lg` container on
+`surface-container-low` at `shadow-level2`,
 48dp items, and the selected item filled with `tertiary-container`, given medium
 corners and a check mark. The menu springs open from the field on
 `ease-spatial-fast`, flips above the field when there's no room below, and follows the

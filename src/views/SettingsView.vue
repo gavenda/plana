@@ -142,7 +142,10 @@ const version = __APP_VERSION__
             These drive the join announcement and the triage queue.
           </p>
         </div>
-        <span class="chip" :class="store.configured ? 'chip-success' : 'chip-warn'">
+        <span
+          class="pr-4 text-label-large"
+          :class="store.configured ? 'text-success' : 'text-warning'"
+        >
           {{ store.configured ? 'Configured' : 'Incomplete' }}
         </span>
       </div>

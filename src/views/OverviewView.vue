@@ -75,15 +75,19 @@ const recent = computed(() =>
   <div class="flex flex-col gap-4">
     <div
       v-if="settings.loaded && missing.length > 0"
-      class="flex flex-col items-start gap-2 rounded-xl bg-warning-container p-6 text-on-warning-container"
+      class="card card-warn flex items-center gap-4 py-4 pr-3 pl-6"
     >
-      <p class="text-title-medium">Finish setting up</p>
-      <p class="text-body-medium">
-        The join flow stays inactive until these are configured:
-        <strong class="font-medium">{{ missing.map((item) => item.label).join(', ') }}</strong
-        >.
-      </p>
-      <RouterLink class="btn btn-filled mt-2" to="/settings">Open settings</RouterLink>
+      <div class="flex min-w-0 flex-1 flex-col gap-1">
+        <p class="text-title-medium">Finish setting up</p>
+        <p class="text-body-medium">
+          The join flow stays inactive until these are configured:
+          <strong class="font-medium">{{ missing.map((item) => item.label).join(', ') }}</strong
+          >.
+        </p>
+      </div>
+      <RouterLink class="btn btn-text text-on-warning-container" to="/settings"
+        >Open settings</RouterLink
+      >
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
@@ -92,8 +96,8 @@ const recent = computed(() =>
         v-for="stat in stats"
         :key="stat.label"
         :to="stat.to ?? undefined"
-        class="flex flex-col gap-1 rounded-xl px-6 py-5 transition-[border-radius] duration-350 ease-spatial-fast"
-        :class="[stat.tone, stat.to && 'state-layer hover:rounded-2xl active:rounded-lg']"
+        class="card flex flex-col gap-1 px-6 py-5 transition-shadow duration-150 ease-effects-fast"
+        :class="[stat.tone, stat.to && 'state-layer hover:shadow-level1']"
       >
         <span class="text-display-small font-medium">{{ stat.value }}</span>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
@@ -106,8 +110,8 @@ const recent = computed(() =>
           <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
           <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
         </div>
-        <!-- Loading, empty and error states sit in one item-coloured block in place of the list. -->
-        <div :class="(pending.data.value?.length ?? 0) === 0 && 'rounded-lg bg-surface-container'">
+        <!-- Loading, empty and error states sit in one card in place of the list. -->
+        <div :class="(pending.data.value?.length ?? 0) === 0 && 'card'">
           <StateBlock
             :loading="pending.loading.value"
             :error="pending.error.value"
@@ -149,7 +153,7 @@ const recent = computed(() =>
           <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
           <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
         </div>
-        <div :class="recent.length === 0 && 'rounded-lg bg-surface-container'">
+        <div :class="recent.length === 0 && 'card'">
           <StateBlock
             :loading="activity.loading.value"
             :error="activity.error.value"

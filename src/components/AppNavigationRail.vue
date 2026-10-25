@@ -186,10 +186,11 @@ onBeforeUnmount(() => observer?.disconnect())
           :inert="!expanded"
         >
           <div>
-            <div
-              class="mx-6 my-4 flex w-fit flex-col divide-y divide-outline-variant rounded-xl bg-surface-container-highest text-on-surface-variant"
-            >
-              <div v-if="server" class="flex items-center gap-3 px-4 py-3">
+            <div class="segmented-list mx-6 my-4 w-fit">
+              <div
+                v-if="server"
+                class="segmented-item gap-3 bg-surface-container-highest py-3 text-on-surface-variant"
+              >
                 <img
                   v-if="server.iconUrl"
                   class="size-10 shrink-0 rounded-full object-cover"
@@ -212,7 +213,10 @@ onBeforeUnmount(() => observer?.disconnect())
                 </span>
               </div>
 
-              <div v-if="session.user" class="flex items-center gap-3 px-4 py-3">
+              <div
+                v-if="session.user"
+                class="segmented-item gap-3 bg-surface-container-highest py-3 text-on-surface-variant"
+              >
                 <img
                   v-if="session.user.avatar"
                   class="size-10 shrink-0 rounded-full object-cover"

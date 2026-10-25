@@ -309,16 +309,12 @@
     @apply bg-secondary-container text-on-secondary-container hover:not-disabled:shadow-level1 disabled:bg-on-surface/12 disabled:text-on-surface/38;
   }
 
-  .btn-outlined {
-    @apply border border-outline-variant text-on-surface-variant disabled:border-on-surface/12 disabled:text-on-surface/38;
-  }
-
   .btn-text {
     @apply px-3 text-primary disabled:text-on-surface/38;
   }
 
   .icon-btn {
-    @apply state-layer inline-grid size-10 shrink-0 cursor-pointer place-items-center rounded-full-40 text-on-surface-variant transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md disabled:cursor-not-allowed disabled:text-on-surface/38;
+    @apply state-layer inline-grid size-10 shrink-0 cursor-pointer place-items-center rounded-full-40 text-on-surface-variant transition-[border-radius] duration-350 ease-spatial-fast active:rounded-sm disabled:cursor-not-allowed disabled:text-on-surface/38;
   }
 
   /* Tonal icon button, for a supporting action that should still stand out a little. */
@@ -337,9 +333,24 @@
     @apply w-8;
   }
 
-  /* Cards: filled containers, extra-large corners, no dividers under headers. */
+  /* Filled card: M3 medium corners, on surface-container (a step below the spec's
+     surface-container-highest), no dividers under headers. */
   .card {
-    @apply overflow-hidden rounded-xl bg-surface-container;
+    @apply overflow-hidden rounded-md bg-surface-container;
+  }
+
+  /* M3 elevated card, for a panel standing on its own over a backdrop (sign-in, 404). */
+  .card-elevated {
+    @apply bg-surface-container-low shadow-level1;
+  }
+
+  /* A card in a tone's container colour, for a state the screen is in (setup unfinished, a load
+     failed). Never the reply to an action: that is a snackbar. */
+  .card-warn {
+    @apply bg-warning-container text-on-warning-container;
+  }
+  .card-error {
+    @apply bg-error-container text-on-error-container;
   }
 
   /* A section's title sits outside its card, above it, as on Overview: the title on the left
@@ -387,42 +398,6 @@
      Supporting text for a hint that is not tied to one field: */
   .supporting-text {
     @apply px-4 text-body-small text-on-surface-variant;
-  }
-
-  /* Chips: small, tonal, 8dp corners. Used for status and event labels. */
-  .chip {
-    @apply inline-flex h-6 items-center gap-1 rounded-sm bg-surface-container-highest px-2 text-label-medium whitespace-nowrap text-on-surface-variant;
-  }
-
-  .chip-accent {
-    @apply bg-primary-container text-on-primary-container;
-  }
-  .chip-tertiary {
-    @apply bg-tertiary-container text-on-tertiary-container;
-  }
-  .chip-success {
-    @apply bg-success-container text-on-success-container;
-  }
-  .chip-danger {
-    @apply bg-error-container text-on-error-container;
-  }
-  .chip-warn {
-    @apply bg-warning-container text-on-warning-container;
-  }
-
-  /* Inline banners, in the container color of their tone. */
-  .alert {
-    @apply flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-surface-container-high px-4 py-3 text-body-medium text-on-surface;
-  }
-
-  .alert-error {
-    @apply bg-error-container text-on-error-container;
-  }
-  .alert-success {
-    @apply bg-success-container text-on-success-container;
-  }
-  .alert-warn {
-    @apply bg-warning-container text-on-warning-container;
   }
 }
 
@@ -533,8 +508,25 @@
   background-color: var(--color-secondary-container);
 }
 
-.rail-item[data-active='false']:hover .rail-item-pill {
-  background-color: color-mix(in srgb, var(--color-on-surface) 8%, transparent);
+/* The state layer, on the pill in the item's content colour: 8% on hover, 10% on focus or press. */
+.rail-item-pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms var(--ease-effects-fast);
+}
+
+.rail-item:hover .rail-item-pill::before {
+  opacity: 0.08;
+}
+
+.rail-item:focus-visible .rail-item-pill::before,
+.rail-item:active .rail-item-pill::before {
+  opacity: 0.1;
 }
 
 .rail-item:focus-visible .rail-item-pill {
