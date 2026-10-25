@@ -29,14 +29,20 @@ type Track = {
 type ActivityOverview = {
   days: number
   totals: { gameMs: number; games: number; trackPlays: number; tracks: number }
-  games: { name: string; ms: number; players: number; top: (ActivityMember & { ms: number })[] }[]
+  games: {
+    name: string
+    iconUrl: string | null
+    ms: number
+    players: number
+    top: (ActivityMember & { ms: number })[]
+  }[]
   tracks: (Track & {
     plays: number
     listeners: number
     ms: number
     top: (ActivityMember & { plays: number })[]
   })[]
-  playing: { member: ActivityMember; game: string; since: number }[]
+  playing: { member: ActivityMember; game: string; iconUrl: string | null; since: number }[]
   listening: { member: ActivityMember; track: Track; since: number }[]
 }
 
@@ -74,6 +80,7 @@ const live = computed(() => [
     key: `game:${entry.member.id}:${entry.game}`,
     member: entry.member,
     icon: 'sports_esports',
+    image: entry.iconUrl,
     title: entry.game,
     subtitle: null as string | null,
     since: entry.since,
@@ -82,6 +89,7 @@ const live = computed(() => [
     key: `track:${entry.member.id}`,
     member: entry.member,
     icon: 'music_note',
+    image: entry.track.artUrl,
     title: entry.track.title,
     subtitle: entry.track.artist,
     since: entry.since,
@@ -178,7 +186,15 @@ const plural = (count: number, one: string, many: string) =>
                   {{ entry.member.displayName }}
                 </p>
                 <p class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
-                  <span class="shrink-0 icon [--icon-size:16px]" aria-hidden="true">{{
+                  <img
+                    v-if="entry.image"
+                    class="size-4 shrink-0 rounded-xs object-cover"
+                    :src="entry.image"
+                    alt=""
+                    width="16"
+                    height="16"
+                  />
+                  <span v-else class="shrink-0 icon [--icon-size:16px]" aria-hidden="true">{{
                     entry.icon
                   }}</span>
                   <span class="truncate"
@@ -219,13 +235,23 @@ const plural = (count: number, one: string, many: string) =>
             <ol class="segmented-list">
               <li v-for="(game, index) in games" :key="game.name" class="segmented-item">
                 <span
-                  class="grid size-10 shrink-0 place-items-center rounded-full text-title-small"
-                  :class="
-                    index === 0
-                      ? 'bg-primary-container text-on-primary-container'
-                      : 'bg-surface-container-highest text-on-surface-variant'
-                  "
+                  class="w-5 shrink-0 text-center text-label-large tabular-nums"
+                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
                   >{{ index + 1 }}</span
+                >
+                <img
+                  v-if="game.iconUrl"
+                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                  :src="game.iconUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <span
+                  v-else
+                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                  aria-hidden="true"
+                  ><span class="icon [--icon-size:20px]">sports_esports</span></span
                 >
                 <div class="min-w-0 flex-1 py-1">
                   <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>

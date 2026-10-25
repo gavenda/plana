@@ -10,6 +10,7 @@ import {
   type OpenRow,
   type Track,
 } from '../db/activity'
+import { gameIconUrl, requestGameIcon } from './game-icons'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { ok, primeMemberCache, type Result } from './service'
 
@@ -30,12 +31,14 @@ type Live = { games: Map<string, OpenRow>; track: LiveTrack | null }
 
 const live = new Map<string, Live>()
 
-function playedGames(presence: Presence): string[] {
-  const names = presence.activities
-    .filter((activity) => activity.type === ActivityType.Playing)
-    .map((activity) => activity.name.trim())
-    .filter(Boolean)
-  return [...new Set(names)]
+/** Game names being played, each with the Discord application behind it when known. */
+function playedGames(presence: Presence): Map<string, string | null> {
+  const games = new Map<string, string | null>()
+  for (const activity of presence.activities) {
+    const name = activity.type === ActivityType.Playing ? activity.name.trim() : ''
+    if (name && !games.get(name)) games.set(name, activity.applicationId)
+  }
+  return games
 }
 
 /** Spotify's presence: `details` is the title, `state` the artists split by "; ". */
@@ -78,12 +81,14 @@ export function trackPresence(presence: Presence, now = Date.now()): void {
     const ended: OpenRow[] = []
 
     for (const [game, row] of current.games) {
-      if (games.includes(game)) continue
+      if (games.has(game)) continue
       ended.push(row)
       current.games.delete(game)
     }
-    for (const game of games) {
-      if (!current.games.has(game)) current.games.set(game, openGameSession(memberId, game, now))
+    for (const [game, applicationId] of games) {
+      if (current.games.has(game)) continue
+      current.games.set(game, openGameSession(memberId, game, now))
+      requestGameIcon(game, applicationId)
     }
 
     const endedTracks: OpenRow[] = []
@@ -148,6 +153,7 @@ export type ActivityMember = {
 
 export type GameStat = {
   name: string
+  iconUrl: string | null
   ms: number
   players: number
   top: (ActivityMember & { ms: number })[]
@@ -165,7 +171,7 @@ export type ActivityOverview = {
   totals: { gameMs: number; games: number; trackPlays: number; tracks: number }
   games: GameStat[]
   tracks: TrackStat[]
-  playing: { member: ActivityMember; game: string; since: number }[]
+  playing: { member: ActivityMember; game: string; iconUrl: string | null; since: number }[]
   listening: { member: ActivityMember; track: Track; since: number }[]
 }
 
@@ -255,7 +261,9 @@ export async function getActivityOverview(days: number): Promise<Result<Activity
   const listening: ActivityOverview['listening'] = []
   for (const [memberId, entry] of live) {
     const member = describe(members, memberId)
-    for (const [game, row] of entry.games) playing.push({ member, game, since: row.startedAt })
+    for (const [game, row] of entry.games) {
+      playing.push({ member, game, iconUrl: gameIconUrl(game), since: row.startedAt })
+    }
     if (entry.track) {
       listening.push({ member, track: entry.track.track, since: entry.track.startedAt })
     }
@@ -271,7 +279,7 @@ export async function getActivityOverview(days: number): Promise<Result<Activity
       trackPlays: sum(tracks.map((track) => track.plays)),
       tracks: tracks.length,
     },
-    games: games.slice(0, TOP_ITEMS),
+    games: games.slice(0, TOP_ITEMS).map((game) => ({ ...game, iconUrl: gameIconUrl(game.name) })),
     tracks: tracks.slice(0, TOP_ITEMS),
     playing,
     listening,

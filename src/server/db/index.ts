@@ -87,6 +87,15 @@ const migrations: string[] = [
   CREATE INDEX spotify_plays_member   ON spotify_plays (member_id, ended_at DESC);
   CREATE INDEX spotify_plays_ended_at ON spotify_plays (ended_at);
   `,
+  `
+  CREATE TABLE game_icons (
+    game           TEXT PRIMARY KEY,
+    icon_url       TEXT,
+    source         TEXT,
+    application_id TEXT,
+    checked_at     INTEGER NOT NULL
+  );
+  `,
 ]
 
 function migrate(database: Database): void {
