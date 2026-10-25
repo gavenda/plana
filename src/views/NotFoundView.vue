@@ -2,14 +2,10 @@
 import { RouterLink } from 'vue-router'
 
 import PlanaSays from '@/components/PlanaSays.vue'
-import SchaleMark from '@/components/SchaleMark.vue'
 </script>
 
 <template>
-  <div class="relative isolate grid w-full place-items-center">
-    <SchaleMark
-      class="pointer-events-none absolute top-1/2 left-1/2 -z-10 w-[720px] max-w-none -translate-1/2 text-on-surface/4"
-    />
+  <div class="flex w-full justify-center">
     <div
       class="flex w-full max-w-[400px] flex-col items-center gap-4 rounded-3xl bg-surface-container-low px-10 py-12 text-center shadow-level1"
     >

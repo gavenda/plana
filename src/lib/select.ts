@@ -2,6 +2,8 @@
 export type SelectOption<T> = {
   value: T
   label: string
+  /** A colour shown as a dot before the label, such as a Discord role's. */
+  swatch?: string | null
   /** Secondary text at the end of the menu item, such as a username. */
   trailing?: string
   disabled?: boolean

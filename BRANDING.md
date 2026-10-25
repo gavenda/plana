@@ -25,7 +25,7 @@ Views use those tokens as Tailwind utilities; no component has a `<style>` block
    exclaims.
 3. **Her face is for a screen with nothing to show, a page that failed to load, a
    confirmation dialog, the sign-in panel, the 404 panel, the phone notice and About.**
-   It is never beside a figure, a table row, a form field or a chart.
+   It is never beside a figure, a list row, a form field or a chart.
 4. **A badge masks her.** She stands in M3's 9-sided cookie in `primary-container`, the
    navy of her coat. She is cut off at its edge from its middle down, and her head, ribbon
    and halo flow out past it. Her eyes are its horizontal centre.
@@ -39,7 +39,7 @@ Views use those tokens as Tailwind utilities; no component has a `<style>` block
 
 The app and the character have the same name, told apart by where it is used.
 
-**Plana** is the app: the name on the sign-in panel, beside the logo in the expanded rail,
+**Plana** is the app: the name beside the logo in the expanded rail,
 in the page title ("Overview · Plana") and on the bot's Discord profile.
 
 **Plana** is also the character. Where the text has someone doing the work, it is her, and
@@ -75,7 +75,7 @@ Her [wiki page](https://bluearchive.wiki/wiki/Plana) gives the facts, her
 
 ## Platform
 
-- **Tablets and desktops only.** Phones are not supported. Below the M3 *medium* window
+- **Tablets and desktops only.** Phones are not supported. Below the M3 _medium_ window
   class (600px wide), or on a touch screen under 480px tall (a phone held landscape), the
   app is hidden and a "Phones aren't supported" screen is shown instead
   ([`PhoneNotice.vue`](src/components/PhoneNotice.vue)). It is driven by the `phone:`
@@ -101,30 +101,30 @@ One theme, dark only, the same for everyone. It is the M3 tonal spot scheme at d
 contrast, built with Google's `@material/material-color-utilities` 0.3.0 from three
 colours sampled from her art (`Plana_Portrait_Expression_1.webp`):
 
-| Input | Value | Taken from | Becomes |
-| --- | --- | --- | --- |
-| Seed | `#283050` | Her coat, in shade | `primary`, the surfaces and `error` |
-| Hair lilac | `#F0E0F8` | Her hair, towards the tips | `secondary` |
-| Halo pink | `#FF6CB3` | The light band of her halo | `tertiary` |
+| Input      | Value     | Taken from                 | Becomes                             |
+| ---------- | --------- | -------------------------- | ----------------------------------- |
+| Seed       | `#283050` | Her coat, in shade         | `primary`, the surfaces and `error` |
+| Hair lilac | `#F0E0F8` | Her hair, towards the tips | `secondary`                         |
+| Halo pink  | `#FF6CB3` | The light band of her halo | `tertiary`                          |
 
 The seed goes through the tonal spot style. The other two are given as palettes of their
 own (`TonalPalette.fromInt`), so they keep their own hue and chroma. The halo's deep red
 (`#FF023A`) was not used: its container came out within a shade of `error-container`.
 Error keeps M3's own red.
 
-| Role | Value |
-| --- | --- |
-| `primary` / `on-primary` | `#B7C4FF` / `#1E2D61` |
-| `primary-container` / `on-primary-container` | `#364479` / `#DCE1FF` |
-| `secondary` / `on-secondary` | `#D0C1D8` / `#362D3E` |
-| `secondary-container` / `on-secondary-container` | `#4D4356` / `#EDDDF5` |
-| `tertiary` / `on-tertiary` | `#FFB0CF` / `#63003C` |
-| `tertiary-container` / `on-tertiary-container` | `#8B0256` / `#FFD8E5` |
-| `surface` | `#121318` |
+| Role                                                                 | Value                                         |
+| -------------------------------------------------------------------- | --------------------------------------------- |
+| `primary` / `on-primary`                                             | `#B7C4FF` / `#1E2D61`                         |
+| `primary-container` / `on-primary-container`                         | `#364479` / `#DCE1FF`                         |
+| `secondary` / `on-secondary`                                         | `#D0C1D8` / `#362D3E`                         |
+| `secondary-container` / `on-secondary-container`                     | `#4D4356` / `#EDDDF5`                         |
+| `tertiary` / `on-tertiary`                                           | `#FFB0CF` / `#63003C`                         |
+| `tertiary-container` / `on-tertiary-container`                       | `#8B0256` / `#FFD8E5`                         |
+| `surface`                                                            | `#121318`                                     |
 | `surface-container-low` / `surface-container` / `-high` / `-highest` | `#1A1B21` / `#1E1F25` / `#292A2F` / `#34343A` |
-| `on-surface` / `on-surface-variant` | `#E3E1E9` / `#C6C5D0` |
-| `outline` / `outline-variant` | `#90909A` / `#45464F` |
-| `inverse-primary` | `#4E5B92` |
+| `on-surface` / `on-surface-variant`                                  | `#E3E1E9` / `#C6C5D0`                         |
+| `outline` / `outline-variant`                                        | `#90909A` / `#45464F`                         |
+| `inverse-primary`                                                    | `#4E5B92`                                     |
 
 The roles in `main.css` are this output written out, and are regenerated from the three
 inputs when one changes, never edited one at a time. The custom `success-*` and
@@ -138,24 +138,42 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
   stat tile on Overview, today's birthdays (`.chip-tertiary`), the selected item in a menu,
   her name in About, and her halo wherever it is drawn in code.
 
-| Use | Roles |
-| --- | --- |
-| Page background, rail | `surface` / `on-surface` |
-| Open rail floating over the page | `surface-container`, `shadow-level2`, a 32% `scrim` behind |
-| Account card in the open rail | `surface-container-highest` |
-| Cards, segmented list items | `surface-container` |
-| Avatar placeholders | `surface-container-highest` |
-| Sign-in and 404 panels | `surface-container-low` |
-| Dialogs | `surface-container-high` |
-| Secondary text, icons, table headers | `on-surface-variant` |
-| Field borders | `outline`; dividers use `outline-variant` |
-| Main action | `primary` / `on-primary` |
-| Active rail destination, tonal buttons | `secondary-container` / `on-secondary-container` |
-| Emphasis tiles and chips | `primary-`, `secondary-`, `tertiary-container` and their `on-` roles |
-| Her portrait's badge | `primary-container` |
-| Her speech bubble | `surface-container-highest` / `on-surface` |
-| Errors | `error`, `error-container` / `on-error-container` |
-| Success and warning | custom colors `success-*` and `warning-*`, same role structure as M3 |
+| Use                                    | Roles                                                                |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| Page background, rail                  | `surface` / `on-surface`                                             |
+| Open rail floating over the page       | `surface-container`, `shadow-level2`, a 32% `scrim` behind           |
+| Account card in the open rail          | `surface-container-highest`                                          |
+| Cards, segmented list items            | `surface-container`                                                  |
+| Avatar placeholders                    | `surface-container-highest`                                          |
+| Sign-in and 404 panels                 | `surface-container-low`                                              |
+| Dialogs                                | `surface-container-high`                                             |
+| Secondary text, icons, list headers    | `on-surface-variant`                                                 |
+| Field borders                          | `outline`; dividers use `outline-variant`                            |
+| Main action                            | `primary` / `on-primary`                                             |
+| Active rail destination, tonal buttons | `secondary-container` / `on-secondary-container`                     |
+| Emphasis tiles and chips               | `primary-`, `secondary-`, `tertiary-container` and their `on-` roles |
+| Her portrait's badge                   | `primary-container`                                                  |
+| Her speech bubble                      | `surface-container-highest` / `on-surface`                           |
+| Errors                                 | `error`, `error-container` / `on-error-container`                    |
+| Success and warning                    | custom colors `success-*` and `warning-*`, same role structure as M3 |
+
+**Discord's own colours** are the exception to the theme: anything from Discord looks as it
+does in Discord.
+
+- **Mentions** (`DiscordMention`): a role is `@name` in its role colour on a 16% wash of it
+  (roles without a colour take `secondary`); a channel (`#name`) or a user (`@name`, and
+  `@everyone`/`@here`) is in Discord's blurple (`.mention-blurple`). Audit summaries draw
+  their roles, channels and people this way (`AuditSummary`), looking up current names by id.
+- **Member names** in lists (Triage, Overview, Birthdays) take the member's display colour,
+  their highest coloured role, as Discord's member list does. The server sends it as `color`.
+- **On a button or in a menu** the colour is a dot beside the name instead: the Triage
+  assign buttons, and `AppSelect` options with a `swatch` (Settings' roles, the Birthdays
+  member picker).
+- **The Broadcast preview** (`DiscordMessage`) draws channel and role mentions, `@everyone`,
+  `@here` and custom emoji as Discord will. User mentions (`<@id>`) stay as typed.
+
+Every Discord colour used as text is mixed 20% towards `on-surface` (`discordTextColor`), so
+a dark role colour still reads on the dark theme.
 
 Use roles, never raw hex values in markup. Disabled content is `on-surface` at 38%,
 disabled containers `on-surface` at 12% (`text-on-surface/38`, `bg-on-surface/12`), as
@@ -173,10 +191,10 @@ button sits on its own row beneath it, as M3 places it; nothing goes beside the 
 button. The mark is not a link or a control (Overview is the way home), and is hidden from
 screen readers.
 
-| Where | What |
-| --- | --- |
-| The bot's Discord avatar | The logo at 1024px, written to `branding/out/discord-avatar.png` and uploaded by hand in the Developer Portal. |
-| Browser tab | The bot's Discord avatar itself. `/favicon.ico` redirects to it (`src/server/http/app.ts`), so a new avatar in the Developer Portal is the new favicon, an hour later at most. It 404s until the bot has connected to Discord. |
+| Where                    | What                                                                                                                                                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The bot's Discord avatar | The logo at 1024px, written to `branding/out/discord-avatar.png` and uploaded by hand in the Developer Portal.                                                                                                                 |
+| Browser tab              | The bot's Discord avatar itself. `/favicon.ico` redirects to it (`src/server/http/app.ts`), so a new avatar in the Developer Portal is the new favicon, an hour later at most. It 404s until the bot has connected to Discord. |
 
 The app has no wordmark beyond her name in the type.
 
@@ -201,29 +219,29 @@ text or a button.
 
 She is in these places and nowhere else.
 
-| Place | Mood | Size | Her line | Plain text alongside |
-| --- | --- | --- | --- | --- |
-| **Sign-in panel**, in place of the "P" tile | `Standby` | 128 | Standing by. Please verify your identity. | "Administrative dashboard for your Discord server." and the button |
-| **Sign-in failed**, `forbidden` | `Stern` | 128 | Verification failed. I can't let you in. | The reason, in the error alert |
-| **Sign-in failed**, any other code | `Uneasy` | 128 | That didn't connect. Please try again. | The reason, in the error alert |
-| **404 panel** | `Puzzled` | 128 | This place is... I see. There's nothing here. | "Back to overview" |
-| **Phone notice**, in place of the devices icon | `Uneasy` | 128 | — | The existing headline and text |
-| **Triage queue, empty** | `Asleep` | 96 | Standing by. No one is waiting in triage. | — |
-| **Birthdays, none saved** | `Curious` | 96 | No birthdays yet. I'll remember each one I'm told. | "Members add theirs with `/birthday set`." |
-| **Audit log, empty** | `Standby` | 96 | Nothing to report. I'll record every change here. | — |
-| **A page that failed to load** (`StateBlock` with `error`) | `Confused` | 96 | I'm confused... This didn't load. | The reason, plain, and a "Try again" button |
-| **Sign-out dialog** | `Hesitant` | 96 | — (see [Dialogs](#dialogs)) | |
-| **Remove birthday dialog** | `Attentive` | 96 | — (see [Dialogs](#dialogs)) | |
-| **About**, at the foot of Settings | `Content` | 96 | Connection confirmed. I've been waiting for you, Sensei. | "Plana 1.0.0", then the credits |
+| Place                                                      | Mood        | Size | Her line                                                 | Plain text alongside                        |
+| ---------------------------------------------------------- | ----------- | ---- | -------------------------------------------------------- | ------------------------------------------- |
+| **Sign-in panel**, in place of the "P" tile                | `Standby`   | 128  | Standing by. Please verify your identity.                | The button, and nothing else                |
+| **Sign-in failed**, `forbidden`                            | `Stern`     | 128  | Verification failed. I can't let you in.                 | The reason, in the error alert              |
+| **Sign-in failed**, any other code                         | `Uneasy`    | 128  | That didn't connect. Please try again.                   | The reason, in the error alert              |
+| **404 panel**                                              | `Puzzled`   | 128  | This place is... I see. There's nothing here.            | "Back to overview"                          |
+| **Phone notice**, in place of the devices icon             | `Uneasy`    | 128  | —                                                        | The existing headline and text              |
+| **Triage queue, empty**                                    | `Asleep`    | 96   | Standing by. No one is waiting in triage.                | —                                           |
+| **Birthdays, none saved**                                  | `Curious`   | 96   | No birthdays yet. I'll remember each one I'm told.       | "Members add theirs with `/birthday set`."  |
+| **Audit log, empty**                                       | `Standby`   | 96   | Nothing to report. I'll record every change here.        | —                                           |
+| **A page that failed to load** (`StateBlock` with `error`) | `Confused`  | 96   | I'm confused... This didn't load.                        | The reason, plain, and a "Try again" button |
+| **Sign-out dialog**                                        | `Hesitant`  | 96   | — (see [Dialogs](#dialogs))                              |                                             |
+| **Remove birthday dialog**                                 | `Attentive` | 96   | — (see [Dialogs](#dialogs))                              |                                             |
+| **About**, at the foot of Settings                         | `Content`   | 96   | Connection confirmed. I've been waiting for you, Sensei. | "Plana 1.0.0", then the credits             |
 
 Where she is not, on purpose:
 
-- **Small empty messages inside a card**, such as Overview's "Nobody is waiting." and "No
-  activity recorded.", stay plain text. Overview is figures, and she is never beside one.
+- **Small empty messages in place of a short list**, such as Overview's "Nobody is waiting."
+  and "No activity recorded.", stay plain text. Overview is figures, and she is never beside one.
 - **Alerts after an action** ("Settings saved.", "Discord rejected the role change.") stay
   plain banners. Her face is for a state the screen is in, not a reply to a click.
 - **Loading.** Her halo stands for her (see [The halo](#the-halo)); her face does not.
-- **The rail's destinations, tables, forms, the broadcast preview.**
+- **The rail's destinations, lists, forms, the broadcast preview.**
 
 ### About
 
@@ -238,18 +256,18 @@ DoReMi, from Blue Archive."
 Twenty-one faces are in the sources, each with its own halo. Ten are cut. A new place
 picks from these first, by face and by halo.
 
-| Mood | Face | Halo | Source | Used for |
-| --- | --- | --- | --- | --- |
-| `Standby` | Level, neutral | Ring | 1 | Sign-in panel, Audit log empty, the logo |
-| `Content` | One eye closed, a small smile | Ring | 16 | About |
-| `Attentive` | Eye wide, mouth set | Ring | 8 | Remove birthday dialog |
-| `Curious` | A sparkle in her eye, a blush | Ring with sparks | 9 | Birthdays empty |
-| `Asleep` | Eye closed, calm | Ring | 99 | Triage queue empty |
-| `Hesitant` | A blush, lips parted | Ring | 18 | Sign-out dialog |
-| `Uneasy` | A bead of sweat | Warped | 7 | Sign-in failure, phone notice |
-| `Puzzled` | Eye narrowed | Glitched | 6 | 404 |
-| `Confused` | A spiral eye, flustered | Glitched | 13 | A page that failed to load |
-| `Stern` | A frown | Shattered | 11 | Sign-in refused (not an administrator) |
+| Mood        | Face                          | Halo             | Source | Used for                                 |
+| ----------- | ----------------------------- | ---------------- | ------ | ---------------------------------------- |
+| `Standby`   | Level, neutral                | Ring             | 1      | Sign-in panel, Audit log empty, the logo |
+| `Content`   | One eye closed, a small smile | Ring             | 16     | About                                    |
+| `Attentive` | Eye wide, mouth set           | Ring             | 8      | Remove birthday dialog                   |
+| `Curious`   | A sparkle in her eye, a blush | Ring with sparks | 9      | Birthdays empty                          |
+| `Asleep`    | Eye closed, calm              | Ring             | 99     | Triage queue empty                       |
+| `Hesitant`  | A blush, lips parted          | Ring             | 18     | Sign-out dialog                          |
+| `Uneasy`    | A bead of sweat               | Warped           | 7      | Sign-in failure, phone notice            |
+| `Puzzled`   | Eye narrowed                  | Glitched         | 6      | 404                                      |
+| `Confused`  | A spiral eye, flustered       | Glitched         | 13     | A page that failed to load               |
+| `Stern`     | A frown                       | Shattered        | 11     | Sign-in refused (not an administrator)   |
 
 Not cut: 2 neutral, lips apart; 3 a faint smile; 4 sweat, glitched halo; 5 surprised "o",
 shattered halo; 10 shouting, shattered halo; 12 troubled, glitched halo; 14 a ">" wink,
@@ -302,10 +320,18 @@ ever the ring.
 ## The Schale mark
 
 The emblem of Schale, her affiliation (`branding/Schale_Icon.webp`): a halo over a
-compass ring with a cross-hair. Redrawn as a single-colour SVG (`SchaleMark.vue`), it is a
-watermark in exactly two places, behind the sign-in panel and behind the 404 panel, at
-`on-surface` 4%, centred and larger than the panel. It never carries meaning, and never
-goes behind a list, a form or her portrait's badge.
+compass ring with a cross-hair. Redrawn as a single-colour SVG (`SchaleMark.vue`), it
+appears in one place: the footer of the stand-alone pages (sign-in and 404), centred at
+the bottom of the window, 96px wide in `on-surface-variant` (`App.vue`). It never carries
+meaning, and never goes behind a panel, a list, a form or her portrait's badge.
+
+## The backdrop
+
+A seaside scene at dusk, desks washed up along the shore (`branding/BG_CS_PV4_161_2.jpg`),
+from Blue Archive. It is behind the stand-alone pages only (sign-in and 404), covering the
+window at 16% opacity over `surface`, so it tints the page lilac and blue without
+competing with the panel. `scripts/brand_assets.py` saves it as
+`src/assets/plana/backdrop.webp` (1600px wide). It never goes behind the dashboard itself.
 
 ## Dialogs
 
@@ -319,10 +345,10 @@ and fade) and closes on `ease-effects`.
 hero icon. A dialog that holds a form or a list has no hero and no face. **Never use
 `window.confirm`**: like a native `<select>`, the browser draws it.
 
-| Dialog | Mood | Headline | Supporting text | Buttons |
-| --- | --- | --- | --- | --- |
-| Sign out (from the open rail) | `Hesitant` | You mean that? | I'll be standing by until you return, Sensei. | Stay · Sign out |
-| Remove a birthday | `Attentive` | Remove birthday? | {member}'s birthday will be deleted and won't be announced. | Cancel · Remove |
+| Dialog                        | Mood        | Headline         | Supporting text                                             | Buttons         |
+| ----------------------------- | ----------- | ---------------- | ----------------------------------------------------------- | --------------- |
+| Sign out (from the open rail) | `Hesitant`  | You mean that?   | I'll be standing by until you return, Sensei.               | Stay · Sign out |
+| Remove a birthday             | `Attentive` | Remove birthday? | {member}'s birthday will be deleted and won't be announced. | Cancel · Remove |
 
 Only the sign-out dialog speaks in her voice: it is about Sensei leaving her. A
 destructive confirmation states the consequence plainly, and her face is there to look
@@ -342,16 +368,16 @@ weight (`font-medium`) rather than inventing a size.
 
 The M3 shape scale replaces Tailwind's default radii:
 
-| Utility | M3 token | Size | Used for |
-| --- | --- | --- | --- |
-| `rounded-xs` | extra small | 4px | text fields, menu items |
-| `rounded-sm` | small | 8px | chips, pressed buttons |
-| `rounded-md` | medium | 12px | pressed icon buttons, selected menu item |
-| `rounded-lg` | large | 16px | banners, menus, speech bubbles |
-| `rounded-xl` | extra large | 28px | cards, stat tiles, dialogs |
-| `rounded-2xl` | extra large increased | 32px | hovered stat tiles |
-| `rounded-3xl` | extra extra large | 48px | sign-in and 404 panels |
-| `rounded-full` | full | — | buttons at rest, rail indicators, avatars, the logo |
+| Utility        | M3 token              | Size | Used for                                            |
+| -------------- | --------------------- | ---- | --------------------------------------------------- |
+| `rounded-xs`   | extra small           | 4px  | text fields, menu items                             |
+| `rounded-sm`   | small                 | 8px  | chips, pressed buttons                              |
+| `rounded-md`   | medium                | 12px | pressed icon buttons, selected menu item            |
+| `rounded-lg`   | large                 | 16px | banners, menus, speech bubbles                      |
+| `rounded-xl`   | extra large           | 28px | cards, stat tiles, dialogs                          |
+| `rounded-2xl`  | extra large increased | 32px | hovered stat tiles                                  |
+| `rounded-3xl`  | extra extra large     | 48px | sign-in and 404 panels                              |
+| `rounded-full` | full                  | —    | buttons at rest, rail indicators, avatars, the logo |
 
 Her portrait's badge is the one shape outside this scale: M3 Expressive's 9-sided cookie
 (see [Plana's portraits](#planas-portraits)).
@@ -364,14 +390,14 @@ Animate radius changes on the spatial spring.
 
 Expressive springs, approximated as cubic-bézier curves (`ease-*` utilities):
 
-| Utility | Duration | Use |
-| --- | --- | --- |
-| `ease-spatial-fast` | 350ms | buttons, small shape morphs |
-| `ease-spatial` | 500ms | dialogs opening, larger layout moves |
-| `ease-spatial-slow` | 650ms | full-screen transitions |
-| `ease-effects-fast` | 150ms | state layers, hover tints |
-| `ease-effects` | 200ms | color changes, icon fill, dialogs closing |
-| `ease-effects-slow` | 300ms | fades |
+| Utility             | Duration | Use                                       |
+| ------------------- | -------- | ----------------------------------------- |
+| `ease-spatial-fast` | 350ms    | buttons, small shape morphs               |
+| `ease-spatial`      | 500ms    | dialogs opening, larger layout moves      |
+| `ease-spatial-slow` | 650ms    | full-screen transitions                   |
+| `ease-effects-fast` | 150ms    | state layers, hover tints                 |
+| `ease-effects`      | 200ms    | color changes, icon fill, dialogs closing |
+| `ease-effects-slow` | 300ms    | fades                                     |
 
 The navigation rail is the exception, and moves as Yuuka's does: M3's emphasized decelerate
 curve over 300ms (`ease-emphasized-decelerate`) for the rail's width, the page moving aside,
@@ -404,28 +430,28 @@ hovered filled/tonal buttons, floating panels and dialogs.
 
 Shared components in `main.css`, named after their M3 counterparts:
 
-| Class | M3 component |
-| --- | --- |
-| `.btn` + `.btn-filled` / `.btn-tonal` / `.btn-outlined` / `.btn-text`, `.btn-sm` | Buttons (small, and extra small with `.btn-sm`) |
-| `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-narrow` | Icon button (standard or tonal; default or narrow width) |
-| `.card`, `.card-header`, `.card-body` | Filled card |
-| `.chip` + `.chip-accent` / `-tertiary` / `-success` / `-danger` / `-warn` | Chips (non-interactive, as status labels) |
-| `.alert` + `.alert-error` / `-success` / `-warn` | Banner-style inline message |
-| `.data-table` | Data table (header row, hairline dividers, hover tint) |
-| `.segmented-list`, `.segmented-item`, `.segmented-header` | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). The Audit log is one per day. |
+| Class                                                                            | M3 component                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.btn` + `.btn-filled` / `.btn-tonal` / `.btn-outlined` / `.btn-text`, `.btn-sm` | Buttons (small, and extra small with `.btn-sm`)                                                                                                                                                                                                                                                                    |
+| `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-danger`, `.icon-btn-narrow`          | Icon button (standard or tonal; default or narrow width). Row actions in a list are narrow tonal; one that deletes or removes adds `.icon-btn-danger` for the error colours.                                                                                                                                       |
+| `.card`, `.card-header`, `.card-body`                                            | Filled card                                                                                                                                                                                                                                                                                                        |
+| `.chip` + `.chip-accent` / `-tertiary` / `-success` / `-danger` / `-warn`        | Chips (non-interactive, as status labels)                                                                                                                                                                                                                                                                          |
+| `.alert` + `.alert-error` / `-success` / `-warn`                                 | Banner-style inline message                                                                                                                                                                                                                                                                                        |
+| `.segmented-list`, `.segmented-item`, `.segmented-header`                        | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). Used wherever rows of records would otherwise be a table: the Audit log is one per day; Triage, Birthdays, and Overview's triage and recent activity are one each. No data tables. |
 
 Vue components, where M3 needs behaviour CSS can't give:
 
-| Component | M3 component |
-| --- | --- |
-| [`OutlinedField`](src/components/OutlinedField.vue) | Outlined text field container: notched outline, floating label, supporting text, counter |
-| [`AppSelect`](src/components/AppSelect.vue) | Exposed dropdown menu (outlined field + menu) |
-| [`AppTextArea`](src/components/AppTextArea.vue) | Outlined text field, multi-line, with character counter |
-| `AppDialog` | Basic dialog, with an optional hero (see [Dialogs](#dialogs)) |
-| `PlanaPortrait`, `PlanaSays`, `SpeechBubble` | Her portrait, and her portrait with a line (see [Plana's portraits](#planas-portraits)) |
-| `HaloMark` | Circular progress indicator, indeterminate, in her halo's shape |
-| `StateBlock` | Loading, error and empty states around a block (see below) |
-| `SchaleMark` | Schale's emblem, as a watermark (see [The Schale mark](#the-schale-mark)) |
+| Component                                           | M3 component                                                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [`OutlinedField`](src/components/OutlinedField.vue) | Outlined text field container: notched outline, floating label, supporting text, counter                                              |
+| [`AppSelect`](src/components/AppSelect.vue)         | Exposed dropdown menu (outlined field + menu)                                                                                         |
+| [`AppTextArea`](src/components/AppTextArea.vue)     | Outlined text field, multi-line, with character counter                                                                               |
+| `AppDialog`                                         | Basic dialog, with an optional hero (see [Dialogs](#dialogs))                                                                         |
+| `PlanaPortrait`, `PlanaSays`, `SpeechBubble`        | Her portrait, and her portrait with a line (see [Plana's portraits](#planas-portraits))                                               |
+| `HaloMark`                                          | Circular progress indicator, indeterminate, in her halo's shape                                                                       |
+| `StateBlock`                                        | Loading, error and empty states around a block (see below)                                                                            |
+| `SchaleMark`                                        | Schale's emblem, as a watermark (see [The Schale mark](#the-schale-mark))                                                             |
+| `DiscordMention`, `AuditSummary`, `DiscordMessage`  | A role, channel or user as a Discord mention; an audit summary with its names as mentions; message text with its Discord markup drawn |
 
 `StateBlock` shows `HaloMark` while loading. Given an `emptyMood`, its `emptyText` is her
 line in a bubble, with an optional `#empty` slot for plain text under it; without one,
@@ -434,7 +460,7 @@ again" when `retry` is passed. `compact` keeps her out, for small cards beside f
 
 **Never use a native `<select>`**: its option list is drawn by the browser and can't
 follow M3. Use `AppSelect` with a `SelectOption[]` list (`src/lib/select.ts`); options
-can carry `trailing` text, be `disabled`, and share a `group` to form a labelled
+can carry `trailing` text, a colour `swatch`, be `disabled`, and share a `group` to form a labelled
 section (pass grouped lists through `groupOptions`).
 
 `AppSelect` menus follow M3 Expressive menus: a `rounded-lg` container on
@@ -485,10 +511,10 @@ In Discord she talks to members, who are not Sensei, so the copy in
 `src/server/locales/en.json` stays mostly plain. Where she does the work for someone she
 says "I", with the same status-first shape:
 
-| Key | Line |
-| --- | --- |
-| `reply.birthday_set` | 🎂 Confirmed. I've saved your birthday as **{{date}}**. |
-| `reply.birthday_removed` | Understood. I've forgotten your birthday. |
+| Key                                 | Line                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| `reply.birthday_set`                | 🎂 Confirmed. I've saved your birthday as **{{date}}**.               |
+| `reply.birthday_removed`            | Understood. I've forgotten your birthday.                             |
 | `reply.error_interaction_execution` | I'm confused... Something went wrong handling that. Please try again. |
 
 Announcements, triage cards and errors that name a permission stay as they are. The
@@ -509,12 +535,12 @@ emoji Discord copy already uses are kept there; the dashboard uses none.
 The originals are in `/branding`, which is kept out of git (it is Blue Archive's artwork,
 not the app's).
 
-| File | What it is |
-| --- | --- |
-| `expressions/` | 21 full-length portraits, 1000×1905, in one pose with different faces and halos, numbered 1 to 20 and 99. The colours were sampled from number 1. |
-| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1. |
-| `Plana_Halo.webp` | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped. |
-| `Schale_Icon.webp` | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped. |
+| File                               | What it is                                                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `expressions/`                     | 21 full-length portraits, 1000×1905, in one pose with different faces and halos, numbered 1 to 20 and 99. The colours were sampled from number 1. |
+| `Plana_Portrait_Expression_1.webp` | A copy of `expressions/` number 1.                                                                                                                |
+| `Plana_Halo.webp`                  | Her halo on its own, 160×120. The reference `HaloMark` is drawn from; not shipped.                                                                |
+| `Schale_Icon.webp`                 | Schale's emblem, 688×624. The reference `SchaleMark` is drawn from; not shipped.                                                                  |
 
 What ships is the logo and the ten cut portraits in `src/assets/plana/`. The Discord
 avatar is written to `branding/out/` for uploading by hand. The badge, the speech bubble,

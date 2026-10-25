@@ -302,12 +302,18 @@
   }
 
   .icon-btn {
-    @apply state-layer inline-grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-on-surface-variant transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md;
+    @apply state-layer inline-grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-on-surface-variant transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md disabled:cursor-not-allowed disabled:text-on-surface/38;
   }
 
   /* Tonal icon button, for a supporting action that should still stand out a little. */
   .icon-btn-tonal {
     @apply bg-secondary-container text-on-secondary-container disabled:cursor-not-allowed disabled:bg-on-surface/12 disabled:text-on-surface/38;
+  }
+
+  /* Tonal in the error colours, for an action that deletes or removes something. Pair with
+     `.icon-btn-tonal`. */
+  .icon-btn-danger {
+    @apply bg-error-container text-on-error-container;
   }
 
   /* M3 Expressive width: narrow is 32dp wide at the small (40dp) height. */
@@ -320,12 +326,14 @@
     @apply overflow-hidden rounded-xl bg-surface-container;
   }
 
-  .card-header {
-    @apply flex items-center justify-between gap-4 px-6 pt-5 pb-3;
+  /* A section's title sits outside its card, above it, as on Overview: the title on the left
+     (with any supporting text beneath it), an action or count on the right. */
+  .section-header {
+    @apply flex min-h-12 items-center justify-between gap-4 pb-2 pl-4;
   }
 
   .card-body {
-    @apply px-6 pt-2 pb-6;
+    @apply p-6;
   }
 
   /* M3 Expressive segmented list: each item is its own container, 2dp apart, with large
@@ -351,6 +359,12 @@
   /* A group's heading, inset past the items it names. */
   .segmented-header {
     @apply px-4 pt-3 pb-2 text-title-small text-on-surface-variant;
+  }
+
+  /* A channel or user mention (DiscordMention): Discord's blurple, as text on a faint wash of it. */
+  .mention-blurple {
+    color: color-mix(in oklab, #5865f2 55%, var(--color-on-surface));
+    background-color: color-mix(in srgb, #5865f2 24%, transparent);
   }
 
   /* Outlined text fields are components: OutlinedField, AppSelect, AppTextArea.
@@ -393,27 +407,6 @@
   }
   .alert-warn {
     @apply bg-warning-container text-on-warning-container;
-  }
-
-  /* Data tables: hairline dividers, label-styled headers, hover tint on rows. */
-  .data-table {
-    @apply w-full border-collapse text-body-medium;
-  }
-
-  .data-table th {
-    @apply border-b border-outline-variant px-6 py-3 text-left text-label-large text-on-surface-variant;
-  }
-
-  .data-table td {
-    @apply border-b border-outline-variant px-6 py-3 align-middle;
-  }
-
-  .data-table tbody tr {
-    @apply transition-colors duration-150 ease-effects-fast hover:bg-on-surface/4;
-  }
-
-  .data-table tbody tr:last-child td {
-    @apply border-b-0;
   }
 }
 

@@ -2,25 +2,27 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import AuditSummary from '@/components/AuditSummary.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
-import { describeAudit, toneClass, type AuditPage } from '@/lib/audit'
-import { relativeTime } from '@/lib/format'
+import { auditIcon, describeAudit, toneContainerClass, type AuditPage } from '@/lib/audit'
+import { discordTextColor } from '@/lib/discord'
+import { absoluteTime, relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
-import { useSessionStore } from '@/stores/session'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
 
-type PendingMember = { id: string; displayName: string; avatarUrl: string; joinedAt: number | null }
+type PendingMember = {
+  id: string
+  displayName: string
+  /** Their name's colour in Discord (highest coloured role); #000000 for none. */
+  color?: string
+  avatarUrl: string
+  joinedAt: number | null
+}
 
 const guild = useGuildStore()
-const session = useSessionStore()
 const settings = useSettingsStore()
-
-/** Her greeting is the page's heading, in place of "Overview" (the rail and the tab still say Overview). */
-const greeting = computed(() =>
-  session.user ? `Welcome, ${session.user.displayName} Sensei.` : 'Overview',
-)
 
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
 const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
@@ -71,13 +73,6 @@ const recent = computed(() =>
 
 <template>
   <div class="flex flex-col gap-4">
-    <header class="min-w-0 pb-2">
-      <h1 class="truncate text-headline-small text-on-surface">{{ greeting }}</h1>
-      <p v-if="guild.directory" class="truncate text-body-medium text-on-surface-variant">
-        {{ guild.directory.guild.name }} · {{ guild.directory.guild.memberCount }} members
-      </p>
-    </header>
-
     <div
       v-if="settings.loaded && missing.length > 0"
       class="flex flex-col items-start gap-2 rounded-xl bg-warning-container p-6 text-on-warning-container"
@@ -105,70 +100,88 @@ const recent = computed(() =>
       </component>
     </div>
 
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-4">
-      <div class="card">
-        <div class="card-header">
-          <p class="text-title-medium">Waiting in triage</p>
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-6">
+      <section aria-labelledby="overview-triage">
+        <div class="section-header">
+          <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
           <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
         </div>
-        <StateBlock
-          :loading="pending.loading.value"
-          :error="pending.error.value"
-          :empty="(pending.data.value?.length ?? 0) === 0"
-          empty-text="Nobody is waiting."
-          compact
-        >
-          <ul class="pb-2">
-            <li
-              v-for="member in pending.data.value?.slice(0, 5)"
-              :key="member.id"
-              class="flex min-h-14 items-center gap-4 px-6 py-2"
-            >
-              <img
-                class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                :src="member.avatarUrl"
-                :alt="member.displayName"
-                width="40"
-                height="40"
-              />
-              <span class="min-w-0 flex-1 truncate text-body-large">{{ member.displayName }}</span>
-              <span class="text-label-medium text-on-surface-variant">
-                {{ relativeTime(member.joinedAt) }}
-              </span>
-            </li>
-          </ul>
-        </StateBlock>
-      </div>
+        <!-- Loading, empty and error states sit in one item-coloured block in place of the list. -->
+        <div :class="(pending.data.value?.length ?? 0) === 0 && 'rounded-lg bg-surface-container'">
+          <StateBlock
+            :loading="pending.loading.value"
+            :error="pending.error.value"
+            :empty="(pending.data.value?.length ?? 0) === 0"
+            empty-text="Nobody is waiting."
+            compact
+          >
+            <ul class="segmented-list">
+              <li
+                v-for="member in pending.data.value?.slice(0, 5)"
+                :key="member.id"
+                class="segmented-item"
+              >
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="member.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <span
+                  class="min-w-0 flex-1 truncate text-body-large"
+                  :style="{ color: discordTextColor(member.color) }"
+                  >{{ member.displayName }}</span
+                >
+                <span
+                  class="shrink-0 text-label-small text-on-surface-variant"
+                  :title="absoluteTime(member.joinedAt)"
+                  >{{ relativeTime(member.joinedAt) }}</span
+                >
+              </li>
+            </ul>
+          </StateBlock>
+        </div>
+      </section>
 
-      <div class="card">
-        <div class="card-header">
-          <p class="text-title-medium">Recent activity</p>
+      <section aria-labelledby="overview-activity">
+        <div class="section-header">
+          <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
           <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
         </div>
-        <StateBlock
-          :loading="activity.loading.value"
-          :error="activity.error.value"
-          :empty="recent.length === 0"
-          empty-text="No activity recorded."
-          compact
-        >
-          <ul class="pb-2">
-            <li
-              v-for="row in recent"
-              :key="row.entry.id"
-              class="flex min-h-14 items-center gap-4 px-6 py-2"
-            >
-              <span :class="toneClass(row.description.tone)">{{ row.description.label }}</span>
-              <span class="min-w-0 flex-1 truncate text-body-medium">
-                {{ row.description.summary }}
-              </span>
-              <span class="text-label-medium whitespace-nowrap text-on-surface-variant">
-                {{ relativeTime(row.entry.createdAt) }}
-              </span>
-            </li>
-          </ul>
-        </StateBlock>
-      </div>
+        <div :class="recent.length === 0 && 'rounded-lg bg-surface-container'">
+          <StateBlock
+            :loading="activity.loading.value"
+            :error="activity.error.value"
+            :empty="recent.length === 0"
+            empty-text="No activity recorded."
+            compact
+          >
+            <ul class="segmented-list">
+              <li v-for="{ entry, description } in recent" :key="entry.id" class="segmented-item">
+                <span
+                  class="grid size-10 shrink-0 place-items-center rounded-full"
+                  :class="toneContainerClass(description.tone)"
+                  aria-hidden="true"
+                >
+                  <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
+                </span>
+                <div class="min-w-0 flex-1 py-1">
+                  <p class="truncate text-body-large" :title="description.summary">
+                    <AuditSummary :parts="description.parts" />
+                  </p>
+                  <p class="text-body-medium text-on-surface-variant">{{ description.label }}</p>
+                </div>
+                <span
+                  class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
+                  :title="absoluteTime(entry.createdAt)"
+                  >{{ relativeTime(entry.createdAt) }}</span
+                >
+              </li>
+            </ul>
+          </StateBlock>
+        </div>
+      </section>
     </div>
   </div>
 </template>

@@ -267,6 +267,8 @@ export type PendingMember = {
   id: string
   username: string
   displayName: string
+  /** The colour Discord draws their name in (their highest coloured role); #000000 for none. */
+  color: string
   avatarUrl: string
   joinedAt: number | null
   createdAt: number
@@ -318,6 +320,7 @@ export async function listPendingMembers(): Promise<Result<PendingMember[]>> {
         id: member.id,
         username: member.user.tag,
         displayName: member.displayName,
+        color: member.displayHexColor,
         avatarUrl: member.displayAvatarURL({ size: 128, extension: 'png' }),
         joinedAt: member.joinedTimestamp,
         createdAt: member.user.createdTimestamp,

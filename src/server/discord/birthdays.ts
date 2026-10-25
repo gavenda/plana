@@ -152,6 +152,8 @@ export type BirthdayMember = {
   id: string
   username: string
   displayName: string
+  /** The colour Discord draws their name in (their highest coloured role); #000000 for none. */
+  color: string
   avatarUrl: string
 }
 
@@ -160,6 +162,7 @@ function toBirthdayMember(member: GuildMember): BirthdayMember {
     id: member.id,
     username: member.user.tag,
     displayName: member.displayName,
+    color: member.displayHexColor,
     avatarUrl: member.displayAvatarURL({ size: 64, extension: 'png' }),
   }
 }

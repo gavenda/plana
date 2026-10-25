@@ -6,6 +6,8 @@ import AppDialog from '@/components/AppDialog.vue'
 import AppNavigationRail from '@/components/AppNavigationRail.vue'
 import PhoneNotice from '@/components/PhoneNotice.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
+import SchaleMark from '@/components/SchaleMark.vue'
+import { backdropUrl } from '@/lib/plana'
 import { useRail } from '@/lib/rail'
 import { useSessionStore } from '@/stores/session'
 
@@ -35,8 +37,21 @@ async function signOut() {
 <template>
   <PhoneNotice />
 
-  <div v-if="chromeless" class="grid min-h-full place-items-center p-6 phone:hidden">
-    <RouterView />
+  <!-- Sign-in and 404: the panel centred, with Schale's emblem in the footer beneath it, over a
+       faint backdrop of her seaside scene. -->
+  <div v-if="chromeless" class="relative isolate flex min-h-full flex-col p-6 phone:hidden">
+    <img
+      class="pointer-events-none fixed inset-0 -z-10 size-full object-cover opacity-24 select-none"
+      :src="backdropUrl"
+      alt=""
+      aria-hidden="true"
+    />
+    <div class="grid flex-1 place-items-center">
+      <RouterView />
+    </div>
+    <footer class="flex justify-center pt-6">
+      <SchaleMark class="w-24 text-on-surface-variant" />
+    </footer>
   </div>
 
   <!-- No top app bar: the rail marks where you are. The page makes room for the rail (`.shell` in
@@ -50,9 +65,8 @@ async function signOut() {
     <AppNavigationRail @sign-out="confirmingSignOut = true" />
 
     <main class="w-full px-6 py-6">
-      <!-- Overview has her greeting as a visible heading; every other page is titled for
-           assistive tech only, as the rail already shows where you are. -->
-      <h1 v-if="route.name !== 'overview'" class="sr-only">{{ route.meta.title }}</h1>
+      <!-- Pages are titled for assistive tech only, as the rail already shows where you are. -->
+      <h1 class="sr-only">{{ route.meta.title }}</h1>
       <RouterView />
     </main>
 

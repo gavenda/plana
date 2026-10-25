@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PlanaSays from '@/components/PlanaSays.vue'
-import SchaleMark from '@/components/SchaleMark.vue'
 import type { PlanaMood } from '@/lib/plana'
 
 const route = useRoute()
@@ -39,19 +38,12 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
 </script>
 
 <template>
-  <div class="relative isolate grid w-full place-items-center">
-    <SchaleMark
-      class="pointer-events-none absolute top-1/2 left-1/2 -z-10 w-[720px] max-w-none -translate-1/2 text-on-surface/4"
-    />
+  <div class="flex w-full justify-center">
     <div
       class="flex w-full max-w-[420px] flex-col items-center gap-4 rounded-3xl bg-surface-container-low px-10 py-12 text-center shadow-level1"
     >
+      <h1 class="sr-only">Sign in to Plana</h1>
       <PlanaSays :mood="plana.mood" :size="128" layout="column">{{ plana.line }}</PlanaSays>
-
-      <h1 class="text-headline-medium font-medium">Plana</h1>
-      <p class="-mt-2 text-body-large text-on-surface-variant">
-        Administrative dashboard for your Discord server.
-      </p>
 
       <p v-if="error" class="alert alert-error">{{ error }}</p>
 
@@ -64,10 +56,6 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
         </svg>
         Sign in with Discord
       </a>
-
-      <p class="text-body-small text-on-surface-variant">
-        You need the Administrator permission in the server to sign in.
-      </p>
     </div>
   </div>
 </template>

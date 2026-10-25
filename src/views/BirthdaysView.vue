@@ -2,11 +2,14 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import AppDatePicker from '@/components/AppDatePicker.vue'
 import AppDialog from '@/components/AppDialog.vue'
 import AppSelect from '@/components/AppSelect.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
+import { formatMonthDay } from '@/lib/dates'
+import { discordTextColor, roleColor } from '@/lib/discord'
 import type { SelectOption } from '@/lib/select'
 import { useAsync } from '@/lib/useAsync'
 import { useSettingsStore } from '@/stores/settings'
@@ -15,6 +18,8 @@ type BirthdayMember = {
   id: string
   username: string
   displayName: string
+  /** Their name's colour in Discord (highest coloured role); #000000 for none. */
+  color?: string
   avatarUrl: string
 }
 
@@ -25,24 +30,6 @@ type BirthdayOverview = {
   members: BirthdayMember[]
   timeZone: string
 }
-
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
-
-/** February counts as 29 so a leap-day birthday can be saved. */
-const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 const settings = useSettingsStore()
 const overview = useAsync(() => apiFetch<BirthdayOverview>('/api/birthdays'))
@@ -74,7 +61,6 @@ const members = computed(() => overview.data.value?.members ?? [])
 const byMember = computed(() => new Map(birthdays.value.map((entry) => [entry.id, entry])))
 
 const existing = computed(() => (memberId.value ? byMember.value.get(memberId.value) : undefined))
-const dayOptions = computed(() => (month.value ? DAYS_IN_MONTH[month.value - 1]! : 31))
 
 const memberOptions = computed<SelectOption<string | null>[]>(() =>
   members.value.map((member) => {
@@ -82,32 +68,16 @@ const memberOptions = computed<SelectOption<string | null>[]>(() =>
     return {
       value: member.id,
       label: member.displayName,
+      swatch: roleColor(member.color),
       trailing: saved ? `${member.username} · ${formatDate(saved)}` : member.username,
     }
   }),
-)
-
-const monthOptions: SelectOption<number | null>[] = MONTHS.map((name, index) => ({
-  value: index + 1,
-  label: name,
-}))
-
-const dayChoices = computed<SelectOption<number | null>[]>(() =>
-  Array.from({ length: dayOptions.value }, (_, index) => ({
-    value: index + 1,
-    label: String(index + 1),
-  })),
 )
 
 // Picking a member who already has a birthday loads it, so the form edits it in place.
 watch(memberId, () => {
   month.value = existing.value?.month ?? null
   day.value = existing.value?.day ?? null
-})
-
-// Moving from March 31 to April would otherwise leave an impossible date selected.
-watch(month, () => {
-  if (day.value != null && day.value > dayOptions.value) day.value = null
 })
 
 const canSave = computed(
@@ -120,7 +90,7 @@ const canSave = computed(
 )
 
 function formatDate(entry: { month: number; day: number }): string {
-  return `${MONTHS[entry.month - 1]} ${entry.day}`
+  return formatMonthDay(entry.month, entry.day)
 }
 
 function formatUntil(days: number): string {
@@ -197,18 +167,20 @@ async function remove() {
     <p v-if="actionError" class="alert alert-error">{{ actionError }}</p>
     <p v-else-if="notice" class="alert alert-success">{{ notice }}</p>
 
-    <div class="card">
-      <div class="card-header">
-        <p class="text-title-medium">
-          {{ existing ? 'Change a birthday' : 'Add a birthday' }}
-        </p>
-        <p class="text-body-medium text-on-surface-variant">
-          Only the month and day are stored. Members can also use <code>/birthday set</code>.
-        </p>
+    <section aria-labelledby="birthday-form">
+      <div class="section-header">
+        <div>
+          <h2 id="birthday-form" class="text-title-medium">
+            {{ existing ? 'Change a birthday' : 'Add a birthday' }}
+          </h2>
+          <p class="text-body-medium text-on-surface-variant">
+            Only the month and day are stored. Members can also use <code>/birthday set</code>.
+          </p>
+        </div>
       </div>
 
       <form
-        class="card-body flex flex-col gap-4 expanded:flex-row expanded:items-end"
+        class="card card-body flex flex-col gap-4 expanded:flex-row expanded:items-end"
         @submit.prevent="save"
       >
         <AppSelect
@@ -219,22 +191,13 @@ async function remove() {
           :disabled="overview.loading.value && members.length === 0"
         />
 
-        <div class="flex gap-4">
-          <AppSelect
-            v-model="month"
-            class="w-44"
-            label="Month"
-            :options="monthOptions"
-            :disabled="!memberId"
-          />
-          <AppSelect
-            v-model="day"
-            class="w-28"
-            label="Day"
-            :options="dayChoices"
-            :disabled="!memberId"
-          />
-        </div>
+        <AppDatePicker
+          v-model:month="month"
+          v-model:day="day"
+          class="expanded:w-56"
+          label="Birthday"
+          :disabled="!memberId"
+        />
 
         <div class="flex h-14 items-center gap-2.5">
           <button class="btn btn-filled" type="submit" :disabled="!canSave">
@@ -251,12 +214,12 @@ async function remove() {
           </button>
         </div>
       </form>
-    </div>
+    </section>
 
-    <div class="card">
-      <div class="card-header">
+    <section aria-labelledby="birthday-list">
+      <div class="section-header">
         <div>
-          <p class="text-title-medium">Saved birthdays</p>
+          <h2 id="birthday-list" class="text-title-medium">Saved birthdays</h2>
           <p class="text-body-medium text-on-surface-variant">
             Soonest first. Announced just after midnight
             <template v-if="overview.data.value">({{ overview.data.value.timeZone }})</template>.
@@ -265,69 +228,74 @@ async function remove() {
         <span v-if="birthdays.length > 0" class="chip">{{ birthdays.length }}</span>
       </div>
 
-      <StateBlock
-        :loading="overview.loading.value && birthdays.length === 0"
-        :error="overview.error.value"
-        :empty="birthdays.length === 0"
-        empty-text="No birthdays yet. I'll remember each one I'm told."
-        empty-mood="curious"
-        :retry="overview.run"
-      >
-        <template #empty>Members add theirs with <code>/birthday set</code>.</template>
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>Birthday</th>
-                <th>Next</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="entry in birthdays" :key="entry.id">
-                <td>
-                  <div class="flex items-center gap-3">
-                    <img
-                      class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                      :src="entry.avatarUrl"
-                      :alt="entry.displayName"
-                      width="40"
-                      height="40"
-                    />
-                    <div class="flex flex-col leading-tight">
-                      <span class="text-body-large">{{ entry.displayName }}</span>
-                      <span class="font-mono text-body-small text-on-surface-variant">{{
-                        entry.username
-                      }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>{{ formatDate(entry) }}</td>
-                <td>
-                  <span v-if="entry.daysUntil === 0" class="chip chip-tertiary">Today</span>
-                  <span v-else>{{ formatUntil(entry.daysUntil) }}</span>
-                </td>
-                <td class="text-right">
-                  <div class="inline-flex justify-end gap-2">
-                    <button class="btn btn-tonal btn-sm" :disabled="busy" @click="edit(entry)">
-                      Edit
-                    </button>
-                    <button
-                      class="btn btn-text btn-sm"
-                      :disabled="busy"
-                      @click="confirmRemove(entry)"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </StateBlock>
-    </div>
+      <!-- Loading, empty and error states sit in one item-coloured block in place of the list. -->
+      <div :class="birthdays.length === 0 && 'rounded-lg bg-surface-container'">
+        <StateBlock
+          :loading="overview.loading.value && birthdays.length === 0"
+          :error="overview.error.value"
+          :empty="birthdays.length === 0"
+          empty-text="No birthdays yet. I'll remember each one I'm told."
+          empty-mood="curious"
+          :retry="overview.run"
+        >
+          <template #empty>Members add theirs with <code>/birthday set</code>.</template>
+          <ul class="segmented-list">
+            <li v-for="entry in birthdays" :key="entry.id" class="segmented-item">
+              <img
+                class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                :src="entry.avatarUrl"
+                alt=""
+                width="40"
+                height="40"
+              />
+
+              <div class="min-w-0 flex-1 py-1">
+                <p
+                  class="truncate text-body-large"
+                  :style="{ color: discordTextColor(entry.color) }"
+                >
+                  {{ entry.displayName }}
+                </p>
+                <p class="truncate font-mono text-body-small text-on-surface-variant">
+                  {{ entry.username }}
+                </p>
+              </div>
+
+              <div class="flex shrink-0 flex-col items-end">
+                <span class="text-body-large">{{ formatDate(entry) }}</span>
+                <span v-if="entry.daysUntil === 0" class="chip chip-tertiary">Today</span>
+                <span v-else class="text-label-small text-on-surface-variant">{{
+                  formatUntil(entry.daysUntil)
+                }}</span>
+              </div>
+
+              <div class="flex shrink-0 gap-2">
+                <button
+                  class="icon-btn icon-btn-tonal icon-btn-narrow"
+                  type="button"
+                  :aria-label="`Edit ${entry.displayName}'s birthday`"
+                  title="Edit"
+                  :disabled="busy"
+                  @click="edit(entry)"
+                >
+                  <span class="icon [--icon-size:20px]" aria-hidden="true">edit</span>
+                </button>
+                <button
+                  class="icon-btn icon-btn-tonal icon-btn-danger icon-btn-narrow"
+                  type="button"
+                  :aria-label="`Remove ${entry.displayName}'s birthday`"
+                  title="Remove"
+                  :disabled="busy"
+                  @click="confirmRemove(entry)"
+                >
+                  <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </StateBlock>
+      </div>
+    </section>
 
     <AppDialog v-model:open="removeOpen" headline="Remove birthday?">
       <template #hero><PlanaPortrait mood="attentive" /></template>

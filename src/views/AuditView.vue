@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import AuditSummary from '@/components/AuditSummary.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import {
@@ -11,6 +12,7 @@ import {
   type AuditPage,
 } from '@/lib/audit'
 import { absoluteTime, clockTime, dayLabel, startOfDay } from '@/lib/format'
+import { useGuildStore } from '@/stores/guild'
 
 const entries = ref<AuditEntry[]>([])
 const total = ref(0)
@@ -83,7 +85,13 @@ const days = computed(() => {
   return groups
 })
 
-onMounted(load)
+const guild = useGuildStore()
+
+onMounted(() => {
+  // For role colours in the summaries; the log shows without them if this fails.
+  void guild.load()
+  void load()
+})
 </script>
 
 <template>
@@ -126,7 +134,9 @@ onMounted(load)
             </span>
 
             <div class="min-w-0 flex-1 py-1">
-              <p class="text-body-large [overflow-wrap:anywhere]">{{ description.summary }}</p>
+              <p class="text-body-large [overflow-wrap:anywhere]">
+                <AuditSummary :parts="description.parts" />
+              </p>
               <p class="text-body-medium text-on-surface-variant">
                 {{ description.label }} · {{ SOURCE_LABEL[entry.source] ?? entry.source }}
               </p>

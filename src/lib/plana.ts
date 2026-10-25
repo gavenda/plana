@@ -27,3 +27,6 @@ export function portraitUrl(mood: PlanaMood): string {
 
 /** Her logo: the mark at the top of the navigation rail. */
 export const logoUrl = files['../assets/plana/logo.webp']!
+
+/** The faint seaside scene behind the stand-alone pages (sign-in, 404). */
+export const backdropUrl = files['../assets/plana/backdrop.webp']!

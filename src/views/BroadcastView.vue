@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 
 import AppSelect from '@/components/AppSelect.vue'
 import AppTextArea from '@/components/AppTextArea.vue'
+import DiscordMention from '@/components/DiscordMention.vue'
+import DiscordMessage from '@/components/DiscordMessage.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { groupOptions, type SelectOption } from '@/lib/select'
@@ -70,17 +72,17 @@ async function send() {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="card">
-      <div class="card-header">
+    <section aria-labelledby="broadcast-compose">
+      <div class="section-header">
         <div>
-          <p class="text-title-medium">Send a message as the bot</p>
+          <h2 id="broadcast-compose" class="text-title-medium">Send a message as the bot</h2>
           <p class="text-body-medium text-on-surface-variant">
             Equivalent to the <code>/broadcast</code> command.
           </p>
         </div>
       </div>
 
-      <div class="card-body">
+      <div class="card card-body">
         <StateBlock
           :loading="guild.loading && !guild.directory"
           :error="guild.error"
@@ -99,7 +101,7 @@ async function send() {
 
               <p v-if="error" class="alert alert-error">{{ error }}</p>
               <p v-else-if="result" class="alert alert-success">
-                Posted to #{{ result.channelName }} —
+                Posted to <DiscordMention kind="channel" :name="result.channelName" /> —
                 <a
                   class="font-medium underline underline-offset-2"
                   :href="result.url"
@@ -132,11 +134,14 @@ async function send() {
                     <span class="text-title-small">Plana</span>
                     <span class="chip chip-accent">BOT</span>
                     <span class="text-body-medium text-on-surface-variant">
-                      in {{ selected ? `#${selected.name}` : 'no channel selected' }}
+                      in
+                      <DiscordMention v-if="selected" kind="channel" :name="selected.name" />
+                      <template v-else>no channel selected</template>
                     </span>
                   </div>
                   <p class="mt-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-on-surface">
-                    {{ content || 'Your message will appear here.' }}
+                    <DiscordMessage v-if="content" :content="content" />
+                    <template v-else>Your message will appear here.</template>
                   </p>
                 </div>
               </div>
@@ -148,6 +153,6 @@ async function send() {
           </div>
         </StateBlock>
       </div>
-    </div>
+    </section>
   </div>
 </template>

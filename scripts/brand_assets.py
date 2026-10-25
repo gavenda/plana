@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cuts Plana's portraits, logo and Discord avatar from the art in /branding.
+"""Cuts Plana's portraits, logo, backdrop and Discord avatar from the art in /branding.
 
 Run from the repository root: python3 scripts/brand_assets.py (needs Pillow).
 Every shipped image comes from here; never edit the outputs by hand. See BRANDING.md.
@@ -14,6 +14,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ROOT / "branding" / "expressions"
 PORTRAITS = ROOT / "src" / "assets" / "plana"
 AVATAR = ROOT / "branding" / "out" / "discord-avatar.png"
+
+# The faint scene behind the stand-alone pages (sign-in, 404). Shown at low opacity under a
+# dark surface, so it is saved small: full width, lower quality.
+BACKDROP_SOURCE = ROOT / "branding" / "BG_CS_PV4_161_2.jpg"
+BACKDROP_WIDTH = 1600
 
 # Mood name -> source expression number (Plana_Portrait_Expression_<n>.webp).
 MOODS = {
@@ -108,10 +113,17 @@ def main() -> None:
     # The mark at the top of the navigation rail.
     logo(128).save(PORTRAITS / "logo.webp", quality=90, method=6)
 
+    # Behind the stand-alone pages.
+    backdrop = Image.open(BACKDROP_SOURCE).convert("RGB")
+    if backdrop.width > BACKDROP_WIDTH:
+        height = round(backdrop.height * BACKDROP_WIDTH / backdrop.width)
+        backdrop = backdrop.resize((BACKDROP_WIDTH, height), Image.LANCZOS)
+    backdrop.save(PORTRAITS / "backdrop.webp", quality=72, method=6)
+
     # Uploaded by hand as the bot's avatar in the Developer Portal; the favicon is that avatar.
     logo(1024).save(AVATAR)
 
-    print(f"Wrote {len(MOODS)} portraits, the logo, and {AVATAR.relative_to(ROOT)}.")
+    print(f"Wrote {len(MOODS)} portraits, the logo, the backdrop, and {AVATAR.relative_to(ROOT)}.")
 
 
 if __name__ == "__main__":

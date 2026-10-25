@@ -1,5 +1,5 @@
 <template>
-  <!-- Schale's emblem, redrawn from branding/Schale_Icon.webp. A watermark only; see BRANDING.md. -->
+  <!-- Schale's emblem, redrawn from branding/Schale_Icon.webp. Decoration only: the footer mark on the sign-in and 404 pages (App.vue); see BRANDING.md. -->
   <svg viewBox="0 0 344 312" fill="none" stroke="currentColor" aria-hidden="true">
     <ellipse cx="172" cy="52" rx="96" ry="14" stroke-width="9" />
     <circle cx="172" cy="162" r="84" stroke-width="3" />

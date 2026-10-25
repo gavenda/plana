@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AppSelect from '@/components/AppSelect.vue'
 import PlanaSays from '@/components/PlanaSays.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import { roleColor } from '@/lib/discord'
 import { groupOptions, type SelectOption } from '@/lib/select'
 import { useGuildStore } from '@/stores/guild'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
@@ -62,7 +63,7 @@ function roleOptions(key: keyof GuildSettings): SelectOption<string | null>[] {
     { value: null, label: 'Not set' },
     ...guild.roles
       .filter((role) => role.assignable || role.id === draft[key])
-      .map((role) => ({ value: role.id, label: role.name })),
+      .map((role) => ({ value: role.id, label: role.name, swatch: roleColor(role.color) })),
   ]
 }
 
@@ -126,10 +127,10 @@ const version = __APP_VERSION__
 <template>
   <!-- Two panes on large windows: the form flexes, About is a fixed 360dp pane. -->
   <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
-    <div class="card">
-      <div class="card-header">
+    <section aria-labelledby="settings-roles">
+      <div class="section-header">
         <div>
-          <p class="text-title-medium">Roles and channels</p>
+          <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
           <p class="text-body-medium text-on-surface-variant">
             These drive the join announcement and the triage queue.
           </p>
@@ -139,7 +140,7 @@ const version = __APP_VERSION__
         </span>
       </div>
 
-      <div class="card-body">
+      <div class="card card-body">
         <StateBlock
           :loading="store.loading && !store.loaded"
           :error="store.error"
@@ -206,7 +207,7 @@ const version = __APP_VERSION__
           </form>
         </StateBlock>
       </div>
-    </div>
+    </section>
 
     <!-- About: the last thing in Settings, with no card and no heading. -->
     <section

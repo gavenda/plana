@@ -278,7 +278,15 @@ function onKeydown(event: KeyboardEvent) {
         @focus="focused = true"
         @blur="focused = false"
       >
-        <span class="truncate">{{ selected?.label }}</span>
+        <span class="flex min-w-0 items-center gap-2">
+          <span
+            v-if="selected?.swatch"
+            class="size-3 shrink-0 rounded-full"
+            :style="{ backgroundColor: selected.swatch }"
+            aria-hidden="true"
+          />
+          <span class="truncate">{{ selected?.label }}</span>
+        </span>
       </button>
 
       <span
@@ -358,6 +366,13 @@ function onKeydown(event: KeyboardEvent) {
                 @pointermove="!option.disabled && (activeIndex = index)"
                 @click="choose(index)"
               >
+                <span
+                  v-if="option.swatch"
+                  class="size-3 shrink-0 rounded-full"
+                  :class="option.disabled && 'opacity-38'"
+                  :style="{ backgroundColor: option.swatch }"
+                  aria-hidden="true"
+                />
                 <span class="min-w-0 flex-1 truncate">{{ option.label }}</span>
                 <span
                   v-if="option.trailing"

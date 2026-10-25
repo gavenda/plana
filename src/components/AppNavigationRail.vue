@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import RailItem from '@/components/RailItem.vue'
 import { logoUrl } from '@/lib/plana'
 import { railDocks, useRail } from '@/lib/rail'
+import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
 
 type Destination = { to: string; label: string; icon: string }
@@ -24,7 +25,21 @@ const version = __APP_VERSION__
 const session = useSessionStore()
 const { expanded, toggle, collapse } = useRail()
 
+const guild = useGuildStore()
+
 const initial = computed(() => session.user?.displayName.trim().charAt(0).toUpperCase() || '?')
+
+/** The server this dashboard runs, shown with the account at the foot of the open rail. */
+const server = computed(() => {
+  const info = guild.directory?.guild
+  if (!info) return null
+  return {
+    name: info.name,
+    iconUrl: info.iconUrl,
+    initial: info.name.trim().charAt(0).toUpperCase() || '?',
+    members: `${info.memberCount.toLocaleString()} ${info.memberCount === 1 ? 'member' : 'members'}`,
+  }
+})
 
 /** A floating rail is in the way once it has done its job; a docked one stays put. */
 function afterChoice() {
@@ -59,6 +74,8 @@ function measure() {
 }
 
 onMounted(() => {
+  // The rail shows without the server if this fails.
+  void guild.load()
   measure()
   if (innerEl.value && typeof ResizeObserver !== 'undefined') {
     observer = new ResizeObserver(measure)
@@ -161,39 +178,64 @@ onBeforeUnmount(() => observer?.disconnect())
           </div>
         </div>
 
-        <!-- Who is signed in, at the foot of the open rail however far the destinations scroll. -->
+        <!-- The server and who is signed in, at the foot of the open rail however far the
+             destinations scroll. -->
         <div
           class="rail-collapse flex-none"
-          :data-open="expanded && !!session.user"
+          :data-open="expanded && (!!session.user || !!server)"
           :inert="!expanded"
         >
           <div>
             <div
-              v-if="session.user"
-              class="mx-6 my-4 flex w-fit items-center gap-3 rounded-xl bg-surface-container-highest px-4 py-3 text-on-surface-variant"
+              class="mx-6 my-4 flex w-fit flex-col divide-y divide-outline-variant rounded-xl bg-surface-container-highest text-on-surface-variant"
             >
-              <img
-                v-if="session.user.avatar"
-                class="size-10 shrink-0 rounded-full object-cover"
-                :src="session.user.avatar"
-                alt=""
-                width="40"
-                height="40"
-              />
-              <span
-                v-else
-                class="grid size-10 shrink-0 place-items-center rounded-full bg-primary-container text-title-small text-on-primary-container"
-                aria-hidden="true"
-                >{{ initial }}</span
-              >
-              <span class="max-w-[136px] min-w-0">
-                <span class="block truncate text-title-medium text-on-surface">{{
-                  session.user.displayName
-                }}</span>
-                <span class="block truncate font-mono text-body-small">{{
-                  session.user.username
-                }}</span>
-              </span>
+              <div v-if="server" class="flex items-center gap-3 px-4 py-3">
+                <img
+                  v-if="server.iconUrl"
+                  class="size-10 shrink-0 rounded-full object-cover"
+                  :src="server.iconUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <span
+                  v-else
+                  class="grid size-10 shrink-0 place-items-center rounded-full bg-secondary-container text-title-small text-on-secondary-container"
+                  aria-hidden="true"
+                  >{{ server.initial }}</span
+                >
+                <span class="max-w-[136px] min-w-0">
+                  <span class="block truncate text-title-medium text-on-surface">{{
+                    server.name
+                  }}</span>
+                  <span class="block truncate text-body-small">{{ server.members }}</span>
+                </span>
+              </div>
+
+              <div v-if="session.user" class="flex items-center gap-3 px-4 py-3">
+                <img
+                  v-if="session.user.avatar"
+                  class="size-10 shrink-0 rounded-full object-cover"
+                  :src="session.user.avatar"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <span
+                  v-else
+                  class="grid size-10 shrink-0 place-items-center rounded-full bg-primary-container text-title-small text-on-primary-container"
+                  aria-hidden="true"
+                  >{{ initial }}</span
+                >
+                <span class="max-w-[136px] min-w-0">
+                  <span class="block truncate text-title-medium text-on-surface">{{
+                    session.user.displayName
+                  }}</span>
+                  <span class="block truncate font-mono text-body-small">{{
+                    session.user.username
+                  }}</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
