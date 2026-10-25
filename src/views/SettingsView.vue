@@ -124,7 +124,8 @@ const version = __APP_VERSION__
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <!-- Two panes on large windows: the form flexes, About is a fixed 360dp pane. -->
+  <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
     <div class="card">
       <div class="card-header">
         <div>
@@ -144,7 +145,10 @@ const version = __APP_VERSION__
           :error="store.error"
           :retry="() => store.load(true)"
         >
-          <form class="flex max-w-[560px] flex-col gap-6" @submit.prevent="submit">
+          <form
+            class="grid grid-cols-1 gap-x-6 gap-y-6 expanded:grid-cols-2"
+            @submit.prevent="submit"
+          >
             <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1">
               <AppSelect
                 v-model="draft[field.key]"
@@ -181,10 +185,12 @@ const version = __APP_VERSION__
               </p>
             </div>
 
-            <p v-if="saveError" class="alert alert-error">{{ saveError }}</p>
-            <p v-else-if="saved && !dirty" class="alert alert-success">Settings saved.</p>
+            <p v-if="saveError" class="alert alert-error expanded:col-span-2">{{ saveError }}</p>
+            <p v-else-if="saved && !dirty" class="alert alert-success expanded:col-span-2">
+              Settings saved.
+            </p>
 
-            <div class="flex gap-2.5">
+            <div class="flex gap-2.5 expanded:col-span-2">
               <button class="btn btn-filled" type="submit" :disabled="!dirty || saving">
                 {{ saving ? 'Saving…' : 'Save changes' }}
               </button>
@@ -203,7 +209,10 @@ const version = __APP_VERSION__
     </div>
 
     <!-- About: the last thing in Settings, with no card and no heading. -->
-    <section aria-label="About" class="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center">
+    <section
+      aria-label="About"
+      class="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center large:pt-4"
+    >
       <PlanaSays mood="content">Connection confirmed. I've been waiting for you, Sensei.</PlanaSays>
       <p class="mt-2 text-title-medium">Plana {{ version }}</p>
       <p class="text-body-medium text-on-surface-variant">

@@ -113,3 +113,37 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
 export function toneClass(tone: AuditDescription['tone']): string {
   return tone === 'neutral' ? 'chip' : `chip chip-${tone}`
 }
+
+/** The leading icon for an entry's kind. Material Symbols; add new names to index.html. */
+export function auditIcon(action: AuditAction): string {
+  switch (action) {
+    case 'member.join':
+      return 'how_to_reg'
+    case 'role.assign':
+      return 'badge'
+    case 'broadcast.send':
+      return 'campaign'
+    case 'settings.update':
+      return 'settings'
+    case 'birthday.announce':
+    case 'birthday.set':
+    case 'birthday.remove':
+      return 'cake'
+    default:
+      return 'history'
+  }
+}
+
+/** The tone as a container colour, for the leading icon in a list item. */
+export function toneContainerClass(tone: AuditDescription['tone']): string {
+  switch (tone) {
+    case 'accent':
+      return 'bg-primary-container text-on-primary-container'
+    case 'success':
+      return 'bg-success-container text-on-success-container'
+    case 'warn':
+      return 'bg-warning-container text-on-warning-container'
+    default:
+      return 'bg-surface-container-highest text-on-surface-variant'
+  }
+}

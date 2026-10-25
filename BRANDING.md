@@ -81,9 +81,17 @@ Her [wiki page](https://bluearchive.wiki/wiki/Plana) gives the facts, her
   ([`PhoneNotice.vue`](src/components/PhoneNotice.vue)). It is driven by the `phone:`
   Tailwind variant, so it is correct on the first server-rendered paint.
 - Don't add compact (phone) layouts, bottom navigation bars, or navigation drawers.
-- **Navigation is a navigation rail** ([`AppNavigationRail.vue`](src/components/AppNavigationRail.vue)):
-  collapsed (96dp, icon over label) by default, expandable to 240dp (icon beside label)
-  from the menu button. The choice is remembered per browser.
+- **Navigation is a navigation rail** ([`AppNavigationRail.vue`](src/components/AppNavigationRail.vue),
+  [`RailItem.vue`](src/components/RailItem.vue)), built the way Yuuka's is: slim (96dp, icon
+  over label) by default, and open (icon beside label) from the menu button, as wide as its
+  content needs between 220 and 360dp. Both states are one structure that morphs (see
+  [Motion](#motion)). The open rail adds "Sign out" under the destinations and an account card
+  (avatar, display name, username) at its foot. From 840px it pushes the page aside; below
+  that it floats over the page behind a scrim and closes after a choice. The choice is
+  remembered per browser, and only restored where it docks.
+- **There is no top app bar.** The rail shows where you are, so each page has a heading for
+  screen readers only. Overview is the exception: her greeting is its visible heading, with
+  the server's name and member count under it.
 - Layout breakpoints use the M3 window size classes: `medium:` (600px), `expanded:`
   (840px), `large:` (1200px), `extra-large:` (1600px).
 
@@ -132,8 +140,10 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
 
 | Use | Roles |
 | --- | --- |
-| Page background, rail, top app bar | `surface` / `on-surface` |
-| Cards | `surface-container` |
+| Page background, rail | `surface` / `on-surface` |
+| Open rail floating over the page | `surface-container`, `shadow-level2`, a 32% `scrim` behind |
+| Account card in the open rail | `surface-container-highest` |
+| Cards, segmented list items | `surface-container` |
 | Avatar placeholders | `surface-container-highest` |
 | Sign-in and 404 panels | `surface-container-low` |
 | Dialogs | `surface-container-high` |
@@ -213,12 +223,12 @@ Where she is not, on purpose:
 - **Alerts after an action** ("Settings saved.", "Discord rejected the role change.") stay
   plain banners. Her face is for a state the screen is in, not a reply to a click.
 - **Loading.** Her halo stands for her (see [The halo](#the-halo)); her face does not.
-- **The top app bar, the rail's destinations, tables, forms, the broadcast preview.**
+- **The rail's destinations, tables, forms, the broadcast preview.**
 
 ### About
 
-The last thing in Settings, with no card and no heading: `PlanaSays` with her `Content`
-face and her line, then "Plana" with the version (`package.json`) underneath. Under the
+The last thing in Settings (beside the form on large windows, below it otherwise), with no
+card and no heading: `PlanaSays` with her `Content` face and her line, then "Plana" with the version (`package.json`) underneath. Under the
 version are two plain lines in the third person: "Kept by Plana, system administrator of
 the Shittim Chest", with her name alone in `tertiary`, and, quieter, "Character design by
 DoReMi, from Blue Archive."
@@ -311,7 +321,7 @@ hero icon. A dialog that holds a form or a list has no hero and no face. **Never
 
 | Dialog | Mood | Headline | Supporting text | Buttons |
 | --- | --- | --- | --- | --- |
-| Sign out (from the top app bar) | `Hesitant` | You mean that? | I'll be standing by until you return, Sensei. | Stay · Sign out |
+| Sign out (from the open rail) | `Hesitant` | You mean that? | I'll be standing by until you return, Sensei. | Stay · Sign out |
 | Remove a birthday | `Attentive` | Remove birthday? | {member}'s birthday will be deleted and won't be announced. | Cancel · Remove |
 
 Only the sign-out dialog speaks in her voice: it is about Sensei leaving her. A
@@ -357,11 +367,19 @@ Expressive springs, approximated as cubic-bézier curves (`ease-*` utilities):
 | Utility | Duration | Use |
 | --- | --- | --- |
 | `ease-spatial-fast` | 350ms | buttons, small shape morphs |
-| `ease-spatial` | 500ms | rail expand/collapse, dialogs opening, larger layout moves |
+| `ease-spatial` | 500ms | dialogs opening, larger layout moves |
 | `ease-spatial-slow` | 650ms | full-screen transitions |
 | `ease-effects-fast` | 150ms | state layers, hover tints |
 | `ease-effects` | 200ms | color changes, icon fill, dialogs closing |
 | `ease-effects-slow` | 300ms | fades |
+
+The navigation rail is the exception, and moves as Yuuka's does: M3's emphasized decelerate
+curve over 300ms (`ease-emphasized-decelerate`) for the rail's width, the page moving aside,
+and every item's pill, icon and label, so they all land together without overshoot. Things
+that come and go with the open rail (the name, the menu glyph, "Sign out", the account card)
+fade on `ease-standard`, 150ms out and 200ms in after a 100ms beat; groups grow from zero
+height rather than appear. The scrim fades in on `ease-standard-decelerate` and out on
+`ease-standard-accelerate`. The rules live under "navigation rail" in `main.css`.
 
 Spatial curves overshoot (they move and resize things); effects curves never overshoot
 (they change color and opacity). `prefers-reduced-motion` turns transitions off. Her
@@ -389,11 +407,12 @@ Shared components in `main.css`, named after their M3 counterparts:
 | Class | M3 component |
 | --- | --- |
 | `.btn` + `.btn-filled` / `.btn-tonal` / `.btn-outlined` / `.btn-text`, `.btn-sm` | Buttons (small, and extra small with `.btn-sm`) |
-| `.icon-btn` | Standard icon button |
+| `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-narrow` | Icon button (standard or tonal; default or narrow width) |
 | `.card`, `.card-header`, `.card-body` | Filled card |
 | `.chip` + `.chip-accent` / `-tertiary` / `-success` / `-danger` / `-warn` | Chips (non-interactive, as status labels) |
 | `.alert` + `.alert-error` / `-success` / `-warn` | Banner-style inline message |
 | `.data-table` | Data table (header row, hairline dividers, hover tint) |
+| `.segmented-list`, `.segmented-item`, `.segmented-header` | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). The Audit log is one per day. |
 
 Vue components, where M3 needs behaviour CSS can't give:
 

@@ -86,9 +86,7 @@ async function send() {
           :error="guild.error"
           :retry="() => guild.load(true)"
         >
-          <div
-            class="grid grid-cols-1 items-start gap-7 large:grid-cols-[minmax(0,1fr)_minmax(0,380px)]"
-          >
+          <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
             <form class="flex flex-col gap-6" @submit.prevent="send">
               <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 

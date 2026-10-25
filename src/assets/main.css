@@ -148,6 +148,13 @@
   --ease-effects: cubic-bezier(0.34, 0.8, 0.34, 1); /* 200ms */
   --ease-effects-slow: cubic-bezier(0.34, 0.88, 0.34, 1); /* 300ms */
 
+  /* M3 standard and emphasized easing, for the navigation rail's morph (see the rail below),
+     which follows Yuuka's: no overshoot, so the rail and the page beside it settle together. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+
   /* Her halo's loading band: once round the ring a second, linear (HaloMark.vue). */
   --animate-halo-sweep: halo-sweep 1s linear infinite;
   @keyframes halo-sweep {
@@ -298,6 +305,16 @@
     @apply state-layer inline-grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-on-surface-variant transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md;
   }
 
+  /* Tonal icon button, for a supporting action that should still stand out a little. */
+  .icon-btn-tonal {
+    @apply bg-secondary-container text-on-secondary-container disabled:cursor-not-allowed disabled:bg-on-surface/12 disabled:text-on-surface/38;
+  }
+
+  /* M3 Expressive width: narrow is 32dp wide at the small (40dp) height. */
+  .icon-btn-narrow {
+    @apply w-8;
+  }
+
   /* Cards: filled containers, extra-large corners, no dividers under headers. */
   .card {
     @apply overflow-hidden rounded-xl bg-surface-container;
@@ -309,6 +326,31 @@
 
   .card-body {
     @apply px-6 pt-2 pb-6;
+  }
+
+  /* M3 Expressive segmented list: each item is its own container, 2dp apart, with large
+     corners on the group's outer edges and extra-small ones where items meet, so the group
+     reads as one block of separate pieces rather than a card with dividers. Matches Yuuka's
+     grouped rows. Put items directly inside `.segmented-list`. */
+  .segmented-list {
+    @apply flex flex-col gap-0.5;
+  }
+
+  .segmented-item {
+    @apply flex min-h-14 items-center gap-4 rounded-xs bg-surface-container px-4 py-2 text-on-surface;
+  }
+
+  .segmented-list > .segmented-item:first-child {
+    @apply rounded-t-lg;
+  }
+
+  .segmented-list > .segmented-item:last-child {
+    @apply rounded-b-lg;
+  }
+
+  /* A group's heading, inset past the items it names. */
+  .segmented-header {
+    @apply px-4 pt-3 pb-2 text-title-small text-on-surface-variant;
   }
 
   /* Outlined text fields are components: OutlinedField, AppSelect, AppTextArea.
@@ -373,4 +415,226 @@
   .data-table tbody tr:last-child td {
     @apply border-b-0;
   }
+}
+
+/* -------------------------------------------------------- navigation rail --- */
+/*
+ * The navigation rail (AppNavigationRail, RailItem), as one structure that morphs between slim
+ * and open. `data-expanded` is the only thing that changes; every property below transitions on
+ * the same curve as the rail's own width, so the two states are the same elements in different
+ * places. Icons sit 36px from the left in both, which is why they never travel sideways: the pill
+ * grows from a capsule around the icon into one that hugs the icon and its label, and the label
+ * moves out from under the icon to beside it.
+ *
+ * Slim, the rail is 96px wide. Open, it is as wide as its content needs (`--rail-open`, measured
+ * by AppNavigationRail), between M3's 220 and 360.
+ */
+:root {
+  --rail-open: 240px;
+}
+
+.rail {
+  --rail-time: 300ms;
+  --rail-ease: var(--ease-emphasized-decelerate);
+  width: 96px;
+  transition:
+    width var(--rail-time) var(--rail-ease),
+    background-color 200ms var(--ease-standard),
+    box-shadow 200ms var(--ease-standard);
+}
+
+.rail[data-expanded='true'] {
+  width: var(--rail-open);
+}
+
+/* Laid out at the open rail's size whatever the state, and clipped by the rail while it is slim. */
+.rail-inner {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 200px;
+  max-width: 340px;
+  height: 100%;
+}
+
+/*
+ * One entry. It is as wide as its open form (the ghost, an invisible copy of the label set where
+ * the open label goes, gives it that width) so the pill can grow to everything but the margins
+ * and end up hugging the label.
+ */
+.rail-item {
+  position: relative;
+  display: block;
+  flex: none;
+  width: fit-content;
+  min-width: 96px;
+  height: 52px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-on-surface-variant);
+  outline: none;
+  transition:
+    height var(--rail-time) var(--rail-ease),
+    margin-bottom var(--rail-time) var(--rail-ease),
+    color 200ms var(--ease-standard);
+}
+
+.rail-item[data-expanded='true'] {
+  height: 56px;
+  margin-bottom: 0;
+}
+
+.rail-item[data-active='true'] {
+  color: var(--color-on-secondary-container);
+}
+
+.rail-item-ghost {
+  display: block;
+  height: 0;
+  padding: 0 36px 0 68px;
+  overflow: hidden;
+  visibility: hidden;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+
+.rail-item-pill {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  width: 56px;
+  height: 32px;
+  border-radius: 9999px;
+  transition:
+    top var(--rail-time) var(--rail-ease),
+    width var(--rail-time) var(--rail-ease),
+    height var(--rail-time) var(--rail-ease),
+    background-color 200ms var(--ease-standard);
+}
+
+.rail-item[data-expanded='true'] .rail-item-pill {
+  width: calc(100% - 40px);
+  height: 56px;
+}
+
+.rail-item[data-active='true'] .rail-item-pill {
+  background-color: var(--color-secondary-container);
+}
+
+.rail-item[data-active='false']:hover .rail-item-pill {
+  background-color: color-mix(in srgb, var(--color-on-surface) 8%, transparent);
+}
+
+.rail-item:focus-visible .rail-item-pill {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.rail-item-icon {
+  position: absolute;
+  top: 4px;
+  left: 36px;
+  width: 24px;
+  height: 24px;
+  transition:
+    top var(--rail-time) var(--rail-ease),
+    font-variation-settings 200ms var(--ease-effects);
+}
+
+.rail-item[data-expanded='true'] .rail-item-icon {
+  top: 16px;
+}
+
+/* Slim, the label sits centred under its icon (the icon's centre is 48px in); open, beside it. */
+.rail-item-label {
+  position: absolute;
+  top: 36px;
+  left: 48px;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition:
+    top var(--rail-time) var(--rail-ease),
+    left var(--rail-time) var(--rail-ease),
+    transform var(--rail-time) var(--rail-ease),
+    font-size var(--rail-time) var(--rail-ease),
+    line-height var(--rail-time) var(--rail-ease),
+    letter-spacing var(--rail-time) var(--rail-ease),
+    color 200ms var(--ease-standard);
+}
+
+.rail-item[data-active='true'] .rail-item-label {
+  color: var(--color-secondary);
+}
+
+.rail-item[data-expanded='true'] .rail-item-label {
+  top: 18px;
+  left: 68px;
+  transform: translateX(0);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.1px;
+  color: inherit;
+}
+
+/* Something that is only there some of the time: it fades, holding back a beat on the way in. */
+.rail-fade {
+  opacity: 0;
+  transition: opacity 150ms var(--ease-standard);
+}
+
+.rail-fade[data-shown='true'] {
+  opacity: 1;
+  transition-duration: 200ms;
+  transition-delay: 100ms;
+}
+
+/* A group that is only in the open rail grows from zero height instead of appearing. */
+.rail-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--rail-time, 300ms) var(--ease-emphasized-decelerate),
+    opacity 150ms var(--ease-standard);
+}
+
+.rail-collapse[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition-duration: 300ms, 200ms;
+  transition-delay: 0s, 100ms;
+}
+
+.rail-collapse > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+ * The page beside the rail. A slim rail always takes its 96px; an open one pushes the page aside
+ * only where there is room for both (the expanded window class), and floats over it below that.
+ */
+.shell {
+  padding-left: 96px;
+  transition: padding-left 300ms var(--ease-emphasized-decelerate);
+}
+
+@media (min-width: 840px) {
+  .shell[data-rail-open='true'] {
+    padding-left: var(--rail-open);
+  }
+}
+
+/* While the remembered state is being applied after load, nothing animates into it. */
+.shell[data-rail-still='true'],
+.shell[data-rail-still='true'] .rail,
+.shell[data-rail-still='true'] .rail * {
+  transition: none !important;
 }

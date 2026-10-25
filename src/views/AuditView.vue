@@ -3,8 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
-import { describeAudit, toneClass, type AuditEntry, type AuditPage } from '@/lib/audit'
-import { absoluteTime, relativeTime } from '@/lib/format'
+import {
+  auditIcon,
+  describeAudit,
+  toneContainerClass,
+  type AuditEntry,
+  type AuditPage,
+} from '@/lib/audit'
+import { absoluteTime, clockTime, dayLabel, startOfDay } from '@/lib/format'
 
 const entries = ref<AuditEntry[]>([])
 const total = ref(0)
@@ -49,72 +55,98 @@ async function loadMore() {
   }
 }
 
-/** Precomputed so the template does not re-describe each row on every render. */
-const rows = computed(() =>
-  entries.value.map((entry) => ({ entry, description: describeAudit(entry) })),
-)
+const SOURCE_LABEL: Record<AuditEntry['source'], string> = {
+  discord: 'Discord',
+  dashboard: 'Dashboard',
+  system: 'System',
+}
+
+/**
+ * Entries grouped by local day, newest first (the order they arrive in), each day one segmented
+ * list. Described once here so the template does not re-describe each item on every render.
+ */
+const days = computed(() => {
+  const groups: {
+    day: number
+    label: string
+    items: { entry: AuditEntry; description: ReturnType<typeof describeAudit> }[]
+  }[] = []
+  for (const entry of entries.value) {
+    const day = startOfDay(entry.createdAt)
+    let group = groups[groups.length - 1]
+    if (!group || group.day !== day) {
+      group = { day, label: dayLabel(entry.createdAt), items: [] }
+      groups.push(group)
+    }
+    group.items.push({ entry, description: describeAudit(entry) })
+  }
+  return groups
+})
 
 onMounted(load)
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <p class="text-title-medium">Activity</p>
-          <p class="text-body-medium text-on-surface-variant">
-            {{ total }} recorded {{ total === 1 ? 'event' : 'events' }}.
-          </p>
-        </div>
-        <button class="btn btn-text btn-sm" :disabled="loading" @click="load">Refresh</button>
-      </div>
-
-      <StateBlock
-        :loading="loading && entries.length === 0"
-        :error="error"
-        :empty="entries.length === 0"
-        empty-text="Nothing to report. I'll record every change here."
-        empty-mood="standby"
-        :retry="load"
+    <div class="flex items-center justify-between gap-4 px-4">
+      <p class="text-headline-medium text-on-surface">
+        {{ total }} recorded {{ total === 1 ? 'event' : 'events' }}
+      </p>
+      <button
+        class="icon-btn icon-btn-tonal icon-btn-narrow"
+        type="button"
+        aria-label="Refresh"
+        title="Refresh"
+        :disabled="loading"
+        @click="load"
       >
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Event</th>
-                <th>Details</th>
-                <th>Source</th>
-                <th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in rows" :key="row.entry.id">
-                <td>
-                  <span :class="toneClass(row.description.tone)">{{ row.description.label }}</span>
-                </td>
-                <td class="break-words">{{ row.description.summary }}</td>
-                <td class="text-on-surface-variant">{{ row.entry.source }}</td>
-                <td
-                  :title="absoluteTime(row.entry.createdAt)"
-                  class="whitespace-nowrap text-on-surface-variant"
-                >
-                  {{ relativeTime(row.entry.createdAt) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div
-          v-if="cursor != null"
-          class="flex justify-center border-t border-outline-variant px-6 py-4"
-        >
-          <button class="btn btn-tonal btn-sm" :disabled="loadingMore" @click="loadMore">
-            {{ loadingMore ? 'Loading…' : 'Load more' }}
-          </button>
-        </div>
-      </StateBlock>
+        <span class="icon [--icon-size:20px]" aria-hidden="true">refresh</span>
+      </button>
     </div>
+
+    <StateBlock
+      :loading="loading && entries.length === 0"
+      :error="error"
+      :empty="entries.length === 0"
+      empty-text="Nothing to report. I'll record every change here."
+      empty-mood="standby"
+      :retry="load"
+    >
+      <section v-for="group in days" :key="group.day" :aria-labelledby="`day-${group.day}`">
+        <h2 :id="`day-${group.day}`" class="segmented-header">{{ group.label }}</h2>
+
+        <ul class="segmented-list">
+          <li v-for="{ entry, description } in group.items" :key="entry.id" class="segmented-item">
+            <span
+              class="grid size-10 shrink-0 place-items-center rounded-full"
+              :class="toneContainerClass(description.tone)"
+              aria-hidden="true"
+            >
+              <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
+            </span>
+
+            <div class="min-w-0 flex-1 py-1">
+              <p class="text-body-large [overflow-wrap:anywhere]">{{ description.summary }}</p>
+              <p class="text-body-medium text-on-surface-variant">
+                {{ description.label }} · {{ SOURCE_LABEL[entry.source] ?? entry.source }}
+              </p>
+            </div>
+
+            <time
+              class="shrink-0 self-start pt-1 text-label-small text-on-surface-variant"
+              :datetime="new Date(entry.createdAt).toISOString()"
+              :title="absoluteTime(entry.createdAt)"
+              >{{ clockTime(entry.createdAt) }}</time
+            >
+          </li>
+        </ul>
+      </section>
+
+      <div v-if="cursor != null" class="flex justify-center pt-2">
+        <button class="btn btn-tonal" :disabled="loadingMore" @click="loadMore">
+          {{ loadingMore ? 'Loading…' : 'Load more' }}
+        </button>
+      </div>
+    </StateBlock>
   </div>
 </template>

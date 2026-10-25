@@ -8,12 +8,19 @@ import { describeAudit, toneClass, type AuditPage } from '@/lib/audit'
 import { relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
+import { useSessionStore } from '@/stores/session'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
 
 type PendingMember = { id: string; displayName: string; avatarUrl: string; joinedAt: number | null }
 
 const guild = useGuildStore()
+const session = useSessionStore()
 const settings = useSettingsStore()
+
+/** Her greeting is the page's heading, in place of "Overview" (the rail and the tab still say Overview). */
+const greeting = computed(() =>
+  session.user ? `Welcome, ${session.user.displayName} Sensei.` : 'Overview',
+)
 
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
 const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
@@ -64,6 +71,13 @@ const recent = computed(() =>
 
 <template>
   <div class="flex flex-col gap-4">
+    <header class="min-w-0 pb-2">
+      <h1 class="truncate text-headline-small text-on-surface">{{ greeting }}</h1>
+      <p v-if="guild.directory" class="truncate text-body-medium text-on-surface-variant">
+        {{ guild.directory.guild.name }} · {{ guild.directory.guild.memberCount }} members
+      </p>
+    </header>
+
     <div
       v-if="settings.loaded && missing.length > 0"
       class="flex flex-col items-start gap-2 rounded-xl bg-warning-container p-6 text-on-warning-container"
