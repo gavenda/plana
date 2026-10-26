@@ -10,6 +10,7 @@
     "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
     "start": "NODE_ENV=production bun run src/server/index.ts",
     "commands:deploy": "bun run src/server/discord/deploy-commands.ts",
+    "backup": "bun run src/server/backup-now.ts",
     "type-check": "run-s type-check:app type-check:server",
     "format": "bun fmt src/",
     "format:check": "bun fmt --check src/",

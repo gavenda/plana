@@ -1,3 +1,4 @@
+import { startBackups, stopBackups } from './backup'
 import { closeCache, connectCache } from './cache'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
@@ -34,6 +35,7 @@ seedSettingsFromEnv()
 
 await initI18n()
 await connectCache()
+await startBackups()
 
 const context: AppContext = {
   applicationId: env.DISCORD_CLIENT_ID,
@@ -127,6 +129,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(birthdayTimer)
   clearInterval(triageReminderTimer)
   clearInterval(activityTimer)
+  stopBackups()
   checkpointActivity()
   checkpointVoice()
   stopLiveSockets()

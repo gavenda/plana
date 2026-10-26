@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
 import { logger } from 'hono/logger'
 
+import { backupStatus } from '../backup'
 import { cacheStatus } from '../cache'
 import { getSettings, isConfigured } from '../db/settings'
 import { client, isReady } from '../discord/client'
@@ -24,6 +25,7 @@ export function createHttpApp(renderer: Renderer): Hono {
       ok: true,
       discord: isReady() ? 'ready' : 'connecting',
       cache: cacheStatus(),
+      backup: backupStatus(),
       configured: isConfigured(getSettings()),
       uptime: Math.round(process.uptime()),
     }),
