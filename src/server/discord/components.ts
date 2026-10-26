@@ -23,10 +23,7 @@ const LABEL_LIMIT = 38
 
 /** The parts of a Components V2 message, laid out straight in it with no container. */
 export type AnnouncementComponents = (
-  | SectionBuilder
-  | SeparatorBuilder
-  | TextDisplayBuilder
-  | ActionRowBuilder<ButtonBuilder>
+  SectionBuilder | SeparatorBuilder | TextDisplayBuilder | ActionRowBuilder<ButtonBuilder>
 )[]
 
 function truncate(value: string, limit = LABEL_LIMIT): string {

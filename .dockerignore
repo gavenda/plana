@@ -8,7 +8,6 @@ deploy
 coverage
 *.log
 *.tsbuildinfo
-.eslintcache
 .env
 .env.*
 !.env.example
