@@ -107,6 +107,28 @@
       "members_line_other": "{{count}} members joined us this week: {{mentions}}. Please make them feel at home.",
       "members_more_one": "{{count}} more",
       "members_more_other": "{{count}} more"
+    },
+    "game_night": {
+      "title": "-# {{game}} — Game Night",
+      "title_emoji": "-# {{emoji}} {{game}} — Game Night",
+      "intros": [
+        "Gathering detected. Please join them if you're free.",
+        "A session has formed. There's room for more.",
+        "Notice. Several members are playing together.",
+        "Party confirmed. Feel free to drop in.",
+        "Activity spike recorded. Everyone is welcome."
+      ],
+      "trigger_one": "-# {{players}} is playing **{{game}}** in {{channel}}.",
+      "trigger_other": "-# {{players}} are playing **{{game}}** together in {{channel}}.",
+      "ping": "{{role}}",
+      "button_in": "I'm in",
+      "button_out": "Can't make it",
+      "prompt": "-# Let them know if you're coming.",
+      "joining": "**Joining:** {{names}}",
+      "declined": "**Declined:** {{names}}",
+      "more_one": "{{count}} more",
+      "more_other": "{{count}} more",
+      "unknown": "I no longer have a record of this game night."
     }
   }
 }

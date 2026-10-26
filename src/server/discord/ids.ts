@@ -31,6 +31,19 @@ export function decodeBroadcastId(customId: string): { channelId: string } | nul
 
 export const BROADCAST_INPUT_ID = 'content'
 
+export const GAME_NIGHT_PREFIX = 'gamenight'
+
+/** The message the button sits on says which game night it is, so only the answer is carried. */
+export function encodeGameNightId(response: 'in' | 'out'): string {
+  return `${GAME_NIGHT_PREFIX}:${response}`
+}
+
+export function decodeGameNightId(customId: string): { response: 'in' | 'out' } | null {
+  const [prefix, response] = customId.split(':')
+  if (prefix !== GAME_NIGHT_PREFIX || (response !== 'in' && response !== 'out')) return null
+  return { response }
+}
+
 /** The dispatcher matches handlers on this, so ids must keep the prefix first. */
 export function customIdPrefix(customId: string): string {
   return customId.split(':')[0] ?? ''

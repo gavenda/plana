@@ -12,6 +12,8 @@ export type AuditAction =
   | 'birthday.role'
   | 'triage.remind'
   | 'recap.post'
+  | 'gamenight.announce'
+  | 'gamenight.role'
   | 'moderation.ban'
   | 'moderation.unban'
   | 'moderation.kick'
@@ -138,6 +140,7 @@ const SETTING_NAMES: Record<string, { label: string; kind: 'role' | 'channel' }>
   birthdayChannelId: { label: 'the birthday channel', kind: 'channel' },
   birthdayRoleId: { label: 'the birthday role', kind: 'role' },
   recapChannelId: { label: 'the recap channel', kind: 'channel' },
+  gameNightChannelId: { label: 'the game night channel', kind: 'channel' },
   moderatorRoleId: { label: 'the moderator role', kind: 'role' },
 }
 
@@ -152,6 +155,11 @@ function settingChange(key: string, change: unknown): SummaryPart[] {
     return typeof to === 'number'
       ? [`set the reverse proxies to ${to}`]
       : ['turned off reverse proxy support']
+  }
+
+  if (key === 'gameNightMinPlayers') {
+    const to = (change as { to?: unknown } | null)?.to
+    return [`set game nights to start at ${typeof to === 'number' ? to : 3} players`]
   }
 
   const days = DAY_SETTING_NAMES[key]
@@ -332,6 +340,32 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
 
     case 'recap.post':
       return describe('Recap', 'accent', 'Posted the weekly recap in ', targetChannel)
+
+    case 'gamenight.announce': {
+      const players = names(entry.detail?.memberNames)
+      return describe(
+        'Game night',
+        'accent',
+        `Announced ${text(entry.detail?.game, 'a game')} night in `,
+        targetChannel,
+        ...(players.length > 0
+          ? [', started by ', ...list(players.map((name) => [{ user: name }]))]
+          : []),
+        ' in ',
+        voiceChannel(entry.detail?.voiceChannelName, entry.detail?.voiceChannelId),
+      )
+    }
+
+    case 'gamenight.role': {
+      const game = text(entry.detail?.game, 'a game')
+      const to = id(entry.detail?.to)
+      return to
+        ? describe('Game night', 'neutral', actor, ` set ${game} nights to ping `, {
+            role: entry.targetName?.replace(/^@/, '') ?? null,
+            roleId: to,
+          })
+        : describe('Game night', 'neutral', actor, ` stopped pinging anyone for ${game} nights`)
+    }
 
     case 'triage.remind': {
       const names = Array.isArray(entry.detail?.memberNames)
@@ -574,6 +608,9 @@ export function auditIcon(action: AuditAction): string {
       return 'hourglass_top'
     case 'recap.post':
       return 'summarize'
+    case 'gamenight.announce':
+    case 'gamenight.role':
+      return 'sports_esports'
     case 'moderation.ban':
     case 'moderation.unban':
     case 'moderation.kick':

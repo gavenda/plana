@@ -26,6 +26,8 @@ const draft = reactive<GuildSettings>({
   birthdayRoleId: null,
   moderatorRoleId: null,
   trustedProxyHops: null,
+  gameNightChannelId: null,
+  gameNightMinPlayers: null,
 })
 
 const snackbar = useSnackbar()
@@ -33,7 +35,8 @@ const saving = ref(false)
 
 type RoleKey =
   'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId' | 'moderatorRoleId' | 'birthdayRoleId'
-type ChannelKey = 'announceChannelId' | 'birthdayChannelId' | 'recapChannelId'
+type ChannelKey =
+  'announceChannelId' | 'birthdayChannelId' | 'recapChannelId' | 'gameNightChannelId'
 
 type Field = { label: string; hint: string } & (
   | {
@@ -47,6 +50,7 @@ type Field = { label: string; hint: string } & (
   | { kind: 'channel'; key: ChannelKey; empty: string }
   | { kind: 'reminder'; key: 'triageReminderDays' }
   | { kind: 'proxy'; key: 'trustedProxyHops' }
+  | { kind: 'players'; key: 'gameNightMinPlayers' }
 )
 
 /**
@@ -123,6 +127,25 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         label: 'Channel',
         hint: 'Where a summary of the week is posted every Sunday at 18:00, in the bot’s time zone: voice time, top games and music, and new members. Names members without pinging them. Optional.',
         empty: 'Off',
+      },
+    ],
+  },
+  {
+    id: 'settings-game-night',
+    title: 'Game nights',
+    fields: [
+      {
+        kind: 'channel',
+        key: 'gameNightChannelId',
+        label: 'Channel',
+        hint: 'Where a game night is announced once enough people in one voice channel have played the same game together for 5 minutes. Each game is announced at most once every 4 hours per voice channel. Pick who to ping for each game in Games & music. Optional.',
+        empty: 'Off',
+      },
+      {
+        kind: 'players',
+        key: 'gameNightMinPlayers',
+        label: 'Players needed',
+        hint: 'How many people must be in one voice channel playing the same game.',
       },
     ],
   },
@@ -225,6 +248,12 @@ const REMINDER_OPTIONS: SelectOption<number | null>[] = [
   })),
 ]
 
+const PLAYER_OPTIONS: SelectOption<number | null>[] = [
+  { value: 2, label: '2 players' },
+  { value: null, label: '3 players' },
+  ...[4, 5, 6].map((count) => ({ value: count, label: `${count} players` })),
+]
+
 const PROXY_OPTIONS: SelectOption<number | null>[] = [
   { value: null, label: 'None' },
   ...[1, 2, 3].map((count) => ({
@@ -261,6 +290,7 @@ function optionsFor(field: Field): SelectOption<string | number | null>[] {
   if (field.kind === 'role') return roleOptions(field.key, field.empty, field.readOnly)
   if (field.kind === 'channel') return channelOptions(field.empty)
   if (field.kind === 'proxy') return PROXY_OPTIONS
+  if (field.kind === 'players') return PLAYER_OPTIONS
   return REMINDER_OPTIONS
 }
 

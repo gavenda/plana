@@ -19,6 +19,10 @@ export type GuildSettings = {
   birthdayRoleId: string | null
   /** Reverse proxies in front of the app; null is none. */
   trustedProxyHops: number | null
+  /** Where game nights are announced; null is off. */
+  gameNightChannelId: string | null
+  /** Players needed for a game night; null is 3. */
+  gameNightMinPlayers: number | null
 }
 
 type SettingsResponse = { settings: GuildSettings; configured: boolean }
@@ -34,6 +38,8 @@ const EMPTY: GuildSettings = {
   birthdayRoleId: null,
   moderatorRoleId: null,
   trustedProxyHops: null,
+  gameNightChannelId: null,
+  gameNightMinPlayers: null,
 }
 
 export const useSettingsStore = defineStore('settings', () => {

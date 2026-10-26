@@ -27,6 +27,7 @@ import {
   MAX_ACTIVITY_DAYS,
 } from '../discord/activity'
 import { getGuild } from '../discord/client'
+import { getGameRole, setGameRole } from '../db/game-nights'
 import { getMemberProfile, listMembers } from '../discord/members'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { postWeeklyRecap } from '../discord/recap'
@@ -89,6 +90,8 @@ const settingsSchema = z
     birthdayRoleId: snowflake.nullable(),
     moderatorRoleId: snowflake.nullable(),
     trustedProxyHops: z.number().int().min(1).max(5).nullable(),
+    gameNightChannelId: snowflake.nullable(),
+    gameNightMinPlayers: z.number().int().min(2).max(10).nullable(),
   })
   .partial()
 
@@ -331,6 +334,40 @@ api.get('/activity/game', async (c) => {
   const parsed = gamePlayersQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'A game name and a valid period are required.' }, 400)
   return respond(c, await getGamePlayers(parsed.data.name, parsed.data.days))
+})
+
+const gameRoleSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  roleId: snowflake.nullable(),
+})
+
+/** The role pinged when a game night of this game starts, set from Games & music. */
+api.put('/activity/game/role', requireAdmin, async (c) => {
+  const parsed = gameRoleSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success)
+    return c.json({ error: 'A game name and a role (or null) are required.' }, 400)
+
+  const { name, roleId } = parsed.data
+  const guild = await getGuild()
+  const role = roleId ? guild.roles.cache.get(roleId) : null
+  if (roleId && !role) return c.json({ error: 'That role no longer exists.' }, 404)
+
+  const before = getGameRole(name)
+  setGameRole(name, roleId)
+
+  if (before !== roleId) {
+    const user = c.get('user')
+    recordAudit({
+      action: 'gamenight.role',
+      source: 'dashboard',
+      actorId: user.id,
+      actorName: user.username,
+      targetId: roleId,
+      targetName: role ? `@${role.name}` : null,
+      detail: { game: name, from: before, to: roleId },
+    })
+  }
+  return c.json({ name, roleId })
 })
 
 const trackListenersQuerySchema = activityQuerySchema.extend({

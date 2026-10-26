@@ -22,10 +22,18 @@ export type GuildSettings = {
   birthdayRoleId: string | null
   /** Reverse proxies in front of the app, for reading visitors' addresses. Unset is none. */
   trustedProxyHops: number | null
+  /** Optional. Game nights are announced here; off while it is unset. */
+  gameNightChannelId: string | null
+  /** Players in one voice channel playing one game before it counts as a game night. Unset is 3. */
+  gameNightMinPlayers: number | null
 }
 
 /** Settings stored as numbers; every other setting is a Discord ID. */
-const NUMERIC_KEYS: readonly (keyof GuildSettings)[] = ['triageReminderDays', 'trustedProxyHops']
+const NUMERIC_KEYS: readonly (keyof GuildSettings)[] = [
+  'triageReminderDays',
+  'trustedProxyHops',
+  'gameNightMinPlayers',
+]
 
 export const SETTING_KEYS = [
   'triageRoleId',
@@ -38,6 +46,8 @@ export const SETTING_KEYS = [
   'birthdayRoleId',
   'moderatorRoleId',
   'trustedProxyHops',
+  'gameNightChannelId',
+  'gameNightMinPlayers',
 ] as const satisfies readonly (keyof GuildSettings)[]
 
 /** The settings the triage flow cannot run without. */
@@ -59,6 +69,8 @@ const EMPTY: GuildSettings = {
   birthdayRoleId: null,
   moderatorRoleId: null,
   trustedProxyHops: null,
+  gameNightChannelId: null,
+  gameNightMinPlayers: null,
 }
 
 const selectAll = db.query<{ key: string; value: string }, []>('SELECT key, value FROM settings')

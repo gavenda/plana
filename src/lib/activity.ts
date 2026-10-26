@@ -44,6 +44,8 @@ export type GamePlayers = {
   /** Null for all time. */
   days: number | null
   ms: number
+  /** Pinged when a game night of this game starts; null for no ping. */
+  roleId: string | null
   players: (ActivityMember & { ms: number; playingSince: number | null })[]
 }
 

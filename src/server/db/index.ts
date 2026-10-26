@@ -130,6 +130,47 @@ const migrations: string[] = [
     posted_at  INTEGER NOT NULL
   );
   `,
+  // Game nights: the role pinged for each game, and when each game was last announced in
+  // each voice channel, so a restart doesn't announce the same night twice.
+  `
+  CREATE TABLE game_roles (
+    game    TEXT PRIMARY KEY,
+    role_id TEXT NOT NULL
+  );
+
+  CREATE TABLE game_nights (
+    channel_id   TEXT NOT NULL,
+    game         TEXT NOT NULL,
+    announced_at INTEGER NOT NULL,
+    PRIMARY KEY (channel_id, game)
+  );
+
+  CREATE TABLE game_night_posts (
+    message_id       TEXT PRIMARY KEY,
+    channel_id       TEXT NOT NULL,
+    voice_channel_id TEXT NOT NULL,
+    game             TEXT NOT NULL,
+    content          TEXT NOT NULL,
+    posted_at        INTEGER NOT NULL
+  );
+
+  CREATE TABLE game_night_responses (
+    message_id   TEXT NOT NULL REFERENCES game_night_posts (message_id) ON DELETE CASCADE,
+    member_id    TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    response     TEXT NOT NULL CHECK (response IN ('in', 'out')),
+    responded_at INTEGER NOT NULL,
+    PRIMARY KEY (message_id, member_id)
+  );
+
+  -- Each game's icon uploaded as one of the bot's own emojis, and the icon it was made from.
+  CREATE TABLE game_emojis (
+    game     TEXT PRIMARY KEY,
+    emoji_id TEXT NOT NULL,
+    name     TEXT NOT NULL,
+    icon_url TEXT NOT NULL
+  );
+  `,
 ]
 
 function migrate(database: Database): void {

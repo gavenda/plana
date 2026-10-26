@@ -9,6 +9,7 @@ import type { AppContext } from './context'
 import { ACTIVITY_CHECKPOINT_INTERVAL_MS, checkpointActivity } from './discord/activity'
 import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
+import { checkGameNights, GAME_NIGHT_CHECK_INTERVAL_MS } from './discord/game-nights'
 import { postWeeklyRecap } from './discord/recap'
 import { primeMemberCache } from './discord/service'
 import { remindStaleTriage } from './discord/triage-reminders'
@@ -134,6 +135,7 @@ const birthdayTimer = setInterval(() => {
 }, BIRTHDAY_CHECK_INTERVAL_MS)
 const triageReminderTimer = setInterval(() => void remindStaleTriage(), TRIAGE_REMINDER_INTERVAL_MS)
 const recapTimer = setInterval(() => void postWeeklyRecap(), RECAP_CHECK_INTERVAL_MS)
+const gameNightTimer = setInterval(() => void checkGameNights(), GAME_NIGHT_CHECK_INTERVAL_MS)
 
 async function shutdown(signal: string): Promise<void> {
   logger('shutdown').info`received ${signal}`
@@ -142,6 +144,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(birthdayTimer)
   clearInterval(triageReminderTimer)
   clearInterval(recapTimer)
+  clearInterval(gameNightTimer)
   clearInterval(activityTimer)
   stopBackups()
   checkpointActivity()

@@ -13,6 +13,7 @@ import {
   type Track,
 } from '../db/activity'
 import { gameIconUrl, requestGameIcon } from './game-icons'
+import { getGameRole } from '../db/game-nights'
 import { env } from '../env'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { hasSubscribers, publish } from '../live'
@@ -343,6 +344,8 @@ export type GamePlayers = {
   /** Null for all time. */
   days: number | null
   ms: number
+  /** Pinged when a game night of this game starts; null for no ping. */
+  roleId: string | null
   /** Most hours first; `playingSince` is set for whoever is playing it right now. */
   players: (ActivityMember & { ms: number; playingSince: number | null })[]
 }
@@ -369,6 +372,7 @@ export async function getGamePlayers(
     iconUrl: gameIconUrl(name),
     days,
     ms: sum(players.map((player) => player.ms)),
+    roleId: getGameRole(name),
     players,
   })
 }

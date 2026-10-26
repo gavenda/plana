@@ -73,6 +73,17 @@ export async function startVoiceTracking(): Promise<void> {
   log.info`tracking ${live.size} member(s) already in voice`
 }
 
+/** Who is in each voice channel right now, counting only time that counts (not AFK or deafened). */
+export function membersInVoice(): Map<string, string[]> {
+  const channels = new Map<string, string[]>()
+  for (const [memberId, row] of live) {
+    const members = channels.get(row.channelId)
+    if (members) members.push(memberId)
+    else channels.set(row.channelId, [memberId])
+  }
+  return channels
+}
+
 /** Moves every open session's end up to now; see `touchVoiceSessions`. */
 export function checkpointVoice(now = Date.now()): void {
   if (live.size === 0) return
