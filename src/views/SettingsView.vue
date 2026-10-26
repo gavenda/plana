@@ -31,50 +31,109 @@ const saving = ref(false)
 
 type RoleKey =
   'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId' | 'moderatorRoleId' | 'birthdayRoleId'
+type ChannelKey = 'announceChannelId' | 'birthdayChannelId'
 
-type RoleField = {
-  key: RoleKey
-  label: string
-  hint: string
-  /** Label for leaving it unset. */
-  empty: string
-  /** Plana only reads who holds it, so any role will do, not just ones the bot can grant. */
-  readOnly?: boolean
-}
+type Field = { label: string; hint: string } & (
+  | {
+      kind: 'role'
+      key: RoleKey
+      /** Label for leaving it unset. */
+      empty: string
+      /** Plana only reads who holds it, so any role will do, not just ones the bot can grant. */
+      readOnly?: boolean
+    }
+  | { kind: 'channel'; key: ChannelKey; empty: string }
+  | { kind: 'reminder'; key: 'triageReminderDays' }
+)
 
-const ROLE_FIELDS: RoleField[] = [
+/**
+ * The form, one group per feature, its roles first. A field's label leaves out the group's name.
+ */
+const GROUPS: { id: string; title: string; fields: Field[] }[] = [
   {
-    key: 'triageRoleId',
-    label: 'Triage role',
-    hint: 'Assigned by Discord when someone joins, and removed once they are given a role.',
-    empty: 'Not set',
+    id: 'settings-triage',
+    title: 'Triage',
+    fields: [
+      {
+        kind: 'role',
+        key: 'triageRoleId',
+        label: 'Role',
+        hint: 'Assigned by Discord when someone joins, and removed once they are given a role.',
+        empty: 'Not set',
+      },
+      {
+        kind: 'role',
+        key: 'unitOwnerRoleId',
+        label: 'Trusted',
+        hint: 'First button on the join announcement.',
+        empty: 'Not set',
+      },
+      {
+        kind: 'role',
+        key: 'boardersRoleId',
+        label: 'Allowed',
+        hint: 'Second button on the join announcement.',
+        empty: 'Not set',
+      },
+      {
+        kind: 'channel',
+        key: 'announceChannelId',
+        label: 'Announcement channel',
+        hint: 'Where new member cards are posted.',
+        empty: 'Not set',
+      },
+      {
+        kind: 'reminder',
+        key: 'triageReminderDays',
+        label: 'Reminder',
+        hint: 'Members still waiting this long are listed in the announcement channel, once each, without a ping.',
+      },
+    ],
   },
   {
-    key: 'unitOwnerRoleId',
-    label: 'Unit Owner role',
-    hint: 'First button on the join announcement.',
-    empty: 'Not set',
+    id: 'settings-birthday',
+    title: 'Birthday',
+    fields: [
+      {
+        kind: 'channel',
+        key: 'birthdayChannelId',
+        label: 'Channel',
+        hint: 'Where birthday wishes are posted. Members add theirs with /birthday set. Optional.',
+        empty: 'Off',
+      },
+      {
+        kind: 'role',
+        key: 'birthdayRoleId',
+        label: 'Role',
+        hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: it is removed from everyone else.',
+        empty: 'Off',
+      },
+    ],
   },
   {
-    key: 'boardersRoleId',
-    label: 'Boarders role',
-    hint: 'Second button on the join announcement.',
-    empty: 'Not set',
-  },
-  {
-    key: 'moderatorRoleId',
-    label: 'Moderator role',
-    hint: 'Can sign in here and handle triage, but cannot change settings or broadcast. Administrators always have full access.',
-    empty: 'Administrators only',
-    readOnly: true,
-  },
-  {
-    key: 'birthdayRoleId',
-    label: 'Birthday role',
-    hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: it is removed from everyone else.',
-    empty: 'Off',
+    id: 'settings-system',
+    title: 'System',
+    fields: [
+      {
+        kind: 'role',
+        key: 'moderatorRoleId',
+        label: 'Moderator role',
+        hint: 'Can sign in here and handle triage, but cannot change settings or broadcast. Administrators always have full access.',
+        empty: 'Administrators only',
+        readOnly: true,
+      },
+    ],
   },
 ]
+
+/** A group's roles in one column and its other settings in the next, leaving out an empty one. */
+function columnsFor(fields: Field[]): Field[][] {
+  const roles = fields.filter((field) => field.kind === 'role')
+  const rest = fields.filter((field) => field.kind !== 'role')
+  return [roles, rest].filter((column) => column.length > 0)
+}
+
+const COLUMNS = GROUPS.map((group) => ({ ...group, columns: columnsFor(group.fields) }))
 
 onMounted(() => {
   void guild.load()
@@ -115,20 +174,19 @@ const REMINDER_OPTIONS: SelectOption<number | null>[] = [
 ]
 
 /** Roles Discord will actually let the bot grant, plus whatever is already selected. */
-function roleOptions(field: RoleField): SelectOption<string | null>[] {
-  const key = field.key
+function roleOptions(key: RoleKey, empty: string, readOnly = false): SelectOption<string | null>[] {
   return [
-    { value: null, label: field.empty },
+    { value: null, label: empty },
     ...guild.roles
-      .filter((role) => field.readOnly || role.assignable || role.id === draft[key])
+      .filter((role) => readOnly || role.assignable || role.id === draft[key])
       .map((role) => ({ value: role.id, label: role.name, swatch: roleColor(role.color) })),
   ]
 }
 
 /** Channels grouped by category, after an option for leaving the setting empty. */
-function channelOptions(emptyLabel: string): SelectOption<string | null>[] {
+function channelOptions(empty: string): SelectOption<string | null>[] {
   return [
-    { value: null, label: emptyLabel },
+    { value: null, label: empty },
     ...groupOptions(
       guild.channels.map((channel) => ({
         value: channel.id,
@@ -139,24 +197,36 @@ function channelOptions(emptyLabel: string): SelectOption<string | null>[] {
   ]
 }
 
-function warningFor(field: RoleField): string | null {
-  const id = draft[field.key]
+function optionsFor(field: Field): SelectOption<string | number | null>[] {
+  if (field.kind === 'role') return roleOptions(field.key, field.empty, field.readOnly)
+  if (field.kind === 'channel') return channelOptions(field.empty)
+  return REMINDER_OPTIONS
+}
+
+function roleWarning(key: RoleKey, readOnly = false): string | null {
+  const id = draft[key]
   if (!id || guild.roles.length === 0) return null
 
   const role = guild.roles.find((candidate) => candidate.id === id)
   if (!role) return 'This role no longer exists in the server.'
-  if (!field.readOnly && !role.assignable)
+  if (!readOnly && !role.assignable)
     return 'The bot cannot manage this role — move its own role higher.'
   return null
 }
 
-function channelWarningFor(key: 'announceChannelId' | 'birthdayChannelId'): string | null {
+function channelWarning(key: ChannelKey): string | null {
   const id = draft[key]
   if (!id || guild.channels.length === 0) return null
 
   const channel = guild.channels.find((candidate) => candidate.id === id)
   if (!channel) return 'This channel no longer exists.'
   if (!channel.sendable) return 'The bot cannot post in this channel.'
+  return null
+}
+
+function warningFor(field: Field): string | null {
+  if (field.kind === 'role') return roleWarning(field.key, field.readOnly)
+  if (field.kind === 'channel') return channelWarning(field.key)
   return null
 }
 
@@ -203,115 +273,100 @@ const version = __APP_VERSION__
           </span>
         </div>
 
-        <div class="card card-body">
+        <!-- A segmented list: per feature, a tonal item with its name and one with its fields;
+             last, the buttons that save them all. A load failure shows in a card of its own. -->
+        <div :class="{ 'card card-body': store.error }">
           <StateBlock
             :loading="!store.loaded && !store.error"
             :error="store.error"
             :retry="() => store.load(true)"
           >
-            <!-- The form's fields and buttons, as they will stand. -->
+            <!-- The form's cards, fields and buttons, as they will stand. -->
             <template #skeleton>
-              <div class="grid grid-cols-1 gap-6 expanded:grid-cols-2">
-                <span
-                  v-for="field in ROLE_FIELDS.length + 3"
-                  :key="field"
-                  class="skeleton h-14 rounded-xs"
-                />
-                <div class="flex justify-end gap-2 expanded:col-span-2">
+              <div class="segmented-list">
+                <template v-for="group in COLUMNS" :key="group.id">
+                  <div class="segmented-item min-h-12 bg-secondary-container px-6">
+                    <span class="skeleton h-3.5 w-20" />
+                  </div>
+                  <div
+                    class="segmented-item grid grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                  >
+                    <div
+                      v-for="(column, index) in group.columns"
+                      :key="index"
+                      class="flex flex-col gap-6"
+                    >
+                      <span
+                        v-for="field in column"
+                        :key="field.key"
+                        class="skeleton h-14 rounded-xs"
+                      />
+                    </div>
+                  </div>
+                </template>
+                <div class="segmented-item justify-end gap-2 px-6 py-4">
                   <span class="skeleton h-10 w-20" />
                   <span class="skeleton h-10 w-40" />
                 </div>
               </div>
             </template>
-            <form
-              class="grid grid-cols-1 gap-x-6 gap-y-6 expanded:grid-cols-2"
-              @submit.prevent="submit"
-            >
-              <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1">
-                <div class="flex items-center gap-1">
-                  <AppSelect
-                    v-model="draft[field.key]"
-                    class="min-w-0 flex-1"
-                    :label="field.label"
-                    :options="roleOptions(field)"
-                  />
-                  <RichTooltip :title="field.label" :text="field.hint" />
-                </div>
-                <p v-if="warningFor(field)" class="supporting-text text-warning">
-                  {{ warningFor(field) }}
-                </p>
-              </div>
+            <form @submit.prevent="submit">
+              <div class="segmented-list">
+                <!-- Each feature: its name as a tonal item, then an item with its fields. Items
+                     sit directly in the list so its corners land on the outer ones. -->
+                <template v-for="group in COLUMNS" :key="group.id">
+                  <h3
+                    :id="group.id"
+                    class="segmented-item min-h-12 bg-secondary-container px-6 text-title-small text-on-secondary-container"
+                  >
+                    {{ group.title }}
+                  </h3>
+                  <div
+                    role="group"
+                    :aria-labelledby="group.id"
+                    class="segmented-item grid min-w-0 grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                  >
+                    <div
+                      v-for="(column, index) in group.columns"
+                      :key="index"
+                      class="flex min-w-0 flex-col gap-6"
+                    >
+                      <div v-for="field in column" :key="field.key" class="flex flex-col gap-1">
+                        <div class="flex items-center gap-1">
+                          <AppSelect
+                            v-model="draft[field.key]"
+                            class="min-w-0 flex-1"
+                            :label="field.label"
+                            :options="optionsFor(field)"
+                          />
+                          <RichTooltip :title="field.label" :text="field.hint" />
+                        </div>
+                        <p v-if="warningFor(field)" class="supporting-text text-warning">
+                          {{ warningFor(field) }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
 
-              <div class="flex flex-col gap-1">
-                <div class="flex items-center gap-1">
-                  <AppSelect
-                    v-model="draft.announceChannelId"
-                    class="min-w-0 flex-1"
-                    label="Announcement channel"
-                    :options="channelOptions('Not set')"
-                  />
-                  <RichTooltip
-                    title="Announcement channel"
-                    text="Where new member cards are posted."
-                  />
+                <div class="segmented-item justify-end gap-2 px-6 py-4">
+                  <button
+                    class="btn btn-text"
+                    type="button"
+                    :disabled="!dirty || saving"
+                    @click="reset"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    class="btn btn-filled btn-wide"
+                    type="submit"
+                    :disabled="!dirty || saving"
+                  >
+                    <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
+                    {{ saving ? 'Saving…' : 'Save changes' }}
+                  </button>
                 </div>
-                <p
-                  v-if="channelWarningFor('announceChannelId')"
-                  class="supporting-text text-warning"
-                >
-                  {{ channelWarningFor('announceChannelId') }}
-                </p>
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <div class="flex items-center gap-1">
-                  <AppSelect
-                    v-model="draft.birthdayChannelId"
-                    class="min-w-0 flex-1"
-                    label="Birthday channel"
-                    :options="channelOptions('Off')"
-                  />
-                  <RichTooltip
-                    title="Birthday channel"
-                    text="Where birthday wishes are posted. Members add theirs with /birthday set. Optional."
-                  />
-                </div>
-                <p
-                  v-if="channelWarningFor('birthdayChannelId')"
-                  class="supporting-text text-warning"
-                >
-                  {{ channelWarningFor('birthdayChannelId') }}
-                </p>
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <div class="flex items-center gap-1">
-                  <AppSelect
-                    v-model="draft.triageReminderDays"
-                    class="min-w-0 flex-1"
-                    label="Triage reminder"
-                    :options="REMINDER_OPTIONS"
-                  />
-                  <RichTooltip
-                    title="Triage reminder"
-                    text="Members still waiting this long are listed in the announcement channel, once each, without a ping."
-                  />
-                </div>
-              </div>
-
-              <div class="flex justify-end gap-2 expanded:col-span-2">
-                <button
-                  class="btn btn-text"
-                  type="button"
-                  :disabled="!dirty || saving"
-                  @click="reset"
-                >
-                  Discard
-                </button>
-                <button class="btn btn-filled btn-wide" type="submit" :disabled="!dirty || saving">
-                  <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
-                  {{ saving ? 'Saving…' : 'Save changes' }}
-                </button>
               </div>
             </form>
           </StateBlock>
