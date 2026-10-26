@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, useId } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 
 /**
  * M3 rich tooltip on an info icon button: a subhead and a line or two of supporting text on
@@ -23,6 +23,10 @@ const EDGE_PX = 8
 const id = useId()
 const trigger = ref<HTMLButtonElement | null>(null)
 const tooltip = ref<HTMLElement | null>(null)
+
+// Teleport only after hydration: the server render leaves nothing in <body> for it to match.
+const mounted = ref(false)
+onMounted(() => (mounted.value = true))
 
 const open = ref(false)
 /** Opened by a click: stays until dismissed rather than following the pointer. */
@@ -134,7 +138,7 @@ onBeforeUnmount(hide)
     <span class="icon [--icon-size:20px]" aria-hidden="true">info</span>
   </button>
 
-  <Teleport to="body">
+  <Teleport v-if="mounted" to="body">
     <Transition
       enter-active-class="transition-[opacity,scale] duration-150 ease-standard-decelerate"
       enter-from-class="opacity-0 scale-90"
