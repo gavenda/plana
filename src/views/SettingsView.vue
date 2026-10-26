@@ -4,7 +4,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AppSelect from '@/components/AppSelect.vue'
 import BackupSection from '@/components/BackupSection.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
-import PlanaSays from '@/components/PlanaSays.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { roleColor } from '@/lib/discord'
 import { groupOptions, type SelectOption } from '@/lib/select'
@@ -24,6 +23,7 @@ const draft = reactive<GuildSettings>({
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
+  trustedProxyHops: null,
 })
 
 const snackbar = useSnackbar()
@@ -44,6 +44,7 @@ type Field = { label: string; hint: string } & (
     }
   | { kind: 'channel'; key: ChannelKey; empty: string }
   | { kind: 'reminder'; key: 'triageReminderDays' }
+  | { kind: 'proxy'; key: 'trustedProxyHops' }
 )
 
 /**
@@ -122,6 +123,12 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         empty: 'Administrators only',
         readOnly: true,
       },
+      {
+        kind: 'proxy',
+        key: 'trustedProxyHops',
+        label: 'Reverse proxies',
+        hint: 'How many proxies (nginx, Caddy) sit between visitors and the dashboard.',
+      },
     ],
   },
 ]
@@ -134,6 +141,39 @@ function columnsFor(fields: Field[]): Field[][] {
 }
 
 const COLUMNS = GROUPS.map((group) => ({ ...group, columns: columnsFor(group.fields) }))
+
+/**
+ * The page's cards: each feature's roles and channels, then the system's own settings. Each saves
+ * only its own fields, so changing one never saves a half-edited other.
+ */
+const SECTIONS = [
+  {
+    id: 'settings-roles',
+    title: 'Roles and channels',
+    first: true,
+    /** Whether each group gets its own tonal heading inside the card. */
+    titled: true,
+    groups: COLUMNS.filter((group) => group.id !== 'settings-system'),
+  },
+  {
+    id: 'settings-system-card',
+    title: 'System',
+    first: false,
+    titled: false,
+    groups: COLUMNS.filter((group) => group.id === 'settings-system'),
+  },
+]
+
+type Section = (typeof SECTIONS)[number]
+
+/** The settings a card holds. */
+const keysOf = (section: Section) =>
+  section.groups.flatMap((group) => group.fields.map((field) => field.key))
+
+/** A failed load shows once, in the first card. */
+const visibleSections = computed(() =>
+  SECTIONS.filter((section) => section.first || !store.error),
+)
 
 onMounted(() => {
   void guild.load()
@@ -161,15 +201,22 @@ watch(
   { immediate: true, deep: true },
 )
 
-const dirty = computed(() =>
-  (Object.keys(draft) as (keyof GuildSettings)[]).some((key) => draft[key] !== store.settings[key]),
-)
+const dirtyIn = (section: Section) =>
+  keysOf(section).some((key) => draft[key] !== store.settings[key])
 
 const REMINDER_OPTIONS: SelectOption<number | null>[] = [
   { value: null, label: 'Off' },
   ...[1, 2, 3, 5, 7, 14].map((days) => ({
     value: days,
     label: days === 1 ? 'After 1 day' : `After ${days} days`,
+  })),
+]
+
+const PROXY_OPTIONS: SelectOption<number | null>[] = [
+  { value: null, label: 'None' },
+  ...[1, 2, 3].map((count) => ({
+    value: count,
+    label: count === 1 ? '1 proxy' : `${count} proxies`,
   })),
 ]
 
@@ -200,6 +247,7 @@ function channelOptions(empty: string): SelectOption<string | null>[] {
 function optionsFor(field: Field): SelectOption<string | number | null>[] {
   if (field.kind === 'role') return roleOptions(field.key, field.empty, field.readOnly)
   if (field.kind === 'channel') return channelOptions(field.empty)
+  if (field.kind === 'proxy') return PROXY_OPTIONS
   return REMINDER_OPTIONS
 }
 
@@ -230,10 +278,10 @@ function warningFor(field: Field): string | null {
   return null
 }
 
-async function submit() {
+async function submit(section: Section) {
   saving.value = true
   try {
-    await store.save({ ...draft })
+    await store.save(Object.fromEntries(keysOf(section).map((key) => [key, draft[key]])))
     snackbar.show('Settings saved.')
   } catch (cause) {
     snackbar.showError(cause, 'Could not save settings.')
@@ -242,20 +290,18 @@ async function submit() {
   }
 }
 
-function reset() {
-  Object.assign(draft, store.settings)
+function reset(section: Section) {
+  for (const key of keysOf(section)) Object.assign(draft, { [key]: store.settings[key] })
 }
 
-const version = __APP_VERSION__
 </script>
 
 <template>
-  <!-- Two panes on large windows: the form flexes, About is a fixed 360dp pane. -->
-  <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_480px]">
-    <div class="flex min-w-0 flex-col gap-6">
-      <section aria-labelledby="settings-roles">
-        <div class="section-header">
-          <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
+  <div class="flex min-w-0 flex-col gap-6">
+    <section v-for="section in visibleSections" :key="section.id" :aria-labelledby="section.id">
+      <div class="section-header">
+        <h2 :id="section.id" class="text-title-medium">{{ section.title }}</h2>
+        <template v-if="section.first">
           <span
             v-if="!store.loaded && !store.error"
             class="skeleton mr-4 h-3.5 w-24"
@@ -271,126 +317,110 @@ const version = __APP_VERSION__
             }}</span>
             {{ store.configured ? 'Configured' : 'Incomplete' }}
           </span>
-        </div>
+        </template>
+      </div>
 
-        <!-- A segmented list: per feature, a tonal item with its name and one with its fields;
-             last, the buttons that save them all. A load failure shows in a card of its own. -->
-        <div :class="{ 'card card-body': store.error }">
-          <StateBlock
-            :loading="!store.loaded && !store.error"
-            :error="store.error"
-            :retry="() => store.load(true)"
-          >
-            <!-- The form's cards, fields and buttons, as they will stand. -->
-            <template #skeleton>
-              <div class="segmented-list">
-                <template v-for="group in COLUMNS" :key="group.id">
-                  <div class="segmented-item min-h-12 bg-secondary-container px-6">
-                    <span class="skeleton h-3.5 w-20" />
-                  </div>
-                  <div
-                    class="segmented-item grid grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
-                  >
-                    <div
-                      v-for="(column, index) in group.columns"
-                      :key="index"
-                      class="flex flex-col gap-6"
-                    >
-                      <span
-                        v-for="field in column"
-                        :key="field.key"
-                        class="skeleton h-14 rounded-xs"
-                      />
-                    </div>
-                  </div>
-                </template>
-                <div class="segmented-item justify-end gap-2 px-6 py-4">
-                  <span class="skeleton h-10 w-20" />
-                  <span class="skeleton h-10 w-40" />
+      <!-- A segmented list: per feature, a tonal item with its name and one with its fields;
+           last, the buttons that save them all. A load failure shows in a card of its own. -->
+      <div :class="{ 'card card-body': store.error }">
+        <StateBlock
+          :loading="!store.loaded && !store.error"
+          :error="store.error"
+          :retry="() => store.load(true)"
+        >
+          <!-- The form's cards, fields and buttons, as they will stand. -->
+          <template #skeleton>
+            <div class="segmented-list">
+              <template v-for="group in section.groups" :key="group.id">
+                <div v-if="section.titled" class="segmented-item min-h-12 bg-secondary-container px-6">
+                  <span class="skeleton h-3.5 w-20" />
                 </div>
-              </div>
-            </template>
-            <form @submit.prevent="submit">
-              <div class="segmented-list">
-                <!-- Each feature: its name as a tonal item, then an item with its fields. Items
-                     sit directly in the list so its corners land on the outer ones. -->
-                <template v-for="group in COLUMNS" :key="group.id">
-                  <h3
-                    :id="group.id"
-                    class="segmented-item min-h-12 bg-secondary-container px-6 text-title-small text-on-secondary-container"
-                  >
-                    {{ group.title }}
-                  </h3>
+                <div
+                  class="segmented-item grid grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                >
                   <div
-                    role="group"
-                    :aria-labelledby="group.id"
-                    class="segmented-item grid min-w-0 grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                    v-for="(column, index) in group.columns"
+                    :key="index"
+                    class="flex flex-col gap-6"
                   >
-                    <div
-                      v-for="(column, index) in group.columns"
-                      :key="index"
-                      class="flex min-w-0 flex-col gap-6"
-                    >
-                      <div v-for="field in column" :key="field.key" class="flex flex-col gap-1">
-                        <div class="flex items-center gap-1">
-                          <AppSelect
-                            v-model="draft[field.key]"
-                            class="min-w-0 flex-1"
-                            :label="field.label"
-                            :options="optionsFor(field)"
-                          />
-                          <RichTooltip :title="field.label" :text="field.hint" />
-                        </div>
-                        <p v-if="warningFor(field)" class="supporting-text text-warning">
-                          {{ warningFor(field) }}
-                        </p>
+                    <span
+                      v-for="field in column"
+                      :key="field.key"
+                      class="skeleton h-14 rounded-xs"
+                    />
+                  </div>
+                </div>
+              </template>
+              <div class="segmented-item justify-end gap-2 px-6 py-4">
+                <span class="skeleton h-10 w-20" />
+                <span class="skeleton h-10 w-40" />
+              </div>
+            </div>
+          </template>
+          <form @submit.prevent="submit(section)">
+            <div class="segmented-list">
+              <!-- Each feature: its name as a tonal item, then an item with its fields. Items
+                   sit directly in the list so its corners land on the outer ones. -->
+              <template v-for="group in section.groups" :key="group.id">
+                <h3
+                  v-if="section.titled"
+                  :id="group.id"
+                  class="segmented-item min-h-12 bg-secondary-container px-6 text-title-small text-on-secondary-container"
+                >
+                  {{ group.title }}
+                </h3>
+                <div
+                  role="group"
+                  :aria-labelledby="section.titled ? group.id : section.id"
+                  class="segmented-item grid min-w-0 grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                >
+                  <div
+                    v-for="(column, index) in group.columns"
+                    :key="index"
+                    class="flex min-w-0 flex-col gap-6"
+                  >
+                    <div v-for="field in column" :key="field.key" class="flex flex-col gap-1">
+                      <div class="flex items-center gap-1">
+                        <AppSelect
+                          v-model="draft[field.key]"
+                          class="min-w-0 flex-1"
+                          :label="field.label"
+                          :options="optionsFor(field)"
+                        />
+                        <RichTooltip :title="field.label" :text="field.hint" />
                       </div>
+                      <p v-if="warningFor(field)" class="supporting-text text-warning">
+                        {{ warningFor(field) }}
+                      </p>
                     </div>
                   </div>
-                </template>
-
-                <div class="segmented-item justify-end gap-2 px-6 py-4">
-                  <button
-                    class="btn btn-text"
-                    type="button"
-                    :disabled="!dirty || saving"
-                    @click="reset"
-                  >
-                    Discard
-                  </button>
-                  <button
-                    class="btn btn-filled btn-wide"
-                    type="submit"
-                    :disabled="!dirty || saving"
-                  >
-                    <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
-                    {{ saving ? 'Saving…' : 'Save changes' }}
-                  </button>
                 </div>
+              </template>
+
+              <div class="segmented-item justify-end gap-2 px-6 py-4">
+                <button
+                  class="btn btn-text"
+                  type="button"
+                  :disabled="!dirtyIn(section) || saving"
+                  @click="reset(section)"
+                >
+                  Discard
+                </button>
+                <button
+                  class="btn btn-filled btn-wide"
+                  type="submit"
+                  :disabled="!dirtyIn(section) || saving"
+                >
+                  <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
+                  {{ saving ? 'Saving…' : 'Save changes' }}
+                </button>
               </div>
-            </form>
-          </StateBlock>
-        </div>
-      </section>
-
-      <BackupSection />
-    </div>
-
-    <!-- About: the last thing in Settings, with no card and no heading. -->
-    <section
-      aria-label="About"
-      class="flex flex-col items-center gap-3 px-6 pt-8 pb-4 text-center large:pt-4"
-    >
-      <PlanaSays mood="content" layout="column"
-        >Connection confirmed. I've been waiting for you, Sensei.</PlanaSays
-      >
-      <p class="mt-2 text-title-medium">Plana {{ version }}</p>
-      <p class="text-body-medium text-on-surface-variant">
-        Administered by <span class="text-tertiary">Plana</span>, OS of the Shittim Chest
-      </p>
-      <p class="text-body-small text-on-surface-variant">
-        Character design by DoReMi, from Blue Archive.
-      </p>
+            </div>
+          </form>
+        </StateBlock>
+      </div>
     </section>
+
+    <BackupSection />
   </div>
 </template>

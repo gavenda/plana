@@ -4,6 +4,7 @@ import { client, getGuild } from './client'
 import {
   listGamePlayerTotals,
   listGameTotals,
+  listTrackListenerTotals,
   listTrackTotals,
   openGameSession,
   openTrackPlay,
@@ -354,5 +355,46 @@ export async function getGamePlayers(
     days,
     ms: sum(players.map((player) => player.ms)),
     players,
+  })
+}
+
+export type TrackListeners = {
+  id: string
+  track: Track | null
+  /** Null for all time. */
+  days: number | null
+  plays: number
+  /** Most plays first; `listeningSince` is set for whoever has it on right now. */
+  listeners: (ActivityMember & { plays: number; ms: number; listeningSince: number | null })[]
+}
+
+/** Everyone who played one track over the last `days` (null: all time), ranked by plays. */
+export async function getTrackListeners(
+  id: string,
+  days: number | null,
+): Promise<Result<TrackListeners>> {
+  await primeMemberCache()
+  const guild = await getGuild()
+  const now = Date.now()
+
+  checkpointActivity(now)
+
+  const rows = listTrackListenerTotals(id, periodStart(days, now))
+  const listeners = rows.map((row) => {
+    const current = live.get(row.memberId)?.track
+    return {
+      ...describe(guild.members.cache, row.memberId),
+      plays: row.plays,
+      ms: row.ms,
+      listeningSince: current?.track.id === id ? current.startedAt : null,
+    }
+  })
+
+  return ok({
+    id,
+    track: rows[0]?.track ?? null,
+    days,
+    plays: sum(listeners.map((listener) => listener.plays)),
+    listeners,
   })
 }

@@ -15,10 +15,12 @@ export type GuildSettings = {
   moderatorRoleId: string | null
   /** Optional. Held by members only on their birthday; off while unset. */
   birthdayRoleId: string | null
+  /** Reverse proxies in front of the app, for reading visitors' addresses. Unset is none. */
+  trustedProxyHops: number | null
 }
 
 /** Settings stored as numbers; every other setting is a Discord ID. */
-const NUMERIC_KEYS: readonly (keyof GuildSettings)[] = ['triageReminderDays']
+const NUMERIC_KEYS: readonly (keyof GuildSettings)[] = ['triageReminderDays', 'trustedProxyHops']
 
 export const SETTING_KEYS = [
   'triageRoleId',
@@ -29,6 +31,7 @@ export const SETTING_KEYS = [
   'triageReminderDays',
   'birthdayRoleId',
   'moderatorRoleId',
+  'trustedProxyHops',
 ] as const satisfies readonly (keyof GuildSettings)[]
 
 /** The settings the triage flow cannot run without. */
@@ -48,6 +51,7 @@ const EMPTY: GuildSettings = {
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
+  trustedProxyHops: null,
 }
 
 const selectAll = db.query<{ key: string; value: string }, []>('SELECT key, value FROM settings')
@@ -100,6 +104,7 @@ export function seedSettingsFromEnv(): void {
     birthdayChannelId: env.BIRTHDAY_CHANNEL_ID,
     birthdayRoleId: env.BIRTHDAY_ROLE_ID,
     moderatorRoleId: env.MODERATOR_ROLE_ID,
+    trustedProxyHops: env.TRUSTED_PROXY_HOPS || null,
   }
 
   const patch: Partial<Record<keyof GuildSettings, unknown>> = {}

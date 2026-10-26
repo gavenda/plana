@@ -46,6 +46,7 @@ const PLAY_LIMIT = 5
 const topGames = computed(() => play.data.value?.games.slice(0, PLAY_LIMIT) ?? [])
 const topTracks = computed(() => play.data.value?.tracks.slice(0, PLAY_LIMIT) ?? [])
 const topVoice = computed(() => voice.data.value?.members.slice(0, PLAY_LIMIT) ?? [])
+const topChannels = computed(() => voice.data.value?.channels.slice(0, PLAY_LIMIT) ?? [])
 
 /** How many players a game's subtext names before counting the rest. */
 const NAMED_PLAYERS = 3
@@ -127,49 +128,42 @@ const missing = computed(() => CHECKLIST.filter((item) => settings.settings[item
 const countMembers = (entries: { member: { id: string } }[]) =>
   new Set(entries.map((entry) => entry.member.id)).size
 
-/** The tiles take the three tonal containers in turn, per M3 Expressive's color emphasis. */
 const stats = computed(() => [
   {
     label: 'Awaiting a role',
     value: pending.data.value?.length ?? '—',
     loading: (!settings.loaded || hasTriageRole.value) && pendingLoading.value,
     to: '/queue',
-    tone: 'bg-primary-container text-on-primary-container',
   },
   {
     label: 'Server members',
     value: guild.directory?.guild.memberCount ?? '—',
     loading: !guild.directory && !guild.error,
     to: null,
-    tone: 'bg-secondary-container text-on-secondary-container',
   },
   {
     label: 'Playing now',
     value: play.data.value ? countMembers(play.data.value.playing) : '—',
     loading: playLoading.value,
     to: '/activity',
-    tone: 'bg-tertiary-container text-on-tertiary-container',
   },
   {
     label: 'Listening now',
     value: play.data.value ? countMembers(play.data.value.listening) : '—',
     loading: playLoading.value,
     to: '/activity',
-    tone: 'bg-primary-container text-on-primary-container',
   },
   {
     label: 'In voice now',
     value: voice.data.value?.now.length ?? '—',
     loading: voiceLoading.value,
     to: '/voice',
-    tone: 'bg-secondary-container text-on-secondary-container',
   },
   {
     label: 'Birthdays this month',
     value: upcoming.data.value?.thisMonth ?? '—',
     loading: upcomingLoading.value,
     to: '/birthdays',
-    tone: 'bg-tertiary-container text-on-tertiary-container',
   },
 ])
 
@@ -210,7 +204,7 @@ const recent = computed(() =>
         :key="stat.label"
         :to="stat.to ?? undefined"
         class="card flex flex-col gap-1 px-6 py-5 transition-shadow duration-150 ease-effects-fast"
-        :class="[stat.tone, stat.to && 'state-layer hover:shadow-level1']"
+        :class="stat.to && 'state-layer hover:shadow-level1'"
       >
         <span class="text-display-small font-medium">
           <span
@@ -479,6 +473,52 @@ const recent = computed(() =>
                     >
                   </div>
                 </RouterLink>
+              </li>
+            </ol>
+          </StateBlock>
+        </div>
+      </section>
+
+      <section aria-labelledby="overview-channels">
+        <div class="section-header">
+          <h2 id="overview-channels" class="text-title-medium">Busiest voice channels this week</h2>
+          <RouterLink class="btn btn-text" to="/voice">View all</RouterLink>
+        </div>
+        <div :class="!voiceLoading && topChannels.length === 0 && 'card'">
+          <StateBlock
+            :loading="voiceLoading"
+            :error="voice.error.value"
+            :empty="topChannels.length === 0"
+            empty-text="No voice channels used this week."
+            compact
+          >
+            <template #skeleton><SkeletonList rank two-line trailing="stack" /></template>
+            <ol class="segmented-list">
+              <li v-for="(channel, index) in topChannels" :key="channel.id" class="segmented-item">
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                  >#{{ index + 1 }}</span
+                >
+                <span
+                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                  aria-hidden="true"
+                  ><span class="icon [--icon-size:20px]">volume_up</span></span
+                >
+                <div class="min-w-0 flex-1 py-1">
+                  <p class="truncate text-body-large" :title="channel.name">{{ channel.name }}</p>
+                  <p class="truncate text-body-small text-on-surface-variant">
+                    {{
+                      channel.members === 1
+                        ? '1 member'
+                        : `${channel.members.toLocaleString()} members`
+                    }}
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-col items-end">
+                  <span class="text-body-large tabular-nums">{{ formatDuration(channel.ms) }}</span>
+                  <span class="text-label-small text-on-surface-variant">Active</span>
+                </div>
               </li>
             </ol>
           </StateBlock>

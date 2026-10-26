@@ -232,7 +232,8 @@ async function backUpNow() {
                 href="https://dash.cloudflare.com/?to=/:account/r2"
                 target="_blank"
                 rel="noopener noreferrer"
-                >Open R2 in Cloudflare</a
+                ><span class="icon [--icon-size:20px]" aria-hidden="true">open_in_new</span>Open R2 in
+                Cloudflare</a
               >
             </div>
 

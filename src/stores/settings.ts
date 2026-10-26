@@ -15,6 +15,8 @@ export type GuildSettings = {
   moderatorRoleId: string | null
   /** Held by members only on their birthday; null is off. */
   birthdayRoleId: string | null
+  /** Reverse proxies in front of the app; null is none. */
+  trustedProxyHops: number | null
 }
 
 type SettingsResponse = { settings: GuildSettings; configured: boolean }
@@ -28,6 +30,7 @@ const EMPTY: GuildSettings = {
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
+  trustedProxyHops: null,
 }
 
 export const useSettingsStore = defineStore('settings', () => {

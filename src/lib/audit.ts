@@ -27,6 +27,9 @@ export type AuditAction =
   | 'message.delete'
   | 'message.edit'
   | 'message.bulk_delete'
+  | 'auth.login'
+  | 'auth.denied'
+  | 'auth.logout'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -49,6 +52,7 @@ export const AUDIT_CATEGORIES = [
   { id: 'birthdays', label: 'Birthdays' },
   { id: 'broadcasts', label: 'Broadcasts' },
   { id: 'settings', label: 'Settings' },
+  { id: 'access', label: 'Sign-ins' },
 ] as const
 
 export type AuditCategory = (typeof AUDIT_CATEGORIES)[number]['id']
@@ -141,6 +145,13 @@ const DAY_SETTING_NAMES: Record<string, string> = {
 }
 
 function settingChange(key: string, change: unknown): SummaryPart[] {
+  if (key === 'trustedProxyHops') {
+    const to = (change as { to?: unknown } | null)?.to
+    return typeof to === 'number'
+      ? [`set the reverse proxies to ${to}`]
+      : ['turned off reverse proxy support']
+  }
+
   const days = DAY_SETTING_NAMES[key]
   if (days) {
     const to = (change as { to?: unknown } | null)?.to
@@ -194,6 +205,34 @@ const MODERATION: Record<string, { label: string; verb: string; undo?: boolean }
 /** A voice channel kept on an entry, drawn like a channel mention. */
 function voiceChannel(name: unknown, channelId: unknown): SummaryPart {
   return { channel: text(name, '') || null, channelId: id(channelId) }
+}
+
+/** A short "Browser on System" from a user-agent string; the raw string when it isn't recognised. */
+export function describeBrowser(userAgent: string): string {
+  const browser =
+    /Edg\//.test(userAgent) ? 'Edge'
+    : /OPR\/|Opera/.test(userAgent) ? 'Opera'
+    : /Firefox\//.test(userAgent) ? 'Firefox'
+    : /Chrome\/|CriOS\//.test(userAgent) ? 'Chrome'
+    : /Safari\//.test(userAgent) ? 'Safari'
+    : null
+  const system =
+    /Android/.test(userAgent) ? 'Android'
+    : /iPhone|iPad|iOS/.test(userAgent) ? 'iOS'
+    : /Windows/.test(userAgent) ? 'Windows'
+    : /Mac OS X|Macintosh/.test(userAgent) ? 'macOS'
+    : /CrOS/.test(userAgent) ? 'ChromeOS'
+    : /Linux|X11/.test(userAgent) ? 'Linux'
+    : null
+  if (!browser && !system) return truncate(userAgent, 60)
+  return [browser ?? 'Unknown browser', system && `on ${system}`].filter(Boolean).join(' ')
+}
+
+/** ` from 203.0.113.9 using Firefox on Linux`, with whatever the entry kept. */
+function origin(detail: AuditEntry['detail']): string {
+  const ip = text(detail?.ip, '')
+  const agent = text(detail?.userAgent, '')
+  return [ip && ` from ${ip}`, agent && ` using ${describeBrowser(agent)}`].filter(Boolean).join('')
 }
 
 /** Turns a stored audit row into something a human can read at a glance. */
@@ -465,6 +504,22 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       }
     }
 
+    // Dashboard sign-ins, from the Discord account that made them (also the entry's actor).
+    case 'auth.login':
+      return describe('Sign-in', 'success', actor, ' signed in to the dashboard', origin(entry.detail))
+
+    case 'auth.denied':
+      return describe(
+        'Sign-in refused',
+        'warn',
+        actor,
+        ' tried to sign in to the dashboard but has no access',
+        origin(entry.detail),
+      )
+
+    case 'auth.logout':
+      return describe('Sign-out', 'neutral', actor, ' signed out of the dashboard', origin(entry.detail))
+
     default:
       return describe(entry.action, 'neutral', actor, ` performed ${entry.action}`)
   }
@@ -512,6 +567,12 @@ export function auditIcon(action: AuditAction): string {
       return 'edit'
     case 'message.bulk_delete':
       return 'delete_sweep'
+    case 'auth.login':
+      return 'login'
+    case 'auth.denied':
+      return 'block'
+    case 'auth.logout':
+      return 'logout'
     default:
       return 'history'
   }

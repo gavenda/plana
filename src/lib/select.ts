@@ -6,6 +6,8 @@ export type SelectOption<T> = {
   swatch?: string | null
   /** Secondary text at the end of the menu item, such as a username. */
   trailing?: string
+  /** Other text the field's filter matches besides the label, such as a member's username. */
+  keywords?: string[]
   disabled?: boolean
   group?: string
 }

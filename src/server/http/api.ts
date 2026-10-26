@@ -20,7 +20,12 @@ import {
   saveBirthday,
   syncBirthdayRole,
 } from '../discord/birthdays'
-import { getActivityOverview, getGamePlayers, MAX_ACTIVITY_DAYS } from '../discord/activity'
+import {
+  getActivityOverview,
+  getGamePlayers,
+  getTrackListeners,
+  MAX_ACTIVITY_DAYS,
+} from '../discord/activity'
 import { getGuild } from '../discord/client'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { remindStaleTriage } from '../discord/triage-reminders'
@@ -79,6 +84,7 @@ const settingsSchema = z
     triageReminderDays: z.number().int().min(1).max(30).nullable(),
     birthdayRoleId: snowflake.nullable(),
     moderatorRoleId: snowflake.nullable(),
+    trustedProxyHops: z.number().int().min(1).max(5).nullable(),
   })
   .partial()
 
@@ -306,6 +312,16 @@ api.get('/activity/game', async (c) => {
   const parsed = gamePlayersQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'A game name and a valid period are required.' }, 400)
   return respond(c, await getGamePlayers(parsed.data.name, parsed.data.days))
+})
+
+const trackListenersQuerySchema = activityQuerySchema.extend({
+  id: z.string().trim().min(1).max(100),
+})
+
+api.get('/activity/track', async (c) => {
+  const parsed = trackListenersQuerySchema.safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'A track and a valid period are required.' }, 400)
+  return respond(c, await getTrackListeners(parsed.data.id, parsed.data.days))
 })
 
 api.get('/voice', async (c) => {

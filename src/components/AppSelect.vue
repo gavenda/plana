@@ -5,9 +5,11 @@ import OutlinedField from '@/components/OutlinedField.vue'
 import type { SelectOption } from '@/lib/select'
 
 /**
- * M3 exposed dropdown menu: an outlined field that opens a menu of options.
- * Keyboard and screen reader behaviour follow the WAI-ARIA select-only combobox
- * pattern, with focus kept on the field while the menu is open.
+ * M3 editable exposed dropdown menu: an outlined text field that opens a menu of options.
+ * Typing filters the menu; choosing an option (or Enter on the highlighted one) sets the value,
+ * and leaving the field without choosing discards what was typed. Keyboard and screen reader
+ * behaviour follow the WAI-ARIA combobox pattern with a list popup, with focus kept on the
+ * field while the menu is open.
  */
 const props = defineProps<{
   label: string
@@ -24,7 +26,7 @@ const listboxId = `${id}-listbox`
 const supportingId = `${id}-supporting`
 const optionId = (index: number) => `${id}-option-${index}`
 
-const field = ref<HTMLButtonElement | null>(null)
+const field = ref<HTMLInputElement | null>(null)
 const menu = ref<HTMLElement | null>(null)
 
 const open = ref(false)
@@ -33,9 +35,21 @@ const activeIndex = ref(-1)
 const placement = ref<'bottom' | 'top'>('bottom')
 const menuStyle = ref<Record<string, string>>({})
 
-/** Characters typed in quick succession, for type-ahead. */
-let typed = ''
-let typedTimer: ReturnType<typeof setTimeout> | undefined
+/** What has been typed to filter the menu; empty shows every option and the chosen label. */
+const query = ref('')
+/** Set by the first edit, so a field emptied by typing stays empty instead of showing the label. */
+const editing = ref(false)
+
+/** Ignores case and the leading symbols on names such as #channel. */
+const plain = (text: string) => text.replace(/^[^\p{L}\p{N}]+/u, '').toLowerCase()
+
+const shown = computed(() => {
+  const wanted = plain(query.value.trim())
+  if (!wanted) return props.options
+  return props.options.filter((option) =>
+    [option.label, ...(option.keywords ?? [])].some((text) => plain(text).includes(wanted)),
+  )
+})
 
 // The menu is a popover, drawn in the top layer so neither card overflow nor a modal dialog
 // covers it. It teleports into the dialog the field is in, if any, since everything outside an
@@ -54,14 +68,14 @@ function showMenu(el: Element) {
 }
 
 const selectedIndex = computed(() =>
-  props.options.findIndex((option) => option.value === model.value),
+  shown.value.findIndex((option) => option.value === model.value),
 )
-const selected = computed(() => props.options[selectedIndex.value])
+const selected = computed(() => props.options.find((option) => option.value === model.value))
 
 /** Runs of options sharing a group become labelled sections, like <optgroup>. */
 const sections = computed(() => {
   const result: { group?: string; items: { option: SelectOption<T>; index: number }[] }[] = []
-  props.options.forEach((option, index) => {
+  shown.value.forEach((option, index) => {
     const last = result[result.length - 1]
     if (last && last.group === option.group) last.items.push({ option, index })
     else result.push({ group: option.group, items: [{ option, index }] })
@@ -70,12 +84,12 @@ const sections = computed(() => {
 })
 
 const isEnabled = (index: number) => {
-  const option = props.options[index]
+  const option = shown.value[index]
   return option != null && !option.disabled
 }
 
 function firstEnabled(from: number, step: 1 | -1): number {
-  for (let index = from; index >= 0 && index < props.options.length; index += step) {
+  for (let index = from; index >= 0 && index < shown.value.length; index += step) {
     if (isEnabled(index)) return index
   }
   return -1
@@ -127,12 +141,13 @@ function show() {
 
 function hide() {
   open.value = false
-  typed = ''
+  query.value = ''
+  editing.value = false
 }
 
 function choose(index: number) {
   if (!isEnabled(index)) return
-  model.value = props.options[index]!.value
+  model.value = shown.value[index]!.value
   hide()
   field.value?.focus()
 }
@@ -163,51 +178,34 @@ watch(
 )
 
 // Watchers stop before unmount, so drop the listeners here rather than via `open`.
-onBeforeUnmount(() => {
-  detach()
-  clearTimeout(typedTimer)
-})
+onBeforeUnmount(detach)
 
 // --------------------------------------------------------------- keyboard ---
 
 function move(to: number, step: 1 | -1) {
-  const next = firstEnabled(Math.min(Math.max(to, 0), props.options.length - 1), step)
+  const next = firstEnabled(Math.min(Math.max(to, 0), shown.value.length - 1), step)
   if (next >= 0) {
     activeIndex.value = next
     void nextTick(scrollActiveIntoView)
   }
 }
 
-// Type-ahead: typing jumps to the next option starting with the typed text,
-// ignoring leading symbols such as the # on channel names.
-function typeAhead(char: string) {
-  clearTimeout(typedTimer)
-  typedTimer = setTimeout(() => (typed = ''), 600)
-  typed += char.toLowerCase()
-
-  const count = props.options.length
-  const start = typed.length === 1 ? activeIndex.value + 1 : Math.max(activeIndex.value, 0)
-  for (let offset = 0; offset < count; offset++) {
-    const index = (start + offset) % count
-    const text = props.options[index]!.label.replace(/^[^\p{L}\p{N}]+/u, '').toLowerCase()
-    if (isEnabled(index) && text.startsWith(typed)) {
-      activeIndex.value = index
-      void nextTick(scrollActiveIntoView)
-      return
-    }
-  }
+function onInput(event: Event) {
+  query.value = (event.target as HTMLInputElement).value
+  editing.value = true
+  show()
+  activeIndex.value = firstEnabled(0, 1)
+  void nextTick(() => {
+    position()
+    scrollActiveIntoView()
+  })
 }
 
 function onKeydown(event: KeyboardEvent) {
-  const printable = event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey
-
   if (!open.value) {
-    if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+    if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault()
       show()
-    } else if (printable) {
-      show()
-      typeAhead(event.key)
     }
     return
   }
@@ -223,14 +221,6 @@ function onKeydown(event: KeyboardEvent) {
       if (event.altKey) choose(activeIndex.value)
       else move(activeIndex.value - 1, -1)
       break
-    case 'Home':
-      event.preventDefault()
-      move(0, 1)
-      break
-    case 'End':
-      event.preventDefault()
-      move(props.options.length - 1, -1)
-      break
     case 'PageDown':
       event.preventDefault()
       move(activeIndex.value + 10, 1)
@@ -243,11 +233,6 @@ function onKeydown(event: KeyboardEvent) {
       event.preventDefault()
       choose(activeIndex.value)
       break
-    case ' ':
-      event.preventDefault()
-      if (typed) typeAhead(' ')
-      else choose(activeIndex.value)
-      break
     case 'Escape':
       event.preventDefault()
       hide()
@@ -255,9 +240,23 @@ function onKeydown(event: KeyboardEvent) {
     case 'Tab':
       hide()
       break
-    default:
-      if (printable) typeAhead(event.key)
   }
+}
+
+function onFocus() {
+  focused.value = true
+  field.value?.select()
+}
+
+function onBlur() {
+  focused.value = false
+  hide()
+}
+
+/** Opens the menu; the label is selected so typing replaces it rather than extending it. */
+function onClick() {
+  if (!open.value) show()
+  if (!editing.value) field.value?.select()
 }
 </script>
 
@@ -266,16 +265,25 @@ function onKeydown(event: KeyboardEvent) {
     <OutlinedField
       :label="label"
       :label-id="labelId"
-      :populated="selected != null"
+      :populated="editing ? query !== '' : selected != null"
       :focused="focused || open"
       :disabled="disabled"
       :supporting-text="supportingText"
       :supporting-id="supportingId"
     >
-      <button
+      <span
+        v-if="selected?.swatch && !editing"
+        class="pointer-events-none absolute top-1/2 left-4 size-3 -translate-y-1/2 rounded-full"
+        :style="{ backgroundColor: selected.swatch }"
+        aria-hidden="true"
+      />
+      <input
         ref="field"
-        type="button"
+        type="text"
         role="combobox"
+        autocomplete="off"
+        spellcheck="false"
+        aria-autocomplete="list"
         aria-haspopup="listbox"
         :aria-expanded="open"
         :aria-controls="listboxId"
@@ -283,22 +291,15 @@ function onKeydown(event: KeyboardEvent) {
         :aria-describedby="supportingText ? supportingId : undefined"
         :aria-activedescendant="open && activeIndex >= 0 ? optionId(activeIndex) : undefined"
         :disabled="disabled"
-        class="flex h-14 w-full cursor-pointer items-center rounded-xs bg-transparent pr-12 pl-4 text-left text-body-large text-on-surface focus-visible:outline-none disabled:cursor-not-allowed disabled:text-on-surface/38"
-        @click="open ? hide() : show()"
+        :value="editing ? query : (selected?.label ?? '')"
+        class="h-14 w-full truncate rounded-xs bg-transparent pr-12 text-body-large text-on-surface focus-visible:outline-none disabled:cursor-not-allowed disabled:text-on-surface/38"
+        :class="selected?.swatch && !editing ? 'pl-9' : 'pl-4'"
+        @input="onInput"
+        @click="onClick"
         @keydown="onKeydown"
-        @focus="focused = true"
-        @blur="focused = false"
-      >
-        <span class="flex min-w-0 items-center gap-2">
-          <span
-            v-if="selected?.swatch"
-            class="size-3 shrink-0 rounded-full"
-            :style="{ backgroundColor: selected.swatch }"
-            aria-hidden="true"
-          />
-          <span class="truncate">{{ selected?.label }}</span>
-        </span>
-      </button>
+        @focus="onFocus"
+        @blur="onBlur"
+      />
 
       <span
         class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 icon transition-transform duration-350 ease-spatial-fast"
@@ -335,8 +336,8 @@ function onKeydown(event: KeyboardEvent) {
           :style="menuStyle"
           @mousedown.prevent
         >
-          <p v-if="options.length === 0" class="px-3 py-3 text-body-medium text-on-surface-variant">
-            Nothing to choose from.
+          <p v-if="shown.length === 0" class="px-3 py-3 text-body-medium text-on-surface-variant">
+            {{ query ? 'No matches.' : 'Nothing to choose from.' }}
           </p>
 
           <template v-for="(section, sectionIndex) in sections" :key="sectionIndex">

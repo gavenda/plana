@@ -3,10 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import FilterChip from '@/components/FilterChip.vue'
+import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import type { ActivityOverview, GamePlayers } from '@/lib/activity'
+import type { ActivityOverview, GamePlayers, TrackListeners } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
@@ -136,8 +137,8 @@ watch(chosenGame, (game) => {
 
 /** Opening is a step Back undoes; switching games while open just swaps what it shows. */
 function chooseGame(name: string) {
-  const query = { ...route.query, game: name }
-  if (chosenGame.value) {
+  const query = { ...route.query, game: name, track: undefined }
+  if (chosenGame.value || chosenTrack.value) {
     void router.replace({ query })
   } else {
     pushedChoice = true
@@ -166,6 +167,73 @@ watch([chosenGame, days], () => {
 onMounted(() => {
   if (chosenGame.value) void gamePlayers.run()
 })
+
+/** The track whose listeners the second sheet shows; like the game, it lives in the URL. */
+const chosenTrack = computed(() =>
+  typeof route.query.track === 'string' && route.query.track ? route.query.track : null,
+)
+
+/** The id stays while the sheet animates closed. */
+const sheetTrackId = ref(chosenTrack.value)
+watch(chosenTrack, (id) => {
+  if (id) sheetTrackId.value = id
+})
+
+const trackSheetOpen = computed({
+  get: () => chosenTrack.value != null,
+  set: (open) => {
+    if (!open) closeTrack()
+  },
+})
+
+let pushedTrackChoice = false
+
+watch(chosenTrack, (id) => {
+  if (!id) pushedTrackChoice = false
+})
+
+function chooseTrack(id: string) {
+  const query = { ...route.query, track: id, game: undefined }
+  if (chosenTrack.value || chosenGame.value) {
+    void router.replace({ query })
+  } else {
+    pushedTrackChoice = true
+    void router.push({ query })
+  }
+}
+
+function closeTrack() {
+  if (pushedTrackChoice) {
+    pushedTrackChoice = false
+    router.back()
+  } else {
+    void router.replace({ query: { ...route.query, track: undefined } })
+  }
+}
+
+const trackListeners = useAsync(() => {
+  const query = new URLSearchParams({ id: chosenTrack.value ?? '', days: daysParam(days.value) })
+  return apiFetch<TrackListeners>(`/api/activity/track?${query}`)
+})
+
+watch([chosenTrack, days], () => {
+  if (chosenTrack.value) void trackListeners.run()
+})
+
+onMounted(() => {
+  if (chosenTrack.value) void trackListeners.run()
+})
+
+/** The overview's row for the track, which already has its title and art before the answer lands. */
+const sheetTrack = computed(
+  () =>
+    trackDetail.value?.track ?? tracks.value.find((track) => track.id === sheetTrackId.value) ?? null,
+)
+
+/** The answer for the track in the sheet only. */
+const trackDetail = computed(() =>
+  trackListeners.data.value?.id === sheetTrackId.value ? trackListeners.data.value : null,
+)
 
 /** The answer for the game in the sheet only, so a slow earlier one never shows under a later name. */
 const detail = computed(() =>
@@ -369,54 +437,61 @@ const plural = (count: number, one: string, many: string) =>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
             </template>
             <ol class="segmented-list">
-              <li v-for="(track, index) in tracks" :key="track.id" class="segmented-item">
-                <span
-                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
-                  >#{{ index + 1 }}</span
+              <li
+                v-for="(track, index) in tracks"
+                :key="track.id"
+                class="segmented-item state-layer gap-2 p-0 pr-4 transition-colors duration-200 ease-effects-fast"
+                :class="
+                  track.id === chosenTrack && 'bg-secondary-container text-on-secondary-container'
+                "
+              >
+                <button
+                  type="button"
+                  class="flex min-h-14 min-w-0 flex-1 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left"
+                  :aria-current="track.id === chosenTrack ? 'true' : undefined"
+                  @click="chooseTrack(track.id)"
                 >
-                <img
-                  v-if="track.artUrl"
-                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                  :src="track.artUrl"
-                  :alt="track.album ?? ''"
-                  :title="track.album ?? undefined"
-                  width="40"
-                  height="40"
-                />
-                <span
-                  v-else
-                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                  aria-hidden="true"
-                  ><span class="icon [--icon-size:20px]">music_note</span></span
-                >
-                <div class="min-w-0 flex-1 py-1">
-                  <a
-                    class="block truncate text-body-large hover:underline"
-                    :href="`https://open.spotify.com/track/${track.id}`"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :title="track.title"
-                    >{{ track.title }}</a
-                  >
-                  <p class="truncate text-body-small text-on-surface-variant">
-                    {{ track.artist ?? 'Unknown artist' }}
-                  </p>
-                </div>
-                <div class="flex shrink-0 flex-col items-end">
-                  <span class="text-body-large tabular-nums">{{
-                    plural(track.plays, 'play', 'plays')
-                  }}</span>
                   <span
-                    class="text-label-small text-on-surface-variant"
-                    :title="
-                      track.top
-                        .map((listener) => `${listener.displayName} (${listener.plays})`)
-                        .join(', ')
-                    "
-                    >{{ plural(track.listeners, 'listener', 'listeners') }}</span
+                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    >#{{ index + 1 }}</span
                   >
-                </div>
+                  <img
+                    v-if="track.artUrl"
+                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                    :src="track.artUrl"
+                    :alt="track.album ?? ''"
+                    :title="track.album ?? undefined"
+                    width="40"
+                    height="40"
+                  />
+                  <span
+                    v-else
+                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                    aria-hidden="true"
+                    ><span class="icon [--icon-size:20px]">music_note</span></span
+                  >
+                  <div class="min-w-0 flex-1 py-1">
+                    <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
+                    <p class="truncate text-body-small text-on-surface-variant">
+                      {{ track.artist ?? 'Unknown artist' }}
+                    </p>
+                  </div>
+                  <div class="flex shrink-0 flex-col items-end">
+                    <span class="text-body-large tabular-nums">{{
+                      plural(track.plays, 'play', 'plays')
+                    }}</span>
+                    <span class="text-label-small text-on-surface-variant">{{
+                      plural(track.listeners, 'listener', 'listeners')
+                    }}</span>
+                  </div>
+                </button>
+                <RichTooltip
+                  title="Open in Spotify"
+                  :href="`https://open.spotify.com/track/${track.id}`"
+                  icon="open_in_new"
+                  narrow
+                />
               </li>
             </ol>
           </StateBlock>
@@ -497,6 +572,88 @@ const plural = (count: number, one: string, many: string) =>
                 class="text-label-small text-tertiary"
                 :title="`Since ${absoluteTime(player.playingSince)}`"
                 >Playing now</span
+              >
+            </div>
+          </li>
+        </ol>
+      </StateBlock>
+    </SupportingSheet>
+
+    <SupportingSheet v-model:open="trackSheetOpen" :headline="sheetTrack?.title ?? ''">
+      <template #leading>
+        <img
+          v-if="sheetTrack?.artUrl"
+          class="size-14 shrink-0 rounded-md bg-surface-container-highest object-cover"
+          :src="sheetTrack.artUrl"
+          alt=""
+          width="56"
+          height="56"
+        />
+        <span
+          v-else
+          class="grid size-14 shrink-0 place-items-center rounded-md bg-surface-container-highest text-on-surface-variant"
+          aria-hidden="true"
+          ><span class="icon">music_note</span></span
+        >
+      </template>
+      <template v-if="trackDetail" #supporting>
+        {{ plural(trackDetail.plays, 'play', 'plays') }} ·
+        {{ plural(trackDetail.listeners.length, 'listener', 'listeners') }} · {{ periodLabel }}
+      </template>
+      <StateBlock
+        :loading="trackListeners.loading.value && !trackDetail"
+        :error="trackListeners.error.value"
+        :empty="trackDetail?.listeners.length === 0"
+        empty-text="Nobody played this in this period."
+        compact
+      >
+        <template #skeleton>
+          <SkeletonList
+            :rows="4"
+            rank
+            two-line
+            trailing="text"
+            item-class="bg-surface-container-high"
+          />
+        </template>
+        <ol class="segmented-list">
+          <li
+            v-for="(listener, index) in trackDetail?.listeners"
+            :key="listener.id"
+            class="segmented-item bg-surface-container-high"
+          >
+            <span
+              class="w-7 shrink-0 text-center text-label-large tabular-nums"
+              :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+              >#{{ index + 1 }}</span
+            >
+            <img
+              class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+              :src="listener.avatarUrl"
+              alt=""
+              width="40"
+              height="40"
+            />
+            <div class="min-w-0 flex-1 py-1">
+              <p
+                class="truncate text-body-large"
+                :style="{ color: discordTextColor(listener.color) }"
+              >
+                {{ listener.displayName }}
+              </p>
+              <p class="truncate font-mono text-body-small text-on-surface-variant">
+                {{ listener.username }}
+              </p>
+            </div>
+            <div class="flex shrink-0 flex-col items-end">
+              <span class="text-body-large tabular-nums">{{
+                plural(listener.plays, 'play', 'plays')
+              }}</span>
+              <span
+                v-if="listener.listeningSince != null"
+                class="text-label-small text-tertiary"
+                :title="`Since ${absoluteTime(listener.listeningSince)}`"
+                >Listening now</span
               >
             </div>
           </li>

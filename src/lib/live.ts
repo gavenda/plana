@@ -43,6 +43,8 @@ let forbidden = false
  * Only the browser ever changes these, so the server render always shows no banner.
  */
 const failing = ref(false)
+/** Whether the socket is open right now, so pages following a topic update on their own. */
+const connected = ref(false)
 /** Closed for lost access: it won't come back without a reload. */
 const lost = ref(false)
 const FAILING_GRACE_MS = 3000
@@ -86,6 +88,7 @@ function connect() {
 
   ws.onopen = () => {
     retryDelay = RETRY_MIN_MS
+    connected.value = true
     markUp()
     for (const topic of listeners.keys()) send('subscribe', topic)
     if (connectedBefore) for (const topic of listeners.keys()) dispatch(topic, null)
@@ -105,6 +108,7 @@ function connect() {
 
   ws.onclose = (event) => {
     if (socket === ws) socket = null
+    connected.value = false
     if (event.code === CLOSE_FORBIDDEN) {
       forbidden = true
       lost.value = true
@@ -150,9 +154,12 @@ function unsubscribe<K extends LiveTopic>(topic: K, listener: Listener<K>) {
   }
 }
 
-/** The connection's health: `failing` while it keeps retrying, `lost` once access is gone. */
+/**
+ * The connection's health: `connected` while it is open, `failing` while it keeps retrying,
+ * `lost` once access is gone.
+ */
 export function useLiveStatus() {
-  return { failing: readonly(failing), lost: readonly(lost) }
+  return { connected: readonly(connected), failing: readonly(failing), lost: readonly(lost) }
 }
 
 /**

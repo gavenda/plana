@@ -10,7 +10,10 @@ export type VoiceOverview = {
   totals: { ms: number; members: number; sessions: number }
   members: (ActivityMember & { ms: number; sessions: number; inVoiceSince: number | null })[]
   channels: (VoiceChannelRef & {
+    /** How long someone was in the channel; time with several people there counts once. */
     ms: number
+    /** Everyone's time added up, so it exceeds `ms` when people overlap. */
+    combinedMs: number
     members: number
     top: (ActivityMember & { ms: number })[]
   })[]

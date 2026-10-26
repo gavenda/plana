@@ -63,6 +63,44 @@ export const touchVoiceSessions = db.transaction((ids: number[], now: number) =>
   for (const id of ids) touchVoiceSession.run({ id, now })
 })
 
+const selectVoiceIntervals = db.query<
+  { channel_id: string; start: number; ended_at: number },
+  { since: number; min: number }
+>(
+  `SELECT channel_id, MAX(started_at, :since) AS start, ended_at
+   FROM voice_sessions
+   WHERE ended_at > :since AND ended_at - started_at >= :min
+   ORDER BY channel_id, start`,
+)
+
+/**
+ * How long each channel had someone in it since a moment: the time covered by its members'
+ * sessions, with overlaps counted once, so two people there for an hour make one hour.
+ */
+export function listChannelActiveTotals(since: number): Map<string, number> {
+  const totals = new Map<string, number>()
+  let channel = ''
+  let from = 0
+  let to = 0
+  const close = () => {
+    if (channel) totals.set(channel, (totals.get(channel) ?? 0) + (to - from))
+  }
+
+  for (const row of selectVoiceIntervals.all({ since, min: MIN_VOICE_SESSION_MS })) {
+    // Sorted by channel then start: an interval either extends the current run or begins a new one.
+    if (row.channel_id === channel && row.start <= to) {
+      to = Math.max(to, row.ended_at)
+      continue
+    }
+    close()
+    channel = row.channel_id
+    from = row.start
+    to = row.ended_at
+  }
+  close()
+  return totals
+}
+
 export type VoiceTotal = {
   memberId: string
   channelId: string

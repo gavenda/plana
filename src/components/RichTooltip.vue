@@ -9,10 +9,18 @@ import { nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
  * can cross onto the tooltip; keyboard focus opens it at once. A click (or tap) keeps it open
  * until a click elsewhere or Escape, which is also how touch reaches it.
  */
-defineProps<{
+const props = defineProps<{
   /** The subhead, usually the field's own label. */
   title: string
-  text: string
+  /** The supporting line; leave out for a tooltip that is just the subhead. */
+  text?: string
+  /** Makes the trigger a link that opens in a new tab, with its label, instead of an info button. */
+  href?: string
+  /** The trigger's icon; an info icon by default. */
+  icon?: string
+  /** The trigger's accessible name; "About" plus the title by default. */
+  label?: string
+  narrow?: boolean
 }>()
 
 const HOVER_DELAY_MS = 500
@@ -21,7 +29,7 @@ const GAP_PX = 4
 const EDGE_PX = 8
 
 const id = useId()
-const trigger = ref<HTMLButtonElement | null>(null)
+const trigger = ref<HTMLElement | null>(null)
 const tooltip = ref<HTMLElement | null>(null)
 
 // Teleport only after hydration: the server render leaves nothing in <body> for it to match.
@@ -96,6 +104,8 @@ function onPointerLeave(event: PointerEvent) {
 }
 
 function onClick() {
+  // A link just goes; the tooltip has already said where.
+  if (props.href) return hide()
   if (pinned.value) return hide()
   pinned.value = true
   void show()
@@ -121,13 +131,18 @@ onBeforeUnmount(hide)
 </script>
 
 <template>
-  <button
+  <component
+    :is="href ? 'a' : 'button'"
     ref="trigger"
-    type="button"
+    :type="href ? undefined : 'button'"
+    :href="href"
+    :target="href ? '_blank' : undefined"
+    :rel="href ? 'noopener noreferrer' : undefined"
     class="icon-btn text-on-surface-variant"
-    :aria-label="`About ${title}`"
+    :class="narrow && 'icon-btn-narrow'"
+    :aria-label="label ?? `About ${title}`"
     :aria-describedby="open ? id : undefined"
-    :aria-expanded="pinned"
+    :aria-expanded="href ? undefined : pinned"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
     @click="onClick"
@@ -135,8 +150,8 @@ onBeforeUnmount(hide)
     @blur="onBlur"
     @keydown="onKeydown"
   >
-    <span class="icon [--icon-size:20px]" aria-hidden="true">info</span>
-  </button>
+    <span class="icon [--icon-size:20px]" aria-hidden="true">{{ icon ?? 'info' }}</span>
+  </component>
 
   <Teleport v-if="mounted" to="body">
     <Transition
@@ -156,7 +171,7 @@ onBeforeUnmount(hide)
         @pointerleave="onPointerLeave"
       >
         <span class="text-title-small text-on-surface-variant">{{ title }}</span>
-        <span class="pb-1 text-body-medium text-on-surface-variant">{{ text }}</span>
+        <span v-if="text" class="pb-1 text-body-medium text-on-surface-variant">{{ text }}</span>
       </div>
     </Transition>
   </Teleport>

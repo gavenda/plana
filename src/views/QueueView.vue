@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import RefreshButton from '@/components/RefreshButton.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
@@ -125,16 +126,7 @@ async function assign(member: PendingMember, roleId: string) {
     <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="queue-pending">
       <div class="section-header">
         <h2 id="queue-pending" class="text-title-medium">Members awaiting a role</h2>
-        <button
-          class="icon-btn icon-btn-tonal icon-btn-narrow"
-          type="button"
-          aria-label="Refresh"
-          title="Refresh"
-          :disabled="pending.loading.value"
-          @click="pending.run"
-        >
-          <span class="icon [--icon-size:20px]" aria-hidden="true">refresh</span>
-        </button>
+        <RefreshButton :disabled="pending.loading.value" @click="pending.run" />
       </div>
 
       <!-- Loading, empty and error states sit in one card in place of the list. -->

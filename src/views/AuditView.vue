@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
 import FilterChip from '@/components/FilterChip.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
@@ -221,16 +222,7 @@ onMounted(() => {
       <p v-else class="text-headline-medium text-on-surface" aria-live="polite">
         {{ total }} {{ filtering ? 'matching' : 'recorded' }} {{ total === 1 ? 'event' : 'events' }}
       </p>
-      <button
-        class="icon-btn icon-btn-tonal icon-btn-narrow"
-        type="button"
-        aria-label="Refresh"
-        title="Refresh"
-        :disabled="loading"
-        @click="load"
-      >
-        <span class="icon [--icon-size:20px]" aria-hidden="true">refresh</span>
-      </button>
+      <RefreshButton :disabled="loading" @click="load" />
     </div>
 
     <div role="search" class="flex flex-col gap-3">

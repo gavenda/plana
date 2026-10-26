@@ -32,7 +32,7 @@ const allDestinations: Destination[] = [
   { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
 
-const emit = defineEmits<{ signOut: [] }>()
+const emit = defineEmits<{ signOut: []; about: [] }>()
 
 const version = __APP_VERSION__
 const session = useSessionStore()
@@ -89,6 +89,11 @@ watch(fab, (value) => {
 function onFab() {
   afterChoice()
   runRailFab()
+}
+
+function openAbout() {
+  afterChoice()
+  emit('about')
 }
 
 function signOut() {
@@ -164,23 +169,30 @@ onBeforeUnmount(() => observer?.disconnect())
   >
     <div ref="innerEl" class="rail-inner pt-11">
       <!-- The app's mark, in either state, with its name and version beside it once the rail is
-           open. It is a mark, not a control (no link, and never beside the menu button, which sits
-           beneath it); Overview is the way home. -->
-      <div class="flex items-center pb-3 pl-7" aria-hidden="true">
-        <img
-          class="size-10 shrink-0 rounded-full bg-primary-container object-cover"
-          :src="markUrl"
-          alt=""
-          width="40"
-          height="40"
-        />
-        <span
-          class="rail-fade flex items-baseline gap-1.5 pr-4 pl-3 whitespace-nowrap text-on-surface"
-          :data-shown="expanded"
+           open. It opens the About pane, not Overview, which has its own destination below. -->
+      <div class="flex pb-3 pl-7">
+        <button
+          type="button"
+          class="state-layer flex cursor-pointer items-center rounded-full text-left"
+          aria-label="About Plana"
+          @click="openAbout"
         >
-          <span class="text-title-large">Plana</span>
-          <span class="text-label-small text-on-surface-variant">v{{ version }}</span>
-        </span>
+          <img
+            class="size-10 shrink-0 rounded-full bg-primary-container object-cover"
+            :src="markUrl"
+            alt=""
+            width="40"
+            height="40"
+          />
+          <span
+            class="rail-fade flex items-baseline gap-1.5 pr-4 pl-3 whitespace-nowrap text-on-surface"
+            :data-shown="expanded"
+            aria-hidden="true"
+          >
+            <span class="text-title-large">Plana</span>
+            <span class="text-label-small text-on-surface-variant">v{{ version }}</span>
+          </span>
+        </button>
       </div>
 
       <button

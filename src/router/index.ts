@@ -89,7 +89,12 @@ export function createAppRouter(history?: RouterHistory): Router {
   const router = createRouter({
     history: history ?? createWebHistory(import.meta.env.BASE_URL),
     routes,
-    scrollBehavior: () => ({ top: 0 }),
+    scrollBehavior: (to, from, savedPosition) => {
+      if (savedPosition) return savedPosition
+      // Query-only changes (opening a supporting pane, changing a filter) stay where the reader is.
+      if (to.path === from.path) return false
+      return { top: 0 }
+    },
   })
 
   router.beforeEach((to) => {

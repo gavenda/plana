@@ -47,5 +47,15 @@ export type GamePlayers = {
   players: (ActivityMember & { ms: number; playingSince: number | null })[]
 }
 
+export type TrackListeners = {
+  id: string
+  /** Null when nobody played it in the period. */
+  track: Track | null
+  /** Null for all time. */
+  days: number | null
+  plays: number
+  listeners: (ActivityMember & { plays: number; ms: number; listeningSince: number | null })[]
+}
+
 /** Who is playing and listening at this moment; also what the `presence` live topic sends. */
 export type RightNow = Pick<ActivityOverview, 'playing' | 'listening'>

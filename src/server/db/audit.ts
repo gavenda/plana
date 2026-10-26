@@ -28,6 +28,9 @@ export type AuditAction =
   | 'message.delete'
   | 'message.edit'
   | 'message.bulk_delete'
+  | 'auth.login'
+  | 'auth.denied'
+  | 'auth.logout'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -82,6 +85,7 @@ export const AUDIT_CATEGORY_ACTIONS = {
   birthdays: ['birthday.%'],
   broadcasts: ['broadcast.%'],
   settings: ['settings.%', 'backup.%'],
+  access: ['auth.%'],
 } as const satisfies Record<string, readonly string[]>
 
 export type AuditCategory = keyof typeof AUDIT_CATEGORY_ACTIONS

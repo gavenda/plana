@@ -7,7 +7,9 @@ import AppNavigationRail from '@/components/AppNavigationRail.vue'
 import AppSnackbar from '@/components/AppSnackbar.vue'
 import PhoneNotice from '@/components/PhoneNotice.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
+import PlanaSays from '@/components/PlanaSays.vue'
 import SchaleMark from '@/components/SchaleMark.vue'
+import SupportingSheet from '@/components/SupportingSheet.vue'
 import { useLiveStatus } from '@/lib/live'
 import { backdropUrl } from '@/lib/plana'
 import { useRail } from '@/lib/rail'
@@ -22,6 +24,8 @@ const { expanded: railExpanded, still: railStill, restore: restoreRail } = useRa
 const chromeless = computed(() => !session.isAuthenticated || route.meta.public === true)
 
 onMounted(restoreRail)
+
+const aboutOpen = ref(false)
 
 /** A standing snackbar while the live connection is down: pages still work, but stop updating. */
 const { failing: liveFailing, lost: liveLost } = useLiveStatus()
@@ -87,7 +91,7 @@ async function signOut() {
     :data-rail-open="railExpanded"
     :data-rail-still="railStill"
   >
-    <AppNavigationRail @sign-out="confirmingSignOut = true" />
+    <AppNavigationRail @sign-out="confirmingSignOut = true" @about="aboutOpen = true" />
 
     <main class="flex min-h-dvh w-full flex-col px-6 py-6">
       <!-- Pages are titled for assistive tech only, as the rail already shows where you are. -->
@@ -103,6 +107,21 @@ async function signOut() {
     </main>
 
     <AppSnackbar />
+
+    <!-- Opened from the rail's mark and name. -->
+    <SupportingSheet v-model:open="aboutOpen" label="About Plana">
+      <section aria-label="About" class="flex flex-col items-center gap-3 px-2 pt-2 pb-4 text-center">
+        <PlanaSays mood="content" layout="column"
+          >Connection confirmed. I've been waiting for you, Sensei.</PlanaSays
+        >
+        <p class="mt-2 text-body-medium text-on-surface-variant">
+          Administered by <span class="text-tertiary">Plana</span>, OS of the Shittim Chest
+        </p>
+        <p class="text-body-small text-on-surface-variant">
+          Character design by DoReMi, from Blue Archive.
+        </p>
+      </section>
+    </SupportingSheet>
 
     <AppDialog v-model:open="confirmingSignOut" headline="You mean that?">
       <template #hero><PlanaPortrait mood="hesitant" /></template>

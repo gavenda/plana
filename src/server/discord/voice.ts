@@ -1,7 +1,12 @@
 import type { Guild, VoiceBasedChannel, VoiceState } from 'discord.js'
 
 import type { OpenRow } from '../db/activity'
-import { listVoiceTotals, openVoiceSession, touchVoiceSessions } from '../db/voice'
+import {
+  listChannelActiveTotals,
+  listVoiceTotals,
+  openVoiceSession,
+  touchVoiceSessions,
+} from '../db/voice'
 import { notify } from '../live'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { describe, group, periodStart, sum, type ActivityMember } from './activity'
@@ -92,7 +97,10 @@ export type VoiceMemberStat = ActivityMember & {
 }
 
 export type VoiceChannelStat = VoiceChannelRef & {
+  /** How long someone was in the channel; time with several people there counts once. */
   ms: number
+  /** Everyone's time added up, so it exceeds `ms` when people overlap. */
+  combinedMs: number
   members: number
   top: (ActivityMember & { ms: number })[]
 }
@@ -136,7 +144,9 @@ export async function getVoiceOverview(days: number | null): Promise<Result<Voic
   // Open sessions count up to this moment, not to their last checkpoint.
   checkpointVoice(now)
 
-  const rows = listVoiceTotals(periodStart(days, now))
+  const since = periodStart(days, now)
+  const rows = listVoiceTotals(since)
+  const activeTotals = listChannelActiveTotals(since)
 
   const memberStats = [...group(rows, (row) => row.memberId)]
     .map(([memberId, memberRows]) => ({
@@ -150,7 +160,8 @@ export async function getVoiceOverview(days: number | null): Promise<Result<Voic
   const channelStats = [...group(rows, (row) => row.channelId)]
     .map(([channelId, channelRows]) => ({
       ...channelRef(guild, channelId, channelRows[0]!.channelName),
-      ms: sum(channelRows.map((row) => row.ms)),
+      ms: activeTotals.get(channelId) ?? 0,
+      combinedMs: sum(channelRows.map((row) => row.ms)),
       members: channelRows.length,
       top: channelRows
         .sort((a, b) => b.ms - a.ms)

@@ -563,6 +563,7 @@ Vue components, where M3 needs behaviour CSS can't give:
 | `HaloMark`                                          | Circular progress indicator, indeterminate, in her halo's shape                                                                       |
 | `StateBlock`                                        | Loading, error and empty states around a block (see below)                                                                            |
 | `SkeletonList`                                      | Skeleton loader for a segmented list (see [Skeletons](#skeletons))                                                                    |
+| `RefreshButton`                                     | Tonal narrow icon button with a small badge: a `success` dot while the live connection is open                                        |
 | `SchaleMark`                                        | Schale's emblem, as a watermark (see [The Schale mark](#the-schale-mark))                                                             |
 | `DiscordMention`, `AuditSummary`, `DiscordMessage`  | A role, channel or user as a Discord mention; an audit summary with its names as mentions; message text with its Discord markup drawn |
 

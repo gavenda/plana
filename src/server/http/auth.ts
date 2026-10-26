@@ -2,9 +2,11 @@ import { randomBytes, timingSafeEqual } from 'node:crypto'
 
 import { Hono } from 'hono'
 
+import { recordAudit } from '../db/audit'
 import { isReady } from '../discord/client'
 import { getAccessLevel } from '../discord/service'
 import { env } from '../env'
+import { clientInfo } from './client-info'
 import { endSession, readSession, setStateCookie, startSession, takeStateCookie } from './session'
 import type { AppEnv } from './session'
 
@@ -114,7 +116,17 @@ authRoutes.get('/callback', async (c) => {
   if (!user) return loginError('profile')
 
   if (!isReady()) return loginError('not_ready')
-  if (!(await getAccessLevel(user.id))) return loginError('forbidden')
+  const name = user.global_name ?? user.username
+  if (!(await getAccessLevel(user.id))) {
+    recordAudit({
+      action: 'auth.denied',
+      source: 'dashboard',
+      actorId: user.id,
+      actorName: name,
+      detail: clientInfo(c),
+    })
+    return loginError('forbidden')
+  }
 
   await startSession(c, {
     id: user.id,
@@ -125,10 +137,28 @@ authRoutes.get('/callback', async (c) => {
       : null,
   })
 
+  recordAudit({
+    action: 'auth.login',
+    source: 'dashboard',
+    actorId: user.id,
+    actorName: name,
+    detail: clientInfo(c),
+  })
+
   return c.redirect(expected.next ?? '/')
 })
 
 authRoutes.post('/logout', async (c) => {
+  const user = await readSession(c)
+  if (user) {
+    recordAudit({
+      action: 'auth.logout',
+      source: 'dashboard',
+      actorId: user.id,
+      actorName: user.displayName,
+      detail: clientInfo(c),
+    })
+  }
   await endSession(c)
   return c.json({ ok: true })
 })

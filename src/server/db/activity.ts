@@ -202,3 +202,46 @@ export function listTrackTotals(since: number): TrackTotal[] {
     ms: row.ms,
   }))
 }
+
+const selectTrackListenerTotals = db.query<
+  {
+    member_id: string
+    title: string
+    artist: string | null
+    album: string | null
+    art_url: string | null
+    plays: number
+    ms: number
+  },
+  { track_id: string; since: number; min: number }
+>(
+  `SELECT member_id,
+     MAX(title) AS title, MAX(artist) AS artist, MAX(album) AS album, MAX(art_url) AS art_url,
+     COUNT(*) AS plays,
+     SUM(ended_at - MAX(started_at, :since)) AS ms
+   FROM spotify_plays
+   WHERE track_id = :track_id AND started_at >= :since AND ended_at - started_at >= :min
+   GROUP BY member_id
+   ORDER BY plays DESC, ms DESC`,
+)
+
+/** Plays per member of one track since a moment, most first. */
+export function listTrackListenerTotals(
+  trackId: string,
+  since: number,
+): { memberId: string; plays: number; ms: number; track: Track }[] {
+  return selectTrackListenerTotals
+    .all({ track_id: trackId, since, min: MIN_TRACK_PLAY_MS })
+    .map((row) => ({
+      memberId: row.member_id,
+      plays: row.plays,
+      ms: row.ms,
+      track: {
+        id: trackId,
+        title: row.title,
+        artist: row.artist,
+        album: row.album,
+        artUrl: row.art_url,
+      },
+    }))
+}

@@ -18,6 +18,15 @@ const schema = z
     /** Public origin the dashboard is reached on. Must match the Discord OAuth redirect. */
     PUBLIC_BASE_URL: z.url().default('http://localhost:3000'),
 
+    /**
+     * How many reverse proxies sit in front of the app (a proxy, or a CDN and a proxy: 2). The
+     * client's address is then read from X-Forwarded-For, counting that many entries in from the
+     * end, since each proxy appends the address it saw and anything before them is the client's
+     * say-so. Leave at 0 when reached directly, or the header is ignored. Only seeds the
+     * dashboard's Settings the first time; after that it is changed there.
+     */
+    TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
     DISCORD_TOKEN: z.string().min(1),
     DISCORD_CLIENT_ID: snowflake,
     DISCORD_CLIENT_SECRET: z.string().min(1),

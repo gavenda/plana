@@ -67,6 +67,7 @@ const memberOptions = computed<SelectOption<string | null>[]>(() =>
       value: member.id,
       label: member.displayName,
       swatch: roleColor(member.color),
+      keywords: [member.username],
       trailing: saved ? `${member.username} · ${formatDate(saved)}` : member.username,
     }
   }),

@@ -10,7 +10,11 @@ import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
  * - below: a modal bottom sheet with a drag handle.
  * Escape and the close button shut it in every form, and so does the scrim where there is one.
  */
-defineProps<{ headline: string }>()
+defineProps<{
+  headline?: string
+  /** The sheet's name for assistive tech when it has no visible headline. */
+  label?: string
+}>()
 const open = defineModel<boolean>('open', { required: true })
 
 const headlineId = useId()
@@ -66,7 +70,8 @@ onBeforeUnmount(() => (returnFocus = null))
       v-if="open"
       ref="sheet"
       tabindex="-1"
-      :aria-labelledby="headlineId"
+      :aria-labelledby="headline ? headlineId : undefined"
+      :aria-label="headline ? undefined : label"
       class="supporting-sheet fixed z-50 flex flex-col bg-surface-container-low text-on-surface shadow-level1 outline-none max-expanded:inset-x-0 max-expanded:bottom-0 max-expanded:mx-auto max-expanded:max-h-[85dvh] max-expanded:max-w-[640px] max-expanded:rounded-t-xl expanded:top-4 expanded:right-4 expanded:bottom-4 expanded:w-sheet expanded:rounded-xl"
       @keydown="onKeydown"
     >
@@ -83,7 +88,7 @@ onBeforeUnmount(() => (returnFocus = null))
       <header class="flex shrink-0 items-center gap-4 py-4 pr-3 pl-6">
         <slot name="leading" />
         <div class="min-w-0 flex-1">
-          <h2 :id="headlineId" class="truncate text-title-large" :title="headline">
+          <h2 v-if="headline" :id="headlineId" class="truncate text-title-large" :title="headline">
             {{ headline }}
           </h2>
           <p v-if="$slots.supporting" class="text-body-medium text-on-surface-variant">

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import FilterChip from '@/components/FilterChip.vue'
+import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -319,7 +320,13 @@ const plural = (count: number, one: string, many: string) =>
 
       <section aria-labelledby="voice-channels">
         <div class="section-header">
-          <h2 id="voice-channels" class="text-title-medium">Busiest channels</h2>
+          <div class="flex items-center gap-1">
+            <h2 id="voice-channels" class="text-title-medium">Busiest channels</h2>
+            <RichTooltip
+              title="Channel time"
+              text="Active is how long someone was in the channel, with overlapping time counted once. Combined adds up everyone's time, so it can be longer."
+            />
+          </div>
         </div>
         <div :class="!loading && channels.length === 0 && 'card'">
           <StateBlock
@@ -359,9 +366,20 @@ const plural = (count: number, one: string, many: string) =>
                     }}</span>
                   </div>
                 </div>
-                <span class="shrink-0 text-body-large tabular-nums">{{
-                  formatDuration(channel.ms)
-                }}</span>
+                <div class="flex shrink-0 gap-4 text-right">
+                  <div class="flex flex-col items-end">
+                    <span class="text-body-large tabular-nums">{{
+                      formatDuration(channel.ms)
+                    }}</span>
+                    <span class="text-label-small text-on-surface-variant">Active</span>
+                  </div>
+                  <div class="flex flex-col items-end">
+                    <span class="text-body-large text-on-surface-variant tabular-nums">{{
+                      formatDuration(channel.combinedMs)
+                    }}</span>
+                    <span class="text-label-small text-on-surface-variant">Combined</span>
+                  </div>
+                </div>
               </li>
             </ol>
           </StateBlock>
