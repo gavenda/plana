@@ -2,6 +2,7 @@ import { S3Client } from 'bun'
 
 import { db } from './db'
 import { env } from './env'
+import { notify } from './live'
 
 /**
  * Off-site copies of the SQLite database in a Cloudflare R2 bucket. Each backup is the whole
@@ -18,10 +19,14 @@ const CHECK_INTERVAL_MS = 15 * 60 * 1000
 /** After a failure, wait this long before trying again rather than the full interval. */
 const RETRY_AFTER_MS = 30 * 60 * 1000
 
+/** How many backups Settings lists, newest first. */
+const LISTED_BACKUPS = 10
+
 let client: S3Client | null = null
 let timer: ReturnType<typeof setInterval> | undefined
 let lastSuccessAt: number | null = null
 let lastFailureAt: number | null = null
+let lastError: string | null = null
 let running = false
 
 function getClient(): S3Client | null {
@@ -37,6 +42,10 @@ function getClient(): S3Client | null {
   return client
 }
 
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 /** `plana/2026-10-26T02-15-00Z.db.zst`: sorts by time, and the time can be read back. */
 function keyFor(time: Date): string {
   return `${PREFIX}${time.toISOString().slice(0, 19).replaceAll(':', '-')}Z.db.zst`
@@ -49,7 +58,7 @@ function timeOf(key: string): number | null {
   return Number.isNaN(time) ? null : time
 }
 
-type StoredBackup = { key: string; time: number }
+export type StoredBackup = { key: string; time: number; size: number }
 
 /** Every backup in the bucket, oldest first. Other objects under the prefix are ignored. */
 async function listBackups(s3: S3Client): Promise<StoredBackup[]> {
@@ -60,7 +69,7 @@ async function listBackups(s3: S3Client): Promise<StoredBackup[]> {
     const page = await s3.list({ prefix: PREFIX, startAfter })
     for (const object of page.contents ?? []) {
       const time = timeOf(object.key)
-      if (time !== null) backups.push({ key: object.key, time })
+      if (time !== null) backups.push({ key: object.key, time, size: object.size ?? 0 })
     }
     if (!page.isTruncated || !page.contents?.length) break
     startAfter = page.contents.at(-1)!.key
@@ -101,6 +110,7 @@ export async function backUpNow(): Promise<string> {
   await s3.write(key, compressed, { type: 'application/zstd' })
   lastSuccessAt = Date.now()
   lastFailureAt = null
+  lastError = null
 
   const kib = (bytes: number) => `${Math.round(bytes / 1024)} KiB`
   console.log(`[backup] wrote ${key} (${kib(snapshot.length)} -> ${kib(compressed.length)})`)
@@ -109,12 +119,33 @@ export async function backUpNow(): Promise<string> {
   try {
     await pruneOld(s3)
   } catch (error) {
-    console.warn(
-      '[backup] could not delete old backups:',
-      error instanceof Error ? error.message : error,
-    )
+    console.warn('[backup] could not delete old backups:', message(error))
   }
   return key
+}
+
+export type BackupRun = { ok: true; key: string } | { ok: false; busy: boolean; error: string }
+
+/**
+ * One backup, never two at once, for both the schedule and the dashboard's "Back up now".
+ * Open Settings pages are told when it starts and when it ends.
+ */
+export async function runBackup(): Promise<BackupRun> {
+  if (running) return { ok: false, busy: true, error: 'A backup is already running.' }
+
+  running = true
+  notify('backup')
+  try {
+    return { ok: true, key: await backUpNow() }
+  } catch (error) {
+    lastFailureAt = Date.now()
+    lastError = message(error)
+    console.error('[backup] failed:', lastError)
+    return { ok: false, busy: false, error: lastError }
+  } finally {
+    running = false
+    notify('backup')
+  }
 }
 
 function isDue(now: number): boolean {
@@ -124,16 +155,7 @@ function isDue(now: number): boolean {
 }
 
 async function tick(): Promise<void> {
-  if (running || !isDue(Date.now())) return
-  running = true
-  try {
-    await backUpNow()
-  } catch (error) {
-    lastFailureAt = Date.now()
-    console.error('[backup] failed:', error instanceof Error ? error.message : error)
-  } finally {
-    running = false
-  }
+  if (!running && isDue(Date.now())) await runBackup()
 }
 
 export async function startBackups(): Promise<void> {
@@ -149,10 +171,7 @@ export async function startBackups(): Promise<void> {
     console.log(`[backup] R2 bucket ${env.R2_BUCKET} reachable, last backup ${last}`)
   } catch (error) {
     // Listing failing usually means wrong credentials; the first upload will say the same.
-    console.error(
-      '[backup] cannot list the R2 bucket:',
-      error instanceof Error ? error.message : error,
-    )
+    console.error('[backup] cannot list the R2 bucket:', message(error))
   }
 
   void tick()
@@ -169,4 +188,68 @@ export function backupStatus(): BackupStatus {
   if (!getClient()) return 'disabled'
   if (lastFailureAt !== null) return 'failing'
   return lastSuccessAt === null ? 'pending' : 'ok'
+}
+
+/** When the schedule will next try, roughly: it checks every CHECK_INTERVAL_MS. */
+function nextDueAt(): number | null {
+  if (!getClient() || running) return null
+  if (lastFailureAt !== null) return lastFailureAt + RETRY_AFTER_MS
+  if (lastSuccessAt === null) return Date.now()
+  return lastSuccessAt + env.BACKUP_INTERVAL_HOURS * 3_600_000
+}
+
+export type BackupOverview = {
+  status: BackupStatus
+  running: boolean
+  bucket: string | null
+  jurisdiction: string | null
+  intervalHours: number
+  /** 0 when old backups are left to an R2 lifecycle rule. */
+  retentionDays: number
+  lastSuccessAt: number | null
+  lastFailureAt: number | null
+  lastError: string | null
+  nextDueAt: number | null
+  /** The newest few, newest first. */
+  backups: StoredBackup[]
+  /** How many backups the bucket holds in all. */
+  total: number
+  /** Why the bucket could not be listed, when it couldn't. */
+  listError: string | null
+}
+
+/** Everything Settings shows about backups. Lists the bucket, so it costs one R2 request or so. */
+export async function getBackupOverview(): Promise<BackupOverview> {
+  const s3 = getClient()
+  let backups: StoredBackup[] = []
+  let listError: string | null = null
+
+  if (s3) {
+    try {
+      backups = await listBackups(s3)
+      // Catches up if the bucket could not be listed at startup.
+      const newest = backups.at(-1)?.time ?? null
+      if (newest !== null && (lastSuccessAt === null || newest > lastSuccessAt)) {
+        lastSuccessAt = newest
+      }
+    } catch (error) {
+      listError = message(error)
+    }
+  }
+
+  return {
+    status: backupStatus(),
+    running,
+    bucket: s3 ? (env.R2_BUCKET ?? null) : null,
+    jurisdiction: env.R2_JURISDICTION ?? null,
+    intervalHours: env.BACKUP_INTERVAL_HOURS,
+    retentionDays: env.BACKUP_RETENTION_DAYS,
+    lastSuccessAt,
+    lastFailureAt,
+    lastError,
+    nextDueAt: nextDueAt(),
+    backups: backups.slice(-LISTED_BACKUPS).reverse(),
+    total: backups.length,
+    listError,
+  }
 }

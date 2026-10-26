@@ -6,6 +6,7 @@ export type AuditAction =
   | 'role.assign'
   | 'broadcast.send'
   | 'settings.update'
+  | 'backup.create'
   | 'birthday.announce'
   | 'birthday.set'
   | 'birthday.remove'
@@ -80,7 +81,7 @@ export const AUDIT_CATEGORY_ACTIONS = {
   messages: ['message.%'],
   birthdays: ['birthday.%'],
   broadcasts: ['broadcast.%'],
-  settings: ['settings.%'],
+  settings: ['settings.%', 'backup.%'],
 } as const satisfies Record<string, readonly string[]>
 
 export type AuditCategory = keyof typeof AUDIT_CATEGORY_ACTIONS

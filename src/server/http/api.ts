@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { z } from 'zod'
 
+import { getBackupOverview, runBackup } from '../backup'
 import { CacheKey, invalidate } from '../cache'
 import { AUDIT_CATEGORY_ACTIONS, listAudit, recordAudit, type AuditCategory } from '../db/audit'
 import {
@@ -146,6 +147,24 @@ api.put('/settings', requireAdmin, async (c) => {
   }
 
   return c.json({ settings, configured: isConfigured(settings), changed })
+})
+
+api.get('/backup', requireAdmin, async (c) => c.json(await getBackupOverview()))
+
+/** "Back up now" in Settings. Answers once the backup is done, with the overview after it. */
+api.post('/backup', requireAdmin, async (c) => {
+  const result = await runBackup()
+  if (!result.ok) return c.json({ error: result.error }, result.busy ? 409 : 502)
+
+  const user = c.get('user')
+  recordAudit({
+    action: 'backup.create',
+    source: 'dashboard',
+    actorId: user.id,
+    actorName: user.username,
+    detail: { key: result.key },
+  })
+  return c.json(await getBackupOverview())
 })
 
 api.get('/members/pending', async (c) => respond(c, await listPendingMembers()))

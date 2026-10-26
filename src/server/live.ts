@@ -13,12 +13,13 @@ export const LIVE_TOPICS = [
   'guild',
   'birthdays',
   'settings',
+  'backup',
 ] as const
 
 export type LiveTopic = (typeof LIVE_TOPICS)[number]
 
 /** Topics only administrators may follow. */
-export const ADMIN_TOPICS: ReadonlySet<LiveTopic> = new Set(['settings'])
+export const ADMIN_TOPICS: ReadonlySet<LiveTopic> = new Set(['settings', 'backup'])
 
 /** Bursts of the same notice (a role edit touches many members) go out as one. */
 const NOTICE_DELAY_MS = 500

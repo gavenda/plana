@@ -16,6 +16,7 @@ export type LiveMessages = {
   guild: object
   birthdays: object
   settings: object
+  backup: object
 }
 
 export type LiveTopic = keyof LiveMessages

@@ -5,6 +5,7 @@ export type AuditAction =
   | 'role.assign'
   | 'broadcast.send'
   | 'settings.update'
+  | 'backup.create'
   | 'birthday.announce'
   | 'birthday.set'
   | 'birthday.remove'
@@ -243,6 +244,10 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       )
     }
 
+    // Only backups started from Settings are logged; scheduled ones are not.
+    case 'backup.create':
+      return describe('Backup', 'neutral', actor, ' backed up the database')
+
     case 'birthday.announce': {
       const names = Array.isArray(entry.detail?.memberNames)
         ? entry.detail.memberNames.filter((name): name is string => typeof name === 'string')
@@ -476,6 +481,8 @@ export function auditIcon(action: AuditAction): string {
       return 'campaign'
     case 'settings.update':
       return 'settings'
+    case 'backup.create':
+      return 'backup'
     case 'birthday.announce':
     case 'birthday.set':
     case 'birthday.remove':

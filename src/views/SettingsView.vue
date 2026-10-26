@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import AppSelect from '@/components/AppSelect.vue'
+import BackupSection from '@/components/BackupSection.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import PlanaSays from '@/components/PlanaSays.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -181,134 +182,144 @@ const version = __APP_VERSION__
 <template>
   <!-- Two panes on large windows: the form flexes, About is a fixed 360dp pane. -->
   <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_480px]">
-    <section aria-labelledby="settings-roles">
-      <div class="section-header">
-        <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
-        <span
-          v-if="!store.loaded && !store.error"
-          class="skeleton mr-4 h-3.5 w-24"
-          aria-hidden="true"
-        />
-        <span
-          v-else
-          class="inline-flex items-center gap-1.5 pr-4 text-label-large"
-          :class="store.configured ? 'text-success' : 'text-warning'"
-        >
-          <span class="icon [--icon-size:18px] icon-filled" aria-hidden="true">{{
-            store.configured ? 'assignment_turned_in' : 'assignment_late'
-          }}</span>
-          {{ store.configured ? 'Configured' : 'Incomplete' }}
-        </span>
-      </div>
-
-      <div class="card card-body">
-        <StateBlock
-          :loading="!store.loaded && !store.error"
-          :error="store.error"
-          :retry="() => store.load(true)"
-        >
-          <!-- The form's fields and buttons, as they will stand. -->
-          <template #skeleton>
-            <div class="grid grid-cols-1 gap-6 expanded:grid-cols-2">
-              <span
-                v-for="field in ROLE_FIELDS.length + 3"
-                :key="field"
-                class="skeleton h-14 rounded-xs"
-              />
-              <div class="flex justify-end gap-2 expanded:col-span-2">
-                <span class="skeleton h-10 w-20" />
-                <span class="skeleton h-10 w-40" />
-              </div>
-            </div>
-          </template>
-          <form
-            class="grid grid-cols-1 gap-x-6 gap-y-6 expanded:grid-cols-2"
-            @submit.prevent="submit"
+    <div class="flex min-w-0 flex-col gap-6">
+      <section aria-labelledby="settings-roles">
+        <div class="section-header">
+          <h2 id="settings-roles" class="text-title-medium">Roles and channels</h2>
+          <span
+            v-if="!store.loaded && !store.error"
+            class="skeleton mr-4 h-3.5 w-24"
+            aria-hidden="true"
+          />
+          <span
+            v-else
+            class="inline-flex items-center gap-1.5 pr-4 text-label-large"
+            :class="store.configured ? 'text-success' : 'text-warning'"
           >
-            <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1">
-              <div class="flex items-center gap-1">
-                <AppSelect
-                  v-model="draft[field.key]"
-                  class="min-w-0 flex-1"
-                  :label="field.label"
-                  :options="roleOptions(field)"
-                />
-                <RichTooltip :title="field.label" :text="field.hint" />
-              </div>
-              <p v-if="warningFor(field)" class="supporting-text text-warning">
-                {{ warningFor(field) }}
-              </p>
-            </div>
+            <span class="icon [--icon-size:18px] icon-filled" aria-hidden="true">{{
+              store.configured ? 'assignment_turned_in' : 'assignment_late'
+            }}</span>
+            {{ store.configured ? 'Configured' : 'Incomplete' }}
+          </span>
+        </div>
 
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center gap-1">
-                <AppSelect
-                  v-model="draft.announceChannelId"
-                  class="min-w-0 flex-1"
-                  label="Announcement channel"
-                  :options="channelOptions('Not set')"
+        <div class="card card-body">
+          <StateBlock
+            :loading="!store.loaded && !store.error"
+            :error="store.error"
+            :retry="() => store.load(true)"
+          >
+            <!-- The form's fields and buttons, as they will stand. -->
+            <template #skeleton>
+              <div class="grid grid-cols-1 gap-6 expanded:grid-cols-2">
+                <span
+                  v-for="field in ROLE_FIELDS.length + 3"
+                  :key="field"
+                  class="skeleton h-14 rounded-xs"
                 />
-                <RichTooltip
-                  title="Announcement channel"
-                  text="Where new member cards are posted."
-                />
+                <div class="flex justify-end gap-2 expanded:col-span-2">
+                  <span class="skeleton h-10 w-20" />
+                  <span class="skeleton h-10 w-40" />
+                </div>
               </div>
-              <p v-if="channelWarningFor('announceChannelId')" class="supporting-text text-warning">
-                {{ channelWarningFor('announceChannelId') }}
-              </p>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center gap-1">
-                <AppSelect
-                  v-model="draft.birthdayChannelId"
-                  class="min-w-0 flex-1"
-                  label="Birthday channel"
-                  :options="channelOptions('Off')"
-                />
-                <RichTooltip
-                  title="Birthday channel"
-                  text="Where birthday wishes are posted. Members add theirs with /birthday set. Optional."
-                />
+            </template>
+            <form
+              class="grid grid-cols-1 gap-x-6 gap-y-6 expanded:grid-cols-2"
+              @submit.prevent="submit"
+            >
+              <div v-for="field in ROLE_FIELDS" :key="field.key" class="flex flex-col gap-1">
+                <div class="flex items-center gap-1">
+                  <AppSelect
+                    v-model="draft[field.key]"
+                    class="min-w-0 flex-1"
+                    :label="field.label"
+                    :options="roleOptions(field)"
+                  />
+                  <RichTooltip :title="field.label" :text="field.hint" />
+                </div>
+                <p v-if="warningFor(field)" class="supporting-text text-warning">
+                  {{ warningFor(field) }}
+                </p>
               </div>
-              <p v-if="channelWarningFor('birthdayChannelId')" class="supporting-text text-warning">
-                {{ channelWarningFor('birthdayChannelId') }}
-              </p>
-            </div>
 
-            <div class="flex flex-col gap-1">
-              <div class="flex items-center gap-1">
-                <AppSelect
-                  v-model="draft.triageReminderDays"
-                  class="min-w-0 flex-1"
-                  label="Triage reminder"
-                  :options="REMINDER_OPTIONS"
-                />
-                <RichTooltip
-                  title="Triage reminder"
-                  text="Members still waiting this long are listed in the announcement channel, once each, without a ping."
-                />
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-1">
+                  <AppSelect
+                    v-model="draft.announceChannelId"
+                    class="min-w-0 flex-1"
+                    label="Announcement channel"
+                    :options="channelOptions('Not set')"
+                  />
+                  <RichTooltip
+                    title="Announcement channel"
+                    text="Where new member cards are posted."
+                  />
+                </div>
+                <p
+                  v-if="channelWarningFor('announceChannelId')"
+                  class="supporting-text text-warning"
+                >
+                  {{ channelWarningFor('announceChannelId') }}
+                </p>
               </div>
-            </div>
 
-            <div class="flex justify-end gap-2 expanded:col-span-2">
-              <button
-                class="btn btn-text"
-                type="button"
-                :disabled="!dirty || saving"
-                @click="reset"
-              >
-                Discard
-              </button>
-              <button class="btn btn-filled btn-wide" type="submit" :disabled="!dirty || saving">
-                <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
-                {{ saving ? 'Saving…' : 'Save changes' }}
-              </button>
-            </div>
-          </form>
-        </StateBlock>
-      </div>
-    </section>
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-1">
+                  <AppSelect
+                    v-model="draft.birthdayChannelId"
+                    class="min-w-0 flex-1"
+                    label="Birthday channel"
+                    :options="channelOptions('Off')"
+                  />
+                  <RichTooltip
+                    title="Birthday channel"
+                    text="Where birthday wishes are posted. Members add theirs with /birthday set. Optional."
+                  />
+                </div>
+                <p
+                  v-if="channelWarningFor('birthdayChannelId')"
+                  class="supporting-text text-warning"
+                >
+                  {{ channelWarningFor('birthdayChannelId') }}
+                </p>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-1">
+                  <AppSelect
+                    v-model="draft.triageReminderDays"
+                    class="min-w-0 flex-1"
+                    label="Triage reminder"
+                    :options="REMINDER_OPTIONS"
+                  />
+                  <RichTooltip
+                    title="Triage reminder"
+                    text="Members still waiting this long are listed in the announcement channel, once each, without a ping."
+                  />
+                </div>
+              </div>
+
+              <div class="flex justify-end gap-2 expanded:col-span-2">
+                <button
+                  class="btn btn-text"
+                  type="button"
+                  :disabled="!dirty || saving"
+                  @click="reset"
+                >
+                  Discard
+                </button>
+                <button class="btn btn-filled btn-wide" type="submit" :disabled="!dirty || saving">
+                  <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
+                  {{ saving ? 'Saving…' : 'Save changes' }}
+                </button>
+              </div>
+            </form>
+          </StateBlock>
+        </div>
+      </section>
+
+      <BackupSection />
+    </div>
 
     <!-- About: the last thing in Settings, with no card and no heading. -->
     <section
