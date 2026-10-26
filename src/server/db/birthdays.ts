@@ -1,3 +1,4 @@
+import { notify } from '../live'
 import { db } from './index'
 
 export type Birthday = {
@@ -69,11 +70,13 @@ export function isValidBirthday(month: number, day: number): boolean {
 export function setBirthday(memberId: string, month: number, day: number): void {
   if (!isValidBirthday(month, day)) throw new RangeError(`invalid birthday ${month}/${day}`)
   upsert.run({ member_id: memberId, month, day, now: Date.now() })
+  notify('birthdays')
 }
 
 export function removeBirthday(memberId: string): boolean {
   const existed = selectOne.get({ member_id: memberId }) != null
   remove.run({ member_id: memberId })
+  if (existed) notify('birthdays')
   return existed
 }
 

@@ -9,6 +9,7 @@ import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
+import { useLive } from '@/lib/live'
 import { useAsync } from '@/lib/useAsync'
 import type { MemberVoice, VoiceOverview } from '@/lib/voice'
 
@@ -37,6 +38,12 @@ const days = ref(daysFromQuery())
 const overview = useAsync(() => apiFetch<VoiceOverview>(`/api/voice?days=${daysParam(days.value)}`))
 
 onMounted(() => void overview.run())
+
+/** Someone joining, leaving or moving reloads the page, and the open member with it. */
+useLive('voice', () => {
+  if (overview.data.value || overview.error.value) void overview.run()
+  if (chosenMember.value) void memberVoice.run()
+})
 
 watch(days, (value) => {
   void router.replace({

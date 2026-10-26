@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api'
 import { discordTextColor, roleColor } from '@/lib/discord'
 import { absoluteTime, relativeTime } from '@/lib/format'
 import { useSnackbar } from '@/lib/snackbar'
+import { useLive } from '@/lib/live'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
@@ -43,6 +44,13 @@ const hasTriageRole = computed(() => settings.settings.triageRoleId != null)
 onMounted(async () => {
   await Promise.all([guild.load(), settings.load()])
   if (hasTriageRole.value) await pending.run()
+})
+
+/** Someone admitted by another moderator, or from Discord, leaves the list without a reload. */
+useLive('triage', () => {
+  if (hasTriageRole.value && (pending.data.value != null || pending.error.value != null)) {
+    void pending.run()
+  }
 })
 
 /** The two configured roles, in the same order as the Discord buttons. */

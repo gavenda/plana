@@ -2,6 +2,7 @@ import type { Guild, VoiceBasedChannel, VoiceState } from 'discord.js'
 
 import type { OpenRow } from '../db/activity'
 import { listVoiceTotals, openVoiceSession, touchVoiceSessions } from '../db/voice'
+import { notify } from '../live'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { describe, group, periodStart, sum, type ActivityMember } from './activity'
 import { client, getGuild } from './client'
@@ -47,6 +48,7 @@ export function trackVoice(state: VoiceState, now = Date.now()): void {
       const row = openVoiceSession(state.id, channel.id, channel.name, now)
       live.set(state.id, { ...row, channelId: channel.id })
     }
+    notify('voice')
   } catch (error) {
     console.error('[voice] could not record a voice change:', error)
   }

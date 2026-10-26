@@ -18,6 +18,7 @@ import {
   type AuditPage,
 } from '@/lib/audit'
 import { absoluteTime, clockTime, dayLabel, startOfDay } from '@/lib/format'
+import { useLive } from '@/lib/live'
 import { useGuildStore } from '@/stores/guild'
 
 const entries = ref<AuditEntry[]>([])
@@ -61,9 +62,10 @@ function clearFilters() {
   categories.value = []
 }
 
-async function fetchPage(before?: number) {
+async function fetchPage(before?: number, after?: number) {
   const query = new URLSearchParams({ limit: '50' })
   if (before != null) query.set('before', String(before))
+  if (after != null) query.set('after', String(after))
   const text = search.value.trim()
   if (text) query.set('search', text)
   if (categories.value.length > 0) query.set('categories', categories.value.join(','))
@@ -138,6 +140,38 @@ async function loadMore() {
     loadingMore.value = false
   }
 }
+
+/** Adds entries newer than the ones shown, keeping whatever pages are already loaded. */
+function prepend(newer: AuditEntry[]) {
+  const shown = new Set(entries.value.map((entry) => entry.id))
+  const fresh = newer.filter((entry) => !shown.has(entry.id))
+  if (fresh.length > 0) entries.value = [...fresh, ...entries.value]
+  return fresh.length
+}
+
+/**
+ * New entries join the top as they're recorded. Unfiltered, the message's own entry goes
+ * straight in; the search runs on the server, so with a filter (or after a reconnect) the
+ * server is asked for whatever is newer than the top entry and matches.
+ */
+useLive('audit', async (message) => {
+  if (loading.value || error.value) return
+  if (message && !filtering.value) {
+    total.value += prepend([message.entry])
+    return
+  }
+  const current = generation
+  try {
+    const page = await fetchPage(undefined, entries.value[0]?.id ?? 0)
+    if (current !== generation) return
+    // More than a page arrived (a long disconnect): start over rather than leave a gap.
+    if (page.nextCursor != null) return void load()
+    prepend(page.entries)
+    total.value = page.total
+  } catch {
+    // The next entry, or the refresh button, tries again.
+  }
+})
 
 const SOURCE_LABEL: Record<AuditEntry['source'], string> = {
   discord: 'Discord',

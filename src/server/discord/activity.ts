@@ -12,7 +12,9 @@ import {
   type Track,
 } from '../db/activity'
 import { gameIconUrl, requestGameIcon } from './game-icons'
+import { env } from '../env'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
+import { hasSubscribers, publish } from '../live'
 import { ok, primeMemberCache, type Result } from './service'
 
 /** How much play is lost at most if the process dies without warning. */
@@ -24,6 +26,9 @@ export const MAX_ACTIVITY_DAYS = 366
 const DAY_MS = 86_400_000
 const TOP_ITEMS = 25
 const TOP_MEMBERS = 5
+
+/** Presence is noisy; open pages get "Right now" at most this often. */
+const PRESENCE_PUBLISH_MS = 1000
 
 type LiveTrack = OpenRow & { track: Track }
 
@@ -80,6 +85,7 @@ export function trackPresence(presence: Presence, now = Date.now()): void {
     const track = spotifyTrack(presence)
     const current: Live = live.get(memberId) ?? { games: new Map(), track: null }
     const ended: OpenRow[] = []
+    let started = false
 
     for (const [game, row] of current.games) {
       if (games.has(game)) continue
@@ -89,6 +95,7 @@ export function trackPresence(presence: Presence, now = Date.now()): void {
     for (const [game, applicationId] of games) {
       if (current.games.has(game)) continue
       current.games.set(game, openGameSession(memberId, game, now))
+      started = true
       requestGameIcon(game, applicationId)
     }
 
@@ -99,6 +106,7 @@ export function trackPresence(presence: Presence, now = Date.now()): void {
     }
     if (track && !current.track) {
       current.track = { ...openTrackPlay(memberId, track, now), track }
+      started = true
     }
 
     // A stopped row ends now rather than at its last checkpoint.
@@ -109,9 +117,22 @@ export function trackPresence(presence: Presence, now = Date.now()): void {
 
     if (current.games.size === 0 && !current.track) live.delete(memberId)
     else live.set(memberId, current)
+
+    if (started || ended.length > 0 || endedTracks.length > 0) schedulePresencePublish()
   } catch (error) {
     console.error('[activity] could not record a presence:', error)
   }
+}
+
+let presenceTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Sends "Right now" to open pages, once for however many changes land within a second. */
+function schedulePresencePublish(): void {
+  presenceTimer ??= setTimeout(() => {
+    presenceTimer = undefined
+    const guild = client.guilds.cache.get(env.DISCORD_GUILD_ID)
+    if (guild && hasSubscribers('presence')) publish('presence', listRightNow(guild.members.cache))
+  }, PRESENCE_PUBLISH_MS)
 }
 
 /** Starts recording whoever is already playing or listening when the bot connects. */
@@ -218,6 +239,26 @@ export const periodStart = (days: number | null, now: number) =>
 
 export const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
+export type RightNow = Pick<ActivityOverview, 'playing' | 'listening'>
+
+/** Who is playing and listening at this moment. */
+function listRightNow(members: Map<string, GuildMember>): RightNow {
+  const playing: RightNow['playing'] = []
+  const listening: RightNow['listening'] = []
+  for (const [memberId, entry] of live) {
+    const member = describe(members, memberId)
+    for (const [game, row] of entry.games) {
+      playing.push({ member, game, iconUrl: gameIconUrl(game), since: row.startedAt })
+    }
+    if (entry.track) {
+      listening.push({ member, track: entry.track.track, since: entry.track.startedAt })
+    }
+  }
+  playing.sort((a, b) => a.since - b.since)
+  listening.sort((a, b) => a.member.displayName.localeCompare(b.member.displayName))
+  return { playing, listening }
+}
+
 /** Most-played games and Spotify tracks over the last `days` (null: all time), and what is on now. */
 export async function getActivityOverview(days: number | null): Promise<Result<ActivityOverview>> {
   await primeMemberCache()
@@ -263,19 +304,7 @@ export async function getActivityOverview(days: number | null): Promise<Result<A
     })
     .sort((a, b) => b.plays - a.plays || b.listeners - a.listeners || b.ms - a.ms)
 
-  const playing: ActivityOverview['playing'] = []
-  const listening: ActivityOverview['listening'] = []
-  for (const [memberId, entry] of live) {
-    const member = describe(members, memberId)
-    for (const [game, row] of entry.games) {
-      playing.push({ member, game, iconUrl: gameIconUrl(game), since: row.startedAt })
-    }
-    if (entry.track) {
-      listening.push({ member, track: entry.track.track, since: entry.track.startedAt })
-    }
-  }
-  playing.sort((a, b) => a.since - b.since)
-  listening.sort((a, b) => a.member.displayName.localeCompare(b.member.displayName))
+  const { playing, listening } = listRightNow(members)
 
   return ok({
     days,

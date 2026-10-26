@@ -3,11 +3,13 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import RailItem from '@/components/RailItem.vue'
+import { useLive } from '@/lib/live'
 import { logoUrl } from '@/lib/plana'
 import { railDocks, runRailFab, useRail } from '@/lib/rail'
 import { useBotStore } from '@/stores/bot'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
+import { useSettingsStore } from '@/stores/settings'
 
 type Destination = {
   to: string
@@ -42,6 +44,16 @@ const destinations = computed(() =>
 const { expanded, toggle, collapse } = useRail()
 
 const guild = useGuildStore()
+const settings = useSettingsStore()
+
+// The rail is on every signed-in page, so it keeps the shared stores current: roles and
+// channels (Settings, Broadcast, role colours) and, for administrators, the settings.
+useLive('guild', () => {
+  if (guild.directory) void guild.load(true)
+})
+useLive('settings', () => {
+  if (settings.loaded) void settings.load(true)
+})
 
 /** The bot's own avatar, as members see it in Discord; the logo when it has none. */
 const bot = useBotStore()

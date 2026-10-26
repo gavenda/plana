@@ -8,6 +8,7 @@ import { client, isReady } from '../discord/client'
 import { isProduction } from '../env'
 import { api } from './api'
 import { authRoutes } from './auth'
+import { upgradeLiveSocket } from './live-socket'
 import type { Renderer } from './ssr'
 
 /** Paths that look like a file on disk, e.g. `/assets/index-abc123.js`. */
@@ -35,6 +36,9 @@ export function createHttpApp(renderer: Renderer): Hono {
     c.header('Cache-Control', 'public, max-age=3600')
     return c.redirect(client.user.displayAvatarURL({ extension: 'png', size: 64 }), 302)
   })
+
+  // Live updates for open pages; see src/server/live.ts.
+  app.get('/ws', upgradeLiveSocket)
 
   app.route('/auth', authRoutes)
   app.route('/api', api)

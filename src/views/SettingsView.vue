@@ -29,11 +29,7 @@ const snackbar = useSnackbar()
 const saving = ref(false)
 
 type RoleKey =
-  | 'triageRoleId'
-  | 'unitOwnerRoleId'
-  | 'boardersRoleId'
-  | 'moderatorRoleId'
-  | 'birthdayRoleId'
+  'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId' | 'moderatorRoleId' | 'birthdayRoleId'
 
 type RoleField = {
   key: RoleKey
@@ -84,9 +80,24 @@ onMounted(() => {
   void store.load()
 })
 
+/**
+ * The form follows the saved settings, including another administrator's change arriving live.
+ * A field this admin has already changed is kept, so their edit isn't lost; the rest take the
+ * newer value, so saving never puts back something stale.
+ */
 watch(
   () => store.settings,
-  (next) => Object.assign(draft, next),
+  (next, previous) => {
+    let kept = false
+    for (const key of Object.keys(draft) as (keyof GuildSettings)[]) {
+      const edited = previous != null && draft[key] !== previous[key]
+      if (!edited) Object.assign(draft, { [key]: next[key] })
+      else if (draft[key] !== next[key]) kept = true
+    }
+    if (kept && !saving.value) {
+      snackbar.show('Another administrator changed the settings. Your unsaved changes were kept.')
+    }
+  },
   { immediate: true, deep: true },
 )
 

@@ -1,3 +1,4 @@
+import { publish } from '../live'
 import { db } from './index'
 
 export type AuditAction =
@@ -137,8 +138,9 @@ function toEntry(row: AuditRow): AuditEntry {
 }
 
 export function recordAudit(input: RecordAuditInput): number {
+  const createdAt = Date.now()
   const row = insert.get({
-    created_at: Date.now(),
+    created_at: createdAt,
     action: input.action,
     source: input.source,
     actor_id: input.actorId ?? null,
@@ -147,34 +149,53 @@ export function recordAudit(input: RecordAuditInput): number {
     target_name: input.targetName ?? null,
     detail: input.detail ? JSON.stringify(input.detail) : null,
   })
-  return row!.id
+  const id = row!.id
+
+  // Open audit pages add it to the top; the Overview's recent activity too.
+  publish('audit', {
+    entry: {
+      id,
+      createdAt,
+      action: input.action,
+      source: input.source,
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? null,
+      targetId: input.targetId ?? null,
+      targetName: input.targetName ?? null,
+      detail: input.detail ?? null,
+    } satisfies AuditEntry,
+  })
+
+  return id
 }
 
 /**
- * Newest first. `before` is the `id` of the last entry from the previous page. `total` counts
- * the entries matching the filter, across every page.
+ * Newest first. `before` is the `id` of the last entry from the previous page; `after` asks
+ * only for entries newer than one already shown. `total` counts the entries matching the
+ * filter, across every page.
  */
-export function listAudit(options: { limit?: number; before?: number } & AuditFilter = {}): {
+export function listAudit(
+  options: { limit?: number; before?: number; after?: number } & AuditFilter = {},
+): {
   entries: AuditEntry[]
   nextCursor: number | null
   total: number
 } {
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 200)
   const before = options.before ?? Number.MAX_SAFE_INTEGER
+  const after = options.after ?? 0
   const where = whereFor(options)
 
   // bun:sqlite caches prepared statements by their SQL, and there are only a few shapes.
   const rows = db
-    .query<
-      AuditRow,
-      Record<string, string | number>
-    >(`SELECT * FROM audit_log WHERE id < :before AND ${where.sql} ORDER BY id DESC LIMIT :limit`)
-    .all({ ...where.params, before, limit: limit + 1 })
+    .query<AuditRow, Record<string, string | number>>(
+      `SELECT * FROM audit_log WHERE id < :before AND id > :after AND ${where.sql} ORDER BY id DESC LIMIT :limit`,
+    )
+    .all({ ...where.params, before, after, limit: limit + 1 })
   const total = db
-    .query<
-      { total: number },
-      Record<string, string | number>
-    >(`SELECT COUNT(*) AS total FROM audit_log WHERE ${where.sql}`)
+    .query<{ total: number }, Record<string, string | number>>(
+      `SELECT COUNT(*) AS total FROM audit_log WHERE ${where.sql}`,
+    )
     .get(where.params)!.total
 
   const hasMore = rows.length > limit

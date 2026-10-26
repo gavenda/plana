@@ -13,6 +13,7 @@ import { auditIcon, describeAudit, toneContainerClass, type AuditPage } from '@/
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
+import { useLive } from '@/lib/live'
 import type { VoiceOverview } from '@/lib/voice'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
@@ -31,8 +32,11 @@ const guild = useGuildStore()
 const settings = useSettingsStore()
 const session = useSessionStore()
 
+/** How many audit entries "Recent activity" shows. */
+const RECENT_LIMIT = 6
+
 const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending'))
-const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
+const activity = useAsync(() => apiFetch<AuditPage>(`/api/audit?limit=${RECENT_LIMIT}`))
 const play = useAsync(() => apiFetch<ActivityOverview>('/api/activity?days=7'))
 const upcoming = useAsync(() => apiFetch<UpcomingBirthdays>('/api/birthdays/upcoming'))
 const voice = useAsync(() => apiFetch<VoiceOverview>('/api/voice?days=7'))
@@ -41,6 +45,7 @@ const voice = useAsync(() => apiFetch<VoiceOverview>('/api/voice?days=7'))
 const PLAY_LIMIT = 5
 const topGames = computed(() => play.data.value?.games.slice(0, PLAY_LIMIT) ?? [])
 const topTracks = computed(() => play.data.value?.tracks.slice(0, PLAY_LIMIT) ?? [])
+const topVoice = computed(() => voice.data.value?.members.slice(0, PLAY_LIMIT) ?? [])
 
 /** Loading, or not started yet: each request waits for the guild and settings first. */
 const waiting = (state: { data: { value: unknown }; error: { value: unknown } }) =>
@@ -62,6 +67,33 @@ onMounted(async () => {
     voice.run(),
     upcoming.run(),
   ])
+})
+
+// Live updates. Each waits for the first load to finish, so a message never stands in for it.
+useLive('triage', () => {
+  if (hasTriageRole.value && !waiting(pending)) void pending.run()
+})
+useLive('audit', (message) => {
+  const page = activity.data.value
+  if (!page) return
+  if (!message) return void activity.run()
+  if (page.entries.some((entry) => entry.id === message.entry.id)) return
+  activity.data.value = {
+    ...page,
+    entries: [message.entry, ...page.entries].slice(0, RECENT_LIMIT),
+    total: page.total + 1,
+  }
+})
+useLive('presence', (message) => {
+  if (!play.data.value) return
+  if (message) play.data.value = { ...play.data.value, ...message }
+  else void play.run()
+})
+useLive('voice', () => {
+  if (!waiting(voice)) void voice.run()
+})
+useLive('birthdays', () => {
+  if (!waiting(upcoming)) void upcoming.run()
 })
 
 const CHECKLIST: { key: keyof GuildSettings; label: string }[] = [
@@ -358,6 +390,71 @@ const recent = computed(() =>
                 <span class="shrink-0 text-body-large tabular-nums">{{
                   track.plays === 1 ? '1 play' : `${track.plays.toLocaleString()} plays`
                 }}</span>
+              </li>
+            </ol>
+          </StateBlock>
+        </div>
+      </section>
+
+      <section aria-labelledby="overview-voice">
+        <div class="section-header">
+          <h2 id="overview-voice" class="text-title-medium">Most time in voice this week</h2>
+          <RouterLink class="btn btn-text" to="/voice">View all</RouterLink>
+        </div>
+        <div :class="!voiceLoading && topVoice.length === 0 && 'card'">
+          <StateBlock
+            :loading="voiceLoading"
+            :error="voice.error.value"
+            :empty="topVoice.length === 0"
+            empty-text="Nobody spent time in voice this week."
+            compact
+          >
+            <template #skeleton><SkeletonList rank two-line trailing="stack" /></template>
+            <ol class="segmented-list">
+              <li v-for="(member, index) in topVoice" :key="member.id" class="segmented-item p-0">
+                <RouterLink
+                  :to="{ path: '/voice', query: { member: member.id } }"
+                  class="state-layer flex min-h-14 w-full min-w-0 items-center gap-4 rounded-[inherit] px-4 py-2"
+                >
+                  <span
+                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    >#{{ index + 1 }}</span
+                  >
+                  <img
+                    class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                    :src="member.avatarUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                  <div class="min-w-0 flex-1 py-1">
+                    <p
+                      class="truncate text-body-large"
+                      :style="{ color: discordTextColor(member.color) }"
+                    >
+                      {{ member.displayName }}
+                    </p>
+                    <p class="truncate text-body-small text-on-surface-variant">
+                      {{
+                        member.sessions === 1
+                          ? '1 session'
+                          : `${member.sessions.toLocaleString()} sessions`
+                      }}
+                    </p>
+                  </div>
+                  <div class="flex shrink-0 flex-col items-end">
+                    <span class="text-body-large tabular-nums">{{
+                      formatDuration(member.ms)
+                    }}</span>
+                    <span
+                      v-if="member.inVoiceSince != null"
+                      class="text-label-small text-tertiary"
+                      :title="`Since ${absoluteTime(member.inVoiceSince)}`"
+                      >In voice now</span
+                    >
+                  </div>
+                </RouterLink>
               </li>
             </ol>
           </StateBlock>

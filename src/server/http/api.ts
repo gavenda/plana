@@ -249,6 +249,7 @@ const auditCategory = z.enum(
 const auditQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   before: z.coerce.number().int().positive().optional(),
+  after: z.coerce.number().int().nonnegative().optional(),
   search: z.string().max(200).optional(),
   /** Comma-separated, e.g. `moderation,messages`. */
   categories: z

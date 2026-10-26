@@ -12,7 +12,9 @@ import { registerEvents } from './events'
 import { initI18n } from './i18n'
 import { env } from './env'
 import { createHttpApp } from './http/app'
+import { liveSocketHandler, startLiveSockets, stopLiveSockets } from './http/live-socket'
 import { createRenderer } from './http/ssr'
+import { attachLiveServer } from './live'
 
 const SESSION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
 
@@ -83,8 +85,11 @@ const server = Bun.serve({
   hostname: env.HOST,
   port: env.PORT,
   fetch: app.fetch,
+  websocket: liveSocketHandler,
   idleTimeout: 30,
 })
+attachLiveServer(server)
+startLiveSockets()
 
 console.log(`[http] listening on http://${env.HOST}:${env.PORT} (${env.NODE_ENV})`)
 console.log(`[http] public base URL ${env.PUBLIC_BASE_URL}`)
@@ -124,6 +129,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(activityTimer)
   checkpointActivity()
   checkpointVoice()
+  stopLiveSockets()
   await server.stop(true)
   await renderer.close()
   await client.destroy()

@@ -1,3 +1,4 @@
+import { notify } from '../live'
 import { db } from './index'
 import { env } from '../env'
 
@@ -81,6 +82,7 @@ export function updateSettings(patch: Partial<GuildSettings>): GuildSettings {
       else upsert.run({ key, value: String(value) })
     }
   })()
+  notify('settings')
   return getSettings()
 }
 

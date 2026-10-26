@@ -15,6 +15,7 @@ import { discordTextColor, roleColor } from '@/lib/discord'
 import { useRailFab } from '@/lib/rail'
 import type { SelectOption } from '@/lib/select'
 import { useSnackbar } from '@/lib/snackbar'
+import { useLive } from '@/lib/live'
 import { useAsync } from '@/lib/useAsync'
 import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
@@ -45,6 +46,11 @@ function confirmRemove(entry: BirthdayEntry) {
 onMounted(() => {
   void settings.load()
   void overview.run()
+})
+
+/** Another moderator's change, or a member's own `/birthday set`, shows without a reload. */
+useLive('birthdays', () => {
+  if (!loading.value) void overview.run()
 })
 
 const birthdays = computed(() => overview.data.value?.birthdays ?? [])

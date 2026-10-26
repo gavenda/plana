@@ -10,6 +10,7 @@ import type { ActivityOverview, GamePlayers } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
+import { useLive } from '@/lib/live'
 import { useAsync } from '@/lib/useAsync'
 
 /** `days` null is all time; in the URL and the API it is `all`. */
@@ -39,6 +40,13 @@ const overview = useAsync(() =>
 )
 
 onMounted(() => void overview.run())
+
+/** "Right now" follows along; the totals wait for a change of period or a reload. */
+useLive('presence', (message) => {
+  if (!overview.data.value) return
+  if (message) overview.data.value = { ...overview.data.value, ...message }
+  else void overview.run()
+})
 
 watch(days, (value) => {
   void router.replace({

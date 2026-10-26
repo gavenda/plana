@@ -1,6 +1,7 @@
 import { RedisClient } from 'bun'
 
 import { env } from './env'
+import { notify, type LiveTopic } from './live'
 
 /** Namespaced so the cache can share a Redis instance with anything else. */
 const PREFIX = 'plana:'
@@ -9,6 +10,12 @@ export const CacheKey = {
   pendingMembers: 'members:pending',
   guildDirectory: 'guild:directory',
 } as const
+
+/** The page topic that follows each cached value, so open pages reload when it goes stale. */
+const LIVE_TOPIC: Record<string, LiveTopic> = {
+  [CacheKey.pendingMembers]: 'triage',
+  [CacheKey.guildDirectory]: 'guild',
+}
 
 export const CacheTtl = {
   pendingMembers: 60,
@@ -81,6 +88,8 @@ export async function cached<T>(
 }
 
 export async function invalidate(...keys: string[]): Promise<void> {
+  notify(...keys.flatMap((key) => LIVE_TOPIC[key] ?? []))
+
   const redis = getClient()
   if (!redis || keys.length === 0) return
 

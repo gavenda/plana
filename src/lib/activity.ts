@@ -46,3 +46,6 @@ export type GamePlayers = {
   ms: number
   players: (ActivityMember & { ms: number; playingSince: number | null })[]
 }
+
+/** Who is playing and listening at this moment; also what the `presence` live topic sends. */
+export type RightNow = Pick<ActivityOverview, 'playing' | 'listening'>
