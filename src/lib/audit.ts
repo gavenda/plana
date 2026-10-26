@@ -346,7 +346,7 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       return describe(
         'Game night',
         'accent',
-        `Announced ${text(entry.detail?.game, 'a game')} night in `,
+        `Announced a ${text(entry.detail?.game, 'game')} session in `,
         targetChannel,
         ...(players.length > 0
           ? [', started by ', ...list(players.map((name) => [{ user: name }]))]

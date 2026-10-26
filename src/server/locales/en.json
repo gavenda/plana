@@ -109,8 +109,11 @@
       "members_more_other": "{{count}} more"
     },
     "game_night": {
-      "title": "-# {{game}} — Game Night",
-      "title_emoji": "-# {{emoji}} {{game}} — Game Night",
+      "title": "-# {{game}} — {{period}}",
+      "title_emoji": "-# {{emoji}} {{game}} — {{period}}",
+      "period_morning": "Morning Grind",
+      "period_afternoon": "Afternoon Grind",
+      "period_night": "Game Night",
       "intros": [
         "Gathering detected. Please join them if you're free.",
         "A session has formed. There's room for more.",

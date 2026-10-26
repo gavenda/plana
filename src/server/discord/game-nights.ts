@@ -20,6 +20,7 @@ import {
   type GameNightResponse,
 } from '../db/game-nights'
 import { getSettings } from '../db/settings'
+import { env } from '../env'
 import { DEFAULT_LOCALE, t, tlList } from '../i18n'
 import { logger } from '../logging'
 import { memberActivityNow } from './activity'
@@ -107,6 +108,23 @@ function buildGameNight(post: {
     ),
     buttons(),
   ]
+}
+
+/**
+ * What to call a group that forms at this time, by the hour in the bot's time zone (the one
+ * birthdays and the recap use): a morning or afternoon grind, or a game night from 18:00 to 05:00.
+ */
+export function sessionPeriod(
+  now: number,
+  timeZone: string = env.BIRTHDAY_TIMEZONE,
+): 'morning' | 'afternoon' | 'night' {
+  const hour =
+    Number(
+      new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(now),
+    ) % 24
+  if (hour >= 5 && hour < 12) return 'morning'
+  if (hour >= 12 && hour < 18) return 'afternoon'
+  return 'night'
 }
 
 /** Groups in voice right now with enough players: who is playing what, where. */
@@ -206,10 +224,11 @@ async function announce(
   const intro = intros[Math.floor(Math.random() * intros.length)] ?? ''
 
   const emoji = await gameEmoji(group.game)
+  const period = t(`game_night.period_${sessionPeriod(now)}`, { lng })
   const lines = [
     emoji
-      ? t('game_night.title_emoji', { lng, game: group.game, emoji })
-      : t('game_night.title', { lng, game: group.game }),
+      ? t('game_night.title_emoji', { lng, game: group.game, emoji, period })
+      : t('game_night.title', { lng, game: group.game, period }),
     intro,
     t('game_night.trigger', {
       lng,
