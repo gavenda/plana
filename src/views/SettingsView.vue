@@ -331,7 +331,7 @@ const version = __APP_VERSION__
       >
       <p class="mt-2 text-title-medium">Plana {{ version }}</p>
       <p class="text-body-medium text-on-surface-variant">
-        Kept by <span class="text-tertiary">Plana</span>, system administrator of the Shittim Chest
+        Administered by <span class="text-tertiary">Plana</span>, OS of the Shittim Chest
       </p>
       <p class="text-body-small text-on-surface-variant">
         Character design by DoReMi, from Blue Archive.

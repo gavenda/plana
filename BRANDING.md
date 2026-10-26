@@ -260,8 +260,8 @@ Where she is not, on purpose:
 The last thing in Settings (beside the form on large windows, below it otherwise), with no
 card and no heading: `PlanaSays` with her `Content` face and her line under her (`column`,
 so the line isn't squeezed beside a 192px badge in the narrow column), then "Plana" with the version (`package.json`) underneath. Under the
-version are two plain lines in the third person: "Kept by Plana, system administrator of
-the Shittim Chest", with her name alone in `tertiary`, and, quieter, "Character design by
+version are two plain lines in the third person: "Administered by Plana, OS of the
+Shittim Chest", with her name alone in `tertiary`, and, quieter, "Character design by
 DoReMi, from Blue Archive."
 
 ### Moods

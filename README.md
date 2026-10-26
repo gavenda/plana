@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Kept by <b>Plana</b>, system administrator of the Shittim Chest<br>
+  Administered by <b>Plana</b>, OS of the Shittim Chest<br>
   <sub>Character design by DoReMi, from Blue Archive.</sub>
 </p>
 
