@@ -12,6 +12,9 @@ import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { describe, group, periodStart, sum, type ActivityMember } from './activity'
 import { client, getGuild } from './client'
 import { ok, primeMemberCache, type Result } from './service'
+import { logger } from '../logging'
+
+const log = logger('voice')
 
 const TOP_ITEMS = 25
 const TOP_MEMBERS = 5
@@ -55,7 +58,7 @@ export function trackVoice(state: VoiceState, now = Date.now()): void {
     }
     notify('voice')
   } catch (error) {
-    console.error('[voice] could not record a voice change:', error)
+    log.error`could not record a voice change: ${error}`
   }
 }
 
@@ -67,7 +70,7 @@ export async function startVoiceTracking(): Promise<void> {
   const guild = await getGuild()
   const now = Date.now()
   for (const state of guild.voiceStates.cache.values()) trackVoice(state, now)
-  console.log(`[voice] tracking ${live.size} member(s) already in voice`)
+  log.info`tracking ${live.size} member(s) already in voice`
 }
 
 /** Moves every open session's end up to now; see `touchVoiceSessions`. */
@@ -79,7 +82,7 @@ export function checkpointVoice(now = Date.now()): void {
       now,
     )
   } catch (error) {
-    console.error('[voice] checkpoint failed:', error)
+    log.error`checkpoint failed: ${error}`
   }
 }
 

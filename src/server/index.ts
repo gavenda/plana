@@ -1,3 +1,6 @@
+// First, so LogTape is configured before any other module logs while loading.
+import { logger } from './logging'
+
 import { startBackups, stopBackups } from './backup'
 import { closeCache, connectCache } from './cache'
 import { pruneExpiredSessions } from './db/sessions'
@@ -17,6 +20,11 @@ import { createHttpApp } from './http/app'
 import { liveSocketHandler, startLiveSockets, stopLiveSockets } from './http/live-socket'
 import { createRenderer } from './http/ssr'
 import { attachLiveServer } from './live'
+
+const discordLog = logger('discord')
+const httpLog = logger('http')
+const sessionsLog = logger('sessions')
+const settingsLog = logger('settings')
 
 const SESSION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
 
@@ -60,22 +68,22 @@ async function login(): Promise<void> {
     const message = error instanceof Error ? error.message : String(error)
 
     if (message.includes('disallowed intents')) {
-      console.error(
-        '[discord] Discord refused the connection: this bot needs three privileged intents.\n' +
-          '          Enable them at https://discord.com/developers/applications\n' +
-          '          -> your application -> Bot -> Privileged Gateway Intents\n' +
-          '          -> Presence Intent, Server Members Intent and Message Content Intent,\n' +
-          '          then start again. Games & music needs the first, triage the second, and the\n' +
-          '          audit log the third for message text.',
+      discordLog.fatal(
+        'Discord refused the connection: this bot needs three privileged intents.\n' +
+          '  Enable them at https://discord.com/developers/applications\n' +
+          '  -> your application -> Bot -> Privileged Gateway Intents\n' +
+          '  -> Presence Intent, Server Members Intent and Message Content Intent,\n' +
+          '  then start again. Games & music needs the first, triage the second, and the\n' +
+          '  audit log the third for message text.',
       )
       process.exit(1)
     }
 
     if (message.includes('invalid token')) {
-      console.error(
-        '[discord] Discord rejected the bot token.\n' +
-          '          Check DISCORD_TOKEN against the Bot page of your application.\n' +
-          '          Note that the bot token is not the client secret.',
+      discordLog.fatal(
+        'Discord rejected the bot token.\n' +
+          '  Check DISCORD_TOKEN against the Bot page of your application.\n' +
+          '  Note that the bot token is not the client secret.',
       )
       process.exit(1)
     }
@@ -97,16 +105,16 @@ const server = Bun.serve({
 attachLiveServer(server)
 startLiveSockets()
 
-console.log(`[http] listening on http://${env.HOST}:${env.PORT} (${env.NODE_ENV})`)
-console.log(`[http] public base URL ${env.PUBLIC_BASE_URL}`)
+httpLog.info`listening on http://${env.HOST}:${env.PORT} (${env.NODE_ENV})`
+httpLog.info`public base URL ${env.PUBLIC_BASE_URL}`
 
 if (!isConfigured(getSettings())) {
-  console.warn('[settings] roles/channel not fully configured — set them in the dashboard.')
+  settingsLog.warning`roles/channel not fully configured — set them in the dashboard.`
 }
 
 const pruneTimer = setInterval(() => {
   const removed = pruneExpiredSessions()
-  if (removed > 0) console.log(`[sessions] pruned ${removed} expired session(s)`)
+  if (removed > 0) sessionsLog.info`pruned ${removed} expired session(s)`
 }, SESSION_PRUNE_INTERVAL_MS)
 
 const activityTimer = setInterval(() => {
@@ -116,7 +124,7 @@ const activityTimer = setInterval(() => {
 
 const memberRefreshTimer = setInterval(() => {
   void primeMemberCache(true).catch((error: unknown) => {
-    console.warn('[discord] member cache refresh failed:', error)
+    discordLog.warning`member cache refresh failed: ${error}`
   })
 }, MEMBER_REFRESH_INTERVAL_MS)
 
@@ -128,7 +136,7 @@ const triageReminderTimer = setInterval(() => void remindStaleTriage(), TRIAGE_R
 const recapTimer = setInterval(() => void postWeeklyRecap(), RECAP_CHECK_INTERVAL_MS)
 
 async function shutdown(signal: string): Promise<void> {
-  console.log(`\n[shutdown] received ${signal}`)
+  logger('shutdown').info`received ${signal}`
   clearInterval(pruneTimer)
   clearInterval(memberRefreshTimer)
   clearInterval(birthdayTimer)

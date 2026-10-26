@@ -4,6 +4,8 @@
  *
  * The bot also registers commands on every startup, so this is only a convenience.
  */
+import '../logging'
+
 import { REST, Routes } from 'discord.js'
 
 import { chatInputCommandData } from '../commands/chat-input'

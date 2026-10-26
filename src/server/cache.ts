@@ -2,6 +2,9 @@ import { RedisClient } from 'bun'
 
 import { env } from './env'
 import { notify, type LiveTopic } from './live'
+import { logger } from './logging'
+
+const log = logger('cache')
 
 /** Namespaced so the cache can share a Redis instance with anything else. */
 const PREFIX = 'plana:'
@@ -38,7 +41,7 @@ function getClient(): RedisClient | null {
   })
 
   client.onconnect = () => {
-    if (degraded) console.log('[cache] reconnected to Redis')
+    if (degraded) log.info`reconnected to Redis`
     degraded = false
   }
 
@@ -52,9 +55,7 @@ function getClient(): RedisClient | null {
 function degrade(error: unknown): void {
   if (degraded) return
   degraded = true
-  console.warn(
-    `[cache] Redis unavailable, serving uncached: ${error instanceof Error ? error.message : error}`,
-  )
+  log.warning`Redis unavailable, serving uncached: ${error instanceof Error ? error.message : error}`
 }
 
 /** Read-through cache. `produce` is called on a miss, on an error, or with no Redis. */
@@ -111,13 +112,13 @@ export function cacheStatus(): CacheStatus {
 export async function connectCache(): Promise<void> {
   const redis = getClient()
   if (!redis) {
-    console.log('[cache] REDIS_URL is empty, caching disabled')
+    log.info`REDIS_URL is empty, caching disabled`
     return
   }
 
   try {
     await redis.connect()
-    console.log('[cache] connected to Redis')
+    log.info`connected to Redis`
   } catch (error) {
     degrade(error)
   }

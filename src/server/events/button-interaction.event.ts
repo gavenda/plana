@@ -4,6 +4,9 @@ import { customIdPrefix } from '../discord/ids'
 import { buttonHandlers } from '../handlers/buttons'
 import { replyWithError } from '../utils/reply-with-error'
 import type { AppEvent } from './event'
+import { logger } from '../logging'
+
+const log = logger('discord')
 
 export const buttonInteractionEvent: AppEvent<Events.InteractionCreate> = {
   event: Events.InteractionCreate,
@@ -16,14 +19,14 @@ export const buttonInteractionEvent: AppEvent<Events.InteractionCreate> = {
     const handler = buttonHandlers.find((entry) => entry.customId === prefix)
 
     if (!handler) {
-      console.warn(`[discord] no button handler for "${interaction.customId}"`)
+      log.warning`no button handler for "${interaction.customId}"`
       return
     }
 
     try {
       await handler.handle(context, interaction)
     } catch (error) {
-      console.error(`[discord] button "${interaction.customId}" threw:`, error)
+      log.error`button "${interaction.customId}" threw: ${error}`
       await replyWithError(interaction)
     }
   },

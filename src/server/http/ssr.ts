@@ -7,6 +7,9 @@ import { readSession } from './session'
 import { client, isReady } from '../discord/client'
 import { getAccessLevel } from '../discord/service'
 import { isProduction } from '../env'
+import { logger } from '../logging'
+
+const log = logger('ssr')
 
 const VITE_DEV_PORT = Number(Bun.env.VITE_DEV_PORT ?? 5174)
 
@@ -85,7 +88,7 @@ async function createDevRenderer(): Promise<Renderer> {
     server: { port: VITE_DEV_PORT, strictPort: true },
   })
   await vite.listen()
-  console.log(`[ssr] vite dev server on http://localhost:${VITE_DEV_PORT}`)
+  log.info`vite dev server on http://localhost:${VITE_DEV_PORT}`
 
   async function proxy(c: Context): Promise<Response> {
     const incoming = new URL(c.req.url)
@@ -115,7 +118,7 @@ async function createDevRenderer(): Promise<Renderer> {
       } catch (error) {
         // Rewrites the stack against original sources so the trace points at .vue files.
         if (error instanceof Error) vite.ssrFixStacktrace(error)
-        console.error('[ssr] render failed:', error)
+        log.error`render failed: ${error}`
         return c.text(error instanceof Error ? error.stack || error.message : 'SSR error', 500)
       }
     },
@@ -133,7 +136,7 @@ async function createProdRenderer(): Promise<Renderer> {
   const template = await Bun.file('dist/client/index.html')
     .text()
     .catch(() => {
-      console.error('[ssr] dist/client/index.html is missing. Run `bun run build` first.')
+      log.error`dist/client/index.html is missing. Run \`bun run build\` first.`
       process.exit(1)
     })
 
@@ -145,7 +148,7 @@ async function createProdRenderer(): Promise<Renderer> {
       try {
         return await renderPage(c, template, module.render)
       } catch (error) {
-        console.error('[ssr] render failed:', error)
+        log.error`render failed: ${error}`
         return c.text('Internal server error', 500)
       }
     },

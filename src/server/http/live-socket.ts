@@ -8,6 +8,9 @@ import { getAccessLevel, type AccessLevel } from '../discord/service'
 import { env } from '../env'
 import { ADMIN_TOPICS, LIVE_TOPICS, type LiveTopic } from '../live'
 import { SESSION_COOKIE } from './session'
+import { logger } from '../logging'
+
+const log = logger('live')
 
 /**
  * `requireStaff` asks Discord on every request so revoked access takes effect at once. A
@@ -110,7 +113,7 @@ async function recheckAccess(): Promise<void> {
       }
     } catch (error) {
       // Discord being unreachable is not a reason to cut everyone off; try again next time.
-      console.warn('[live] could not re-check access:', error)
+      log.warning`could not re-check access: ${error}`
     }
   }
 }

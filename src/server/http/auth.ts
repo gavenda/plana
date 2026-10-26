@@ -3,12 +3,15 @@ import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 
 import { recordAudit } from '../db/audit'
+import { logger } from '../logging'
 import { isReady } from '../discord/client'
 import { getAccessLevel } from '../discord/service'
 import { env } from '../env'
 import { clientInfo } from './client-info'
 import { endSession, readSession, setStateCookie, startSession, takeStateCookie } from './session'
 import type { AppEnv } from './session'
+
+const log = logger('auth')
 
 const DISCORD_API = 'https://discord.com/api/v10'
 const REDIRECT_PATH = '/auth/callback'
@@ -63,7 +66,7 @@ async function exchangeCode(code: string): Promise<string | null> {
   })
 
   if (!response.ok) {
-    console.error('[auth] token exchange failed:', response.status, await response.text())
+    log.error`token exchange failed: ${response.status} ${await response.text()}`
     return null
   }
 
@@ -76,7 +79,7 @@ async function fetchUser(accessToken: string): Promise<DiscordUser | null> {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (!response.ok) {
-    console.error('[auth] /users/@me failed:', response.status)
+    log.error`/users/@me failed: ${response.status}`
     return null
   }
   return (await response.json()) as DiscordUser

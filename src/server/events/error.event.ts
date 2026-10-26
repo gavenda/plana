@@ -1,11 +1,14 @@
 import { Events } from 'discord.js'
 
 import type { AppEvent } from './event'
+import { logger } from '../logging'
+
+const log = logger('discord')
 
 export const errorEvent: AppEvent<Events.Error> = {
   event: Events.Error,
   once: false,
   execute: (_context, error) => {
-    console.error('[discord] client error:', error)
+    log.error`client error: ${error}`
   },
 }

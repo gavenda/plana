@@ -1,4 +1,7 @@
 import { getGameIcon, saveGameIcon, type GameIcon } from '../db/game-icons'
+import { logger } from '../logging'
+
+const log = logger('activity')
 
 /**
  * Game icons come from Discord itself when the presence names the game's application (the
@@ -89,7 +92,7 @@ async function resolve(game: string, applicationId: string | null): Promise<void
     failedAt.delete(game)
   } catch (error) {
     failedAt.set(game, Date.now())
-    console.warn(`[activity] could not look up an icon for ${game}:`, error)
+    log.warning`could not look up an icon for ${game}: ${error}`
   }
 }
 

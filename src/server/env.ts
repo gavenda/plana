@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { logger } from './logging'
+
 const snowflake = z.string().regex(/^\d{17,20}$/, 'must be a Discord snowflake ID')
 
 /** An unset or blank variable reads as undefined, so `NAME=` in .env means "not set". */
@@ -115,7 +117,7 @@ function load(): Env {
     const issues = parsed.error.issues
       .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
       .join('\n')
-    console.error(`Invalid environment configuration:\n${issues}\n\nSee .env.example.`)
+    logger('env').fatal`Invalid environment configuration:\n${issues}\n\nSee .env.example.`
     process.exit(1)
   }
   return parsed.data

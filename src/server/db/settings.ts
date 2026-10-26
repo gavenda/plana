@@ -1,6 +1,9 @@
 import { notify } from '../live'
 import { db } from './index'
 import { env } from '../env'
+import { logger } from '../logging'
+
+const log = logger('settings')
 
 export type GuildSettings = {
   triageRoleId: string | null
@@ -119,7 +122,7 @@ export function seedSettingsFromEnv(): void {
 
   if (Object.keys(patch).length > 0) {
     updateSettings(patch as Partial<GuildSettings>)
-    console.log(`[settings] seeded from environment: ${Object.keys(patch).join(', ')}`)
+    log.info`seeded from environment: ${Object.keys(patch).join(', ')}`
   }
 }
 

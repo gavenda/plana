@@ -9,31 +9,36 @@ import { remindStaleTriage } from '../discord/triage-reminders'
 import { startVoiceTracking } from '../discord/voice'
 import { env } from '../env'
 import type { AppEvent } from './event'
+import { logger } from '../logging'
+
+const activityLog = logger('activity')
+const discordLog = logger('discord')
+const voiceLog = logger('voice')
 
 export const clientReadyEvent: AppEvent<Events.ClientReady> = {
   event: Events.ClientReady,
   once: true,
   execute: async (_context, client) => {
-    console.log(`[discord] logged in as ${client.user.tag}`)
+    discordLog.info`logged in as ${client.user.tag}`
 
     try {
       const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID)
       await guild.commands.set(chatInputCommandData)
-      console.log(`[discord] registered ${chatInputCommandData.length} command(s) in ${guild.name}`)
+      discordLog.info`registered ${chatInputCommandData.length} command(s) in ${guild.name}`
     } catch (error) {
-      console.error('[discord] command registration failed:', error)
+      discordLog.error`command registration failed: ${error}`
     }
 
     // The single Request Guild Members call this process makes.
     await primeMemberCache().catch((error: unknown) => {
-      console.error('[discord] member cache priming failed:', error)
+      discordLog.error`member cache priming failed: ${error}`
     })
 
     await startActivityTracking().catch((error: unknown) => {
-      console.error('[activity] could not start tracking:', error)
+      activityLog.error`could not start tracking: ${error}`
     })
     await startVoiceTracking().catch((error: unknown) => {
-      console.error('[voice] could not start tracking:', error)
+      voiceLog.error`could not start tracking: ${error}`
     })
 
     // Catches up on a birthday missed while the bot was down.

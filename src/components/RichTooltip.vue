@@ -8,6 +8,10 @@ import { nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
  * Hovering opens it after M3's 500ms delay and leaving closes it shortly after, so the pointer
  * can cross onto the tooltip; keyboard focus opens it at once. A click (or tap) keeps it open
  * until a click elsewhere or Escape, which is also how touch reaches it.
+ *
+ * With `action`, the trigger is an action's icon button instead: a click emits `click` and
+ * closes the tooltip, which then only names the action. The default slot adds to the trigger,
+ * such as a badge.
  */
 const props = defineProps<{
   /** The subhead, usually the field's own label. */
@@ -18,10 +22,19 @@ const props = defineProps<{
   href?: string
   /** The trigger's icon; an info icon by default. */
   icon?: string
-  /** The trigger's accessible name; "About" plus the title by default. */
+  /** The trigger's accessible name; "About" plus the title by default, or the title for an action. */
   label?: string
   narrow?: boolean
+  /** A tonal trigger, for an action that should stand out a little. */
+  tonal?: boolean
+  /** Makes the trigger an action's button: a click emits `click` rather than pinning the tooltip. */
+  action?: boolean
+  disabled?: boolean
+  /** For a toggle action: whether it is on. */
+  pressed?: boolean
 }>()
+
+const emit = defineEmits<{ click: [] }>()
 
 const HOVER_DELAY_MS = 500
 const LEAVE_DELAY_MS = 200
@@ -104,7 +117,11 @@ function onPointerLeave(event: PointerEvent) {
 }
 
 function onClick() {
-  // A link just goes; the tooltip has already said where.
+  // A link just goes and an action just runs; the tooltip has already said what they do.
+  if (props.action) {
+    hide()
+    return emit('click')
+  }
   if (props.href) return hide()
   if (pinned.value) return hide()
   pinned.value = true
@@ -138,11 +155,13 @@ onBeforeUnmount(hide)
     :href="href"
     :target="href ? '_blank' : undefined"
     :rel="href ? 'noopener noreferrer' : undefined"
-    class="icon-btn text-on-surface-variant"
-    :class="narrow && 'icon-btn-narrow'"
-    :aria-label="label ?? `About ${title}`"
+    class="icon-btn relative"
+    :class="[tonal ? 'icon-btn-tonal' : 'text-on-surface-variant', narrow && 'icon-btn-narrow']"
+    :disabled="href ? undefined : disabled"
+    :aria-label="label ?? (action ? title : `About ${title}`)"
     :aria-describedby="open ? id : undefined"
-    :aria-expanded="href ? undefined : pinned"
+    :aria-expanded="href || action ? undefined : pinned"
+    :aria-pressed="action ? pressed : undefined"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
     @click="onClick"
@@ -151,6 +170,7 @@ onBeforeUnmount(hide)
     @keydown="onKeydown"
   >
     <span class="icon [--icon-size:20px]" aria-hidden="true">{{ icon ?? 'info' }}</span>
+    <slot />
   </component>
 
   <Teleport v-if="mounted" to="body">

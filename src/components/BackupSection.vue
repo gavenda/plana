@@ -254,15 +254,14 @@ async function backUpNow() {
                       <pre
                         class="min-w-0 flex-1 overflow-x-auto rounded-sm bg-surface-container-highest px-4 py-3 font-mono text-body-small"
                         >{{ ENV_TEMPLATE }}</pre>
-                      <button
-                        class="icon-btn icon-btn-tonal icon-btn-narrow"
-                        type="button"
-                        aria-label="Copy settings"
-                        title="Copy settings"
+                      <RichTooltip
+                        action
+                        tonal
+                        title="Copy"
+                        icon="content_copy"
+                        narrow
                         @click="copyEnv"
-                      >
-                        <span class="icon [--icon-size:20px]" aria-hidden="true">content_copy</span>
-                      </button>
+                      />
                     </div>
                   </div>
                 </div>

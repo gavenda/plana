@@ -16,6 +16,9 @@ import { getSettings } from '../db/settings'
 import { listChannelActiveTotals, listVoiceTotals } from '../db/voice'
 import { env } from '../env'
 import { DEFAULT_LOCALE, t, tlList } from '../i18n'
+import { logger } from '../logging'
+
+const log = logger('recap')
 
 const DAY_MS = 86_400_000
 
@@ -322,7 +325,7 @@ export async function postWeeklyRecap(now = Date.now()): Promise<void> {
       (await guild.channels.fetch(channelId).catch(() => null))
 
     if (!channel?.isTextBased()) {
-      console.warn('[recap] the configured recap channel no longer exists')
+      log.warning`the configured recap channel no longer exists`
       return
     }
 
@@ -332,14 +335,14 @@ export async function postWeeklyRecap(now = Date.now()): Promise<void> {
       ?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])
 
     if (!canSend) {
-      console.warn(`[recap] the bot cannot post in #${channel.name}`)
+      log.warning`the bot cannot post in #${channel.name}`
       return
     }
 
     const components = await buildRecap(week)
     if (!components) {
       emptyWeek = week.week
-      console.log(`[recap] nothing to report for the week ending ${week.week}`)
+      log.info`nothing to report for the week ending ${week.week}`
       return
     }
 
@@ -360,9 +363,9 @@ export async function postWeeklyRecap(now = Date.now()): Promise<void> {
       detail: { week: week.week, messageId: message.id },
     })
 
-    console.log(`[recap] posted the week ending ${week.week} in #${channel.name}`)
+    log.info`posted the week ending ${week.week} in #${channel.name}`
   } catch (error) {
-    console.error('[recap] posting failed:', error)
+    log.error`posting failed: ${error}`
   } finally {
     running = false
   }

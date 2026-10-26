@@ -6,6 +6,9 @@ import { recordAudit } from '../db/audit'
 import { getSettings } from '../db/settings'
 import { DEFAULT_LOCALE, t } from '../i18n'
 import { primeMemberCache } from './service'
+import { logger } from '../logging'
+
+const log = logger('triage')
 
 const DAY_MS = 86_400_000
 
@@ -61,7 +64,7 @@ export async function remindStaleTriage(): Promise<void> {
       (await guild.channels.fetch(announceChannelId).catch(() => null))
 
     if (!channel?.isTextBased()) {
-      console.warn('[triage] the configured announcement channel no longer exists')
+      log.warning`the configured announcement channel no longer exists`
       return
     }
 
@@ -71,7 +74,7 @@ export async function remindStaleTriage(): Promise<void> {
       ?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])
 
     if (!canSend) {
-      console.warn(`[triage] the bot cannot post reminders in #${channel.name}`)
+      log.warning`the bot cannot post reminders in #${channel.name}`
       return
     }
 
@@ -112,9 +115,9 @@ export async function remindStaleTriage(): Promise<void> {
       },
     })
 
-    console.log(`[triage] reminded staff about ${stale.length} waiting member(s)`)
+    log.info`reminded staff about ${stale.length} waiting member(s)`
   } catch (error) {
-    console.error('[triage] reminder failed:', error)
+    log.error`reminder failed: ${error}`
   } finally {
     running = false
   }

@@ -3,6 +3,9 @@ import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
 
 import { env } from '../env'
+import { logger } from '../logging'
+
+const log = logger('db')
 
 /**
  * Ordered, append-only. Each entry moves `PRAGMA user_version` forward by one,
@@ -139,7 +142,7 @@ function migrate(database: Database): void {
       // PRAGMA does not accept bound parameters.
       database.run(`PRAGMA user_version = ${version + 1}`)
     })()
-    console.log(`[db] applied migration ${version + 1}`)
+    log.info`applied migration ${version + 1}`
   }
 }
 

@@ -22,6 +22,9 @@ import { messageUpdateEvent } from './events/message-update.event'
 import { modalSubmitInteractionEvent } from './events/modal-submit-interaction.event'
 import { presenceUpdateEvent } from './events/presence-update.event'
 import { voiceStateUpdateEvent } from './events/voice-state-update.event'
+import { logger } from './logging'
+
+const log = logger('discord')
 
 export const events: AnyAppEvent[] = [
   clientReadyEvent,
@@ -68,5 +71,5 @@ export function registerEvents(client: Client, context: AppContext): void {
     else emitter.on(appEvent.event, listener)
   }
 
-  console.log(`[discord] registered ${events.length} event handler(s)`)
+  log.info`registered ${events.length} event handler(s)`
 }

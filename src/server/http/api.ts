@@ -32,6 +32,7 @@ import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { postWeeklyRecap } from '../discord/recap'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
+import { recentLogs } from '../logging'
 import {
   assignRole,
   broadcast,
@@ -158,6 +159,9 @@ api.put('/settings', requireAdmin, async (c) => {
 
   return c.json({ settings, configured: isConfigured(settings), changed })
 })
+
+/** The log viewer in Settings: what the server has logged lately, oldest first. */
+api.get('/logs', requireAdmin, (c) => c.json({ entries: recentLogs() }))
 
 api.get('/backup', requireAdmin, async (c) => c.json(await getBackupOverview()))
 

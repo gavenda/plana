@@ -17,6 +17,9 @@ import { env } from '../env'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { hasSubscribers, publish } from '../live'
 import { ok, primeMemberCache, type Result } from './service'
+import { logger } from '../logging'
+
+const log = logger('activity')
 
 /** How much play is lost at most if the process dies without warning. */
 export const ACTIVITY_CHECKPOINT_INTERVAL_MS = 2 * 60_000
@@ -121,7 +124,7 @@ export function trackPresence(presence: Presence, now = Date.now()): void {
 
     if (started || ended.length > 0 || endedTracks.length > 0) schedulePresencePublish()
   } catch (error) {
-    console.error('[activity] could not record a presence:', error)
+    log.error`could not record a presence: ${error}`
   }
 }
 
@@ -153,7 +156,7 @@ export async function startActivityTracking(): Promise<void> {
   const guild = await getGuild()
   const now = Date.now()
   for (const presence of guild.presences.cache.values()) trackPresence(presence, now)
-  console.log(`[activity] tracking ${live.size} member(s) already playing or listening`)
+  log.info`tracking ${live.size} member(s) already playing or listening`
 }
 
 /** Moves every open row's end up to now; see `touchActivity`. */
@@ -169,7 +172,7 @@ export function checkpointActivity(now = Date.now()): void {
   try {
     touchActivity({ games, tracks }, now)
   } catch (error) {
-    console.error('[activity] checkpoint failed:', error)
+    log.error`checkpoint failed: ${error}`
   }
 }
 

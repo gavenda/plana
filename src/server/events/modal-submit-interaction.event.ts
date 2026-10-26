@@ -4,6 +4,9 @@ import { customIdPrefix } from '../discord/ids'
 import { modalSubmitHandlers } from '../handlers/modals'
 import { replyWithError } from '../utils/reply-with-error'
 import type { AppEvent } from './event'
+import { logger } from '../logging'
+
+const log = logger('discord')
 
 export const modalSubmitInteractionEvent: AppEvent<Events.InteractionCreate> = {
   event: Events.InteractionCreate,
@@ -16,14 +19,14 @@ export const modalSubmitInteractionEvent: AppEvent<Events.InteractionCreate> = {
     const handler = modalSubmitHandlers.find((entry) => entry.customId === prefix)
 
     if (!handler) {
-      console.warn(`[discord] no modal handler for "${interaction.customId}"`)
+      log.warning`no modal handler for "${interaction.customId}"`
       return
     }
 
     try {
       await handler.handle(context, interaction)
     } catch (error) {
-      console.error(`[discord] modal "${interaction.customId}" threw:`, error)
+      log.error`modal "${interaction.customId}" threw: ${error}`
       await replyWithError(interaction)
     }
   },

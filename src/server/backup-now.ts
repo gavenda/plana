@@ -1,4 +1,6 @@
 // `bun run backup` — takes one R2 backup immediately, to check the setup or before an upgrade.
+import './logging'
+
 import { backUpNow } from './backup'
 
 try {

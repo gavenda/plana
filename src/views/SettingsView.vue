@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import AppSelect from '@/components/AppSelect.vue'
 import BackupSection from '@/components/BackupSection.vue'
+import LogSection from '@/components/LogSection.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { roleColor } from '@/lib/discord'
@@ -436,5 +437,7 @@ function reset(section: Section) {
     </section>
 
     <BackupSection />
+
+    <LogSection />
   </div>
 </template>

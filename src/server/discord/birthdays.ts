@@ -18,6 +18,9 @@ import { getSettings } from '../db/settings'
 import { env } from '../env'
 import { DEFAULT_LOCALE, t } from '../i18n'
 import { err, ok, primeMemberCache, type ActionSource, type Actor, type Result } from './service'
+import { logger } from '../logging'
+
+const log = logger('birthdays')
 
 export type CalendarDate = { year: number; month: number; day: number }
 
@@ -273,7 +276,7 @@ export async function announceBirthdays(): Promise<void> {
       (await guild.channels.fetch(channelId).catch(() => null))
 
     if (!channel?.isTextBased()) {
-      console.warn('[birthdays] the configured birthday channel no longer exists')
+      log.warning`the configured birthday channel no longer exists`
       return
     }
 
@@ -283,7 +286,7 @@ export async function announceBirthdays(): Promise<void> {
       ?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])
 
     if (!canSend) {
-      console.warn(`[birthdays] the bot cannot post in #${channel.name}`)
+      log.warning`the bot cannot post in #${channel.name}`
       return
     }
 
@@ -311,9 +314,9 @@ export async function announceBirthdays(): Promise<void> {
       },
     })
 
-    console.log(`[birthdays] announced ${members.length} birthday(s) in #${channel.name}`)
+    log.info`announced ${members.length} birthday(s) in #${channel.name}`
   } catch (error) {
-    console.error('[birthdays] announcement failed:', error)
+    log.error`announcement failed: ${error}`
   } finally {
     running = false
   }
@@ -371,20 +374,17 @@ async function runBirthdayRoleSync(previousRoleId?: string | null): Promise<void
 
     const role = guild.roles.cache.get(birthdayRoleId)
     if (!role) {
-      console.warn('[birthdays] the configured birthday role no longer exists')
+      log.warning`the configured birthday role no longer exists`
       return
     }
     if (!role.editable) {
-      console.warn(`[birthdays] the bot cannot manage @${role.name}; move its own role higher`)
+      log.warning`the bot cannot manage @${role.name}; move its own role higher`
       return
     }
 
     const stale = [...role.members.values()].filter((member) => !due.has(member.id))
     if (stale.length > MAX_BIRTHDAY_ROLE_REMOVALS) {
-      console.warn(
-        `[birthdays] @${role.name} is held by ${stale.length} members without a birthday today, ` +
-          'so it does not look like a dedicated birthday role. Leaving it alone.',
-      )
+      log.warning`@${role.name} is held by ${stale.length} members without a birthday today, so it does not look like a dedicated birthday role. Leaving it alone.`
       return
     }
 
@@ -414,8 +414,8 @@ async function runBirthdayRoleSync(previousRoleId?: string | null): Promise<void
       },
     })
 
-    console.log(`[birthdays] @${role.name}: gave ${added.length}, took back ${removed.length}`)
+    log.info`@${role.name}: gave ${added.length}, took back ${removed.length}`
   } catch (error) {
-    console.error('[birthdays] birthday role sync failed:', error)
+    log.error`birthday role sync failed: ${error}`
   }
 }

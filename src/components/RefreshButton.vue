@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RichTooltip from '@/components/RichTooltip.vue'
 import { useLiveStatus } from '@/lib/live'
 
 /**
@@ -13,20 +14,22 @@ const { connected } = useLiveStatus()
 </script>
 
 <template>
-  <button
-    class="icon-btn icon-btn-tonal icon-btn-narrow relative"
-    type="button"
-    :aria-label="connected ? 'Refresh (updating live)' : 'Refresh'"
-    :title="connected ? 'Refresh · Updating live' : 'Refresh'"
+  <RichTooltip
+    action
+    tonal
+    narrow
+    title="Refresh"
+    :text="connected ? 'This list is updating live, so refreshing is rarely needed.' : undefined"
+    :label="connected ? 'Refresh (updating live)' : 'Refresh'"
+    icon="refresh"
     :disabled="disabled"
     @click="$emit('click')"
   >
-    <span class="icon [--icon-size:20px]" aria-hidden="true">refresh</span>
     <!-- M3's small badge: a 6dp dot on the top end, in the success colour for "live". -->
     <span
       v-if="connected"
       class="absolute top-1 right-0.5 size-1.5 rounded-full bg-success"
       aria-hidden="true"
     />
-  </button>
+  </RichTooltip>
 </template>

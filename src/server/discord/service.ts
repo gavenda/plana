@@ -13,6 +13,13 @@ import { getAnnouncement, rememberAnnouncement, resolveAnnouncement } from '../d
 import { recordAudit } from '../db/audit'
 import { DEFAULT_LOCALE, t } from '../i18n'
 import { getSettings, type GuildSettings } from '../db/settings'
+import { logger } from '../logging'
+
+const assignLog = logger('assign')
+const broadcastLog = logger('broadcast')
+const discordLog = logger('discord')
+const joinLog = logger('join')
+const triageLog = logger('triage')
 
 export type Actor = { id: string; name: string }
 export type ActionSource = 'discord' | 'dashboard'
@@ -146,7 +153,7 @@ export async function announceTriage(member: GuildMember): Promise<Result<{ mess
     })
     return ok({ messageId: message.id })
   } catch (error) {
-    console.error(`[join] failed to announce ${member.id}:`, error)
+    joinLog.error`failed to announce ${member.id}: ${error}`
     return err('discord_error', 'error.announce_failed')
   }
 }
@@ -160,7 +167,7 @@ export async function announceIfInTriage(member: GuildMember): Promise<void> {
   if (!triageRoleId || !member.roles.cache.has(triageRoleId)) return
 
   const result = await announceTriage(member)
-  if (!result.ok) console.warn(`[triage] ${member.user.tag}: ${result.message}`)
+  if (!result.ok) triageLog.warning`${member.user.tag}: ${result.message}`
 }
 
 /**
@@ -196,7 +203,7 @@ async function markAnnouncementResolved(options: {
       flags: MessageFlags.IsComponentsV2,
     })
   } catch (error) {
-    console.warn(`[assign] could not update announcement for ${member.id}:`, error)
+    assignLog.warning`could not update announcement for ${member.id}: ${error}`
   } finally {
     resolveAnnouncement(member.id)
   }
@@ -249,7 +256,7 @@ export async function assignRole(input: {
       await member.roles.remove(settings.triageRoleId, reason(actor, source))
     }
   } catch (error) {
-    console.error(`[assign] failed for ${memberId} -> ${roleId}:`, error)
+    assignLog.error`failed for ${memberId} -> ${roleId}: ${error}`
     return err('discord_error', 'error.assign_rejected')
   }
 
@@ -312,7 +319,7 @@ export async function primeMemberCache(force = false): Promise<void> {
     const guild = await getGuild()
     await guild.members.fetch()
     membersPrimed = true
-    console.log(`[discord] member cache primed (${guild.members.cache.size} members)`)
+    discordLog.info`member cache primed (${guild.members.cache.size} members)`
   })().finally(() => {
     priming = null
   })
@@ -464,7 +471,7 @@ export async function broadcast(input: {
       url: message.url,
     })
   } catch (error) {
-    console.error(`[broadcast] failed for #${channel.name}:`, error)
+    broadcastLog.error`failed for #${channel.name}: ${error}`
     return err('discord_error', 'error.broadcast_rejected')
   }
 }

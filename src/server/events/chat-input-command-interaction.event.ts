@@ -3,6 +3,9 @@ import { Events } from 'discord.js'
 import { chatInputCommands } from '../commands/chat-input'
 import { replyWithError } from '../utils/reply-with-error'
 import type { AppEvent } from './event'
+import { logger } from '../logging'
+
+const log = logger('discord')
 
 export const chatInputCommandInteractionEvent: AppEvent<Events.InteractionCreate> = {
   event: Events.InteractionCreate,
@@ -14,14 +17,14 @@ export const chatInputCommandInteractionEvent: AppEvent<Events.InteractionCreate
     const command = chatInputCommands.find((entry) => entry.data.name === interaction.commandName)
 
     if (!command) {
-      console.warn(`[discord] no command registered for /${interaction.commandName}`)
+      log.warning`no command registered for /${interaction.commandName}`
       return
     }
 
     try {
       await command.execute(context, interaction)
     } catch (error) {
-      console.error(`[discord] /${interaction.commandName} threw:`, error)
+      log.error`/${interaction.commandName} threw: ${error}`
       await replyWithError(interaction)
     }
   },

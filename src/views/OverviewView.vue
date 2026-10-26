@@ -380,35 +380,40 @@ const recent = computed(() =>
               <SkeletonList leading="art" rank two-line trailing="text" />
             </template>
             <ol class="segmented-list">
-              <li v-for="(track, index) in topTracks" :key="track.id" class="segmented-item">
-                <span
-                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="rankClass(index)"
-                  >#{{ index + 1 }}</span
+              <li v-for="(track, index) in topTracks" :key="track.id" class="segmented-item p-0">
+                <RouterLink
+                  :to="{ path: '/activity', query: { track: track.id } }"
+                  class="state-layer flex min-h-14 w-full min-w-0 items-center gap-4 rounded-[inherit] px-4 py-2"
                 >
-                <img
-                  v-if="track.artUrl"
-                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                  :src="track.artUrl"
-                  :alt="track.album ?? ''"
-                  width="40"
-                  height="40"
-                />
-                <span
-                  v-else
-                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                  aria-hidden="true"
-                  ><span class="icon [--icon-size:20px]">music_note</span></span
-                >
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
-                  <p class="truncate text-body-small text-on-surface-variant">
-                    {{ track.artist ?? 'Unknown artist' }}
-                  </p>
-                </div>
-                <span class="shrink-0 text-body-large tabular-nums">{{
-                  track.plays === 1 ? '1 play' : `${track.plays.toLocaleString()} plays`
-                }}</span>
+                  <span
+                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                    :class="rankClass(index)"
+                    >#{{ index + 1 }}</span
+                  >
+                  <img
+                    v-if="track.artUrl"
+                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                    :src="track.artUrl"
+                    :alt="track.album ?? ''"
+                    width="40"
+                    height="40"
+                  />
+                  <span
+                    v-else
+                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                    aria-hidden="true"
+                    ><span class="icon [--icon-size:20px]">music_note</span></span
+                  >
+                  <div class="min-w-0 flex-1 py-1">
+                    <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
+                    <p class="truncate text-body-small text-on-surface-variant">
+                      {{ track.artist ?? 'Unknown artist' }}
+                    </p>
+                  </div>
+                  <span class="shrink-0 text-body-large tabular-nums">{{
+                    track.plays === 1 ? '1 play' : `${track.plays.toLocaleString()} plays`
+                  }}</span>
+                </RouterLink>
               </li>
             </ol>
           </StateBlock>

@@ -3,6 +3,9 @@ import { S3Client } from 'bun'
 import { db } from './db'
 import { env } from './env'
 import { notify } from './live'
+import { logger } from './logging'
+
+const log = logger('backup')
 
 /**
  * Off-site copies of the SQLite database in a Cloudflare R2 bucket. Each backup is the whole
@@ -88,7 +91,7 @@ async function pruneOld(s3: S3Client): Promise<void> {
   const expired = (await listBackups(s3)).slice(0, -1).filter((backup) => backup.time < cutoff)
 
   for (const backup of expired) await s3.delete(backup.key)
-  if (expired.length > 0) console.log(`[backup] deleted ${expired.length} expired backup(s)`)
+  if (expired.length > 0) log.info`deleted ${expired.length} expired backup(s)`
 }
 
 /**
@@ -113,13 +116,13 @@ export async function backUpNow(): Promise<string> {
   lastError = null
 
   const kib = (bytes: number) => `${Math.round(bytes / 1024)} KiB`
-  console.log(`[backup] wrote ${key} (${kib(snapshot.length)} -> ${kib(compressed.length)})`)
+  log.info`wrote ${key} (${kib(snapshot.length)} -> ${kib(compressed.length)})`
 
   // Only after a successful upload, and a failure here does not make the backup a failure.
   try {
     await pruneOld(s3)
   } catch (error) {
-    console.warn('[backup] could not delete old backups:', message(error))
+    log.warning`could not delete old backups: ${message(error)}`
   }
   return key
 }
@@ -140,7 +143,7 @@ export async function runBackup(): Promise<BackupRun> {
   } catch (error) {
     lastFailureAt = Date.now()
     lastError = message(error)
-    console.error('[backup] failed:', lastError)
+    log.error`failed: ${lastError}`
     return { ok: false, busy: false, error: lastError }
   } finally {
     running = false
@@ -161,17 +164,17 @@ async function tick(): Promise<void> {
 export async function startBackups(): Promise<void> {
   const s3 = getClient()
   if (!s3) {
-    console.log('[backup] R2 is not configured, off-site backups disabled')
+    log.info`R2 is not configured, off-site backups disabled`
     return
   }
 
   try {
     lastSuccessAt = (await listBackups(s3)).at(-1)?.time ?? null
     const last = lastSuccessAt ? new Date(lastSuccessAt).toISOString() : 'none yet'
-    console.log(`[backup] R2 bucket ${env.R2_BUCKET} reachable, last backup ${last}`)
+    log.info`R2 bucket ${env.R2_BUCKET} reachable, last backup ${last}`
   } catch (error) {
     // Listing failing usually means wrong credentials; the first upload will say the same.
-    console.error('[backup] cannot list the R2 bucket:', message(error))
+    log.error`cannot list the R2 bucket: ${message(error)}`
   }
 
   void tick()

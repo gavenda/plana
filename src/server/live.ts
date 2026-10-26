@@ -2,8 +2,8 @@ import type { Server } from 'bun'
 
 /**
  * What open dashboard pages can follow over `/ws`. Most topics are a bare "this changed":
- * the page refetches through the endpoint it already loads from. `audit` and `presence`
- * carry their data, an entry being cheap to send and presence too frequent to refetch for.
+ * the page refetches through the endpoint it already loads from. `audit`, `presence` and
+ * `logs` carry their data, an entry being cheap to send and the others too frequent to refetch for.
  */
 export const LIVE_TOPICS = [
   'triage',
@@ -14,12 +14,13 @@ export const LIVE_TOPICS = [
   'birthdays',
   'settings',
   'backup',
+  'logs',
 ] as const
 
 export type LiveTopic = (typeof LIVE_TOPICS)[number]
 
 /** Topics only administrators may follow. */
-export const ADMIN_TOPICS: ReadonlySet<LiveTopic> = new Set(['settings', 'backup'])
+export const ADMIN_TOPICS: ReadonlySet<LiveTopic> = new Set(['settings', 'backup', 'logs'])
 
 /** Bursts of the same notice (a role edit touches many members) go out as one. */
 const NOTICE_DELAY_MS = 500
