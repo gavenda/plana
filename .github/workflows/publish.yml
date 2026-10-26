@@ -15,28 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The same checks as every push and pull request; see check.yml.
   check:
-    name: Format and type-check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4'
-
-      # vue-tsc patches the TypeScript compiler through Node's module internals
-      # and does not run correctly under Bun, so type-checking needs real Node.
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-
-      - run: bun install --frozen-lockfile
-
-      # bun fmt shipped in Bun 1.4.4, which '1.4' resolves to or past.
-      - run: bun run format:check
-
-      - run: bun run type-check
+    uses: ./.github/workflows/check.yml
 
   publish:
     name: Build and push image
