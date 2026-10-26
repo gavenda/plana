@@ -47,6 +47,22 @@ const topGames = computed(() => play.data.value?.games.slice(0, PLAY_LIMIT) ?? [
 const topTracks = computed(() => play.data.value?.tracks.slice(0, PLAY_LIMIT) ?? [])
 const topVoice = computed(() => voice.data.value?.members.slice(0, PLAY_LIMIT) ?? [])
 
+/** How many players a game's subtext names before counting the rest. */
+const NAMED_PLAYERS = 3
+
+/** "Alice, Bob, Carol and 4 others": who played most, by name, then how many more. */
+function playerNames(game: ActivityOverview['games'][number]): string {
+  const names = game.top.slice(0, NAMED_PLAYERS).map((player) => player.displayName)
+  const others = Math.max(game.players - names.length, 0)
+  if (names.length === 0) {
+    return others === 1 ? '1 player' : `${others.toLocaleString()} players`
+  }
+  if (others > 0) {
+    return `${names.join(', ')} and ${others === 1 ? '1 other' : `${others.toLocaleString()} others`}`
+  }
+  return names.length === 1 ? names[0]! : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+}
+
 /** Loading, or not started yet: each request waits for the guild and settings first. */
 const waiting = (state: { data: { value: unknown }; error: { value: unknown } }) =>
   state.data.value == null && state.error.value == null
@@ -305,7 +321,9 @@ const recent = computed(() =>
             empty-text="No games played this week."
             compact
           >
-            <template #skeleton><SkeletonList leading="art" rank trailing="text" /></template>
+            <template #skeleton>
+              <SkeletonList leading="art" rank two-line trailing="text" />
+            </template>
             <ol class="segmented-list">
               <li v-for="(game, index) in topGames" :key="game.name" class="segmented-item p-0">
                 <RouterLink
@@ -331,9 +349,15 @@ const recent = computed(() =>
                     aria-hidden="true"
                     ><span class="icon [--icon-size:20px]">sports_esports</span></span
                   >
-                  <span class="min-w-0 flex-1 truncate text-body-large" :title="game.name">{{
-                    game.name
-                  }}</span>
+                  <div class="min-w-0 flex-1 py-1">
+                    <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
+                    <p
+                      class="truncate text-body-small text-on-surface-variant"
+                      :title="game.top.map((player) => player.displayName).join(', ')"
+                    >
+                      {{ playerNames(game) }}
+                    </p>
+                  </div>
                   <span class="shrink-0 text-body-large tabular-nums">{{
                     formatDuration(game.ms)
                   }}</span>
