@@ -39,14 +39,18 @@ function serializeState(state: Record<string, unknown>): string {
   return JSON.stringify(state).replace(/</g, '\\u003c')
 }
 
+/**
+ * The replacements are functions on purpose: a string replacement treats `$&`, `$'` and the
+ * like as patterns, so a nickname containing them would splice the template into the page.
+ */
 function fillTemplate(template: string, result: RenderResult): string {
+  const state = result.state
+    ? `<script>window.__PINIA__ = ${serializeState(result.state)}</script>`
+    : ''
   return template
-    .replace('<!--app-head-->', result.head ?? '')
-    .replace('<!--app-html-->', result.html)
-    .replace(
-      '<!--app-state-->',
-      result.state ? `<script>window.__PINIA__ = ${serializeState(result.state)}</script>` : '',
-    )
+    .replace('<!--app-head-->', () => result.head ?? '')
+    .replace('<!--app-html-->', () => result.html)
+    .replace('<!--app-state-->', () => state)
 }
 
 async function renderPage(c: Context, template: string, render: RenderFn): Promise<Response> {
