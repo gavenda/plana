@@ -450,6 +450,10 @@ The result of an action, success or failure, is an M3 snackbar, never an inline 
   adds a close icon button.
 - One at a time: a new message replaces the one showing. It leaves after 4s, or 8s with an
   action or for an error, and holds while the pointer or focus is on it.
+- A state the app is in, rather than a reply, is a standing snackbar
+  (`showStanding(text, { busy })`): the live connection being down ("Connection lost.
+  Reconnecting…", with her halo while it retries). It stays until `clearStanding`; a reply
+  covers it while the reply shows, then it comes back.
 - It slides up on `ease-spatial-fast` and fades out on `ease-effects`. Errors are read out
   assertively, the rest politely.
 - Plain text only: names are written out ("Gave Hoshino the Unit Owner role."), not drawn

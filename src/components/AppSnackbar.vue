@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, watch } from 'vue'
 
+import HaloMark from '@/components/HaloMark.vue'
 import { useSnackbar, type SnackbarAction } from '@/lib/snackbar'
 
 /**
  * M3 snackbar: the reply to an action ("Settings saved.", "Discord rejected the role change."),
  * at the foot of the page. It leaves on its own, later if it has an action or is an error, and
- * holds while the pointer or focus is on it. See "Snackbar" in BRANDING.md.
+ * holds while the pointer or focus is on it. A standing message stays until it is cleared.
+ * See "Snackbar" in BRANDING.md.
  */
 const { current, dismiss } = useSnackbar()
 
@@ -24,7 +26,7 @@ function stop() {
 function start() {
   stop()
   const snack = current.value
-  if (!snack || held) return
+  if (!snack || held || snack.standing) return
   const id = snack.id
   timer = setTimeout(() => dismiss(id), snack.error || snack.action ? LONG_MS : SHORT_MS)
 }
@@ -75,6 +77,7 @@ function act(action: SnackbarAction) {
         @focusin="hold"
         @focusout="release"
       >
+        <HaloMark v-if="current.busy" :size="24" inverse class="mr-2" />
         <p class="flex-1 py-2.5 text-body-medium">{{ current.text }}</p>
         <template v-if="current.action">
           <a

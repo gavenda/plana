@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 
 import AppDialog from '@/components/AppDialog.vue'
@@ -8,8 +8,10 @@ import AppSnackbar from '@/components/AppSnackbar.vue'
 import PhoneNotice from '@/components/PhoneNotice.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SchaleMark from '@/components/SchaleMark.vue'
+import { useLiveStatus } from '@/lib/live'
 import { backdropUrl } from '@/lib/plana'
 import { useRail } from '@/lib/rail'
+import { useSnackbar } from '@/lib/snackbar'
 import { useSessionStore } from '@/stores/session'
 
 const route = useRoute()
@@ -20,6 +22,21 @@ const { expanded: railExpanded, still: railStill, restore: restoreRail } = useRa
 const chromeless = computed(() => !session.isAuthenticated || route.meta.public === true)
 
 onMounted(restoreRail)
+
+/** A standing snackbar while the live connection is down: pages still work, but stop updating. */
+const { failing: liveFailing, lost: liveLost } = useLiveStatus()
+const snackbar = useSnackbar()
+watchEffect(() => {
+  if (liveLost.value) {
+    snackbar.showStanding('Live updates stopped. Your access may have been revoked.', {
+      error: true,
+    })
+  } else if (liveFailing.value) {
+    snackbar.showStanding('Connection lost. Reconnecting…', { busy: true })
+  } else {
+    snackbar.clearStanding()
+  }
+})
 
 /** Signing out asks first, in her voice. */
 const confirmingSignOut = ref(false)

@@ -1,11 +1,19 @@
 <script setup lang="ts">
 /** Her halo: the loading indicator. It always means "Plana is working", never decoration. */
-withDefaults(defineProps<{ size?: number }>(), { size: 32 })
+withDefaults(
+  defineProps<{
+    size?: number
+    /** On an inverse surface (a snackbar), where her usual pink would barely show. */
+    inverse?: boolean
+  }>(),
+  { size: 32 },
+)
 </script>
 
 <template>
   <svg
-    class="shrink-0 text-tertiary"
+    class="shrink-0"
+    :class="inverse ? 'text-inverse-primary' : 'text-tertiary'"
     viewBox="0 0 32 32"
     :width="size"
     :height="size"
@@ -22,7 +30,8 @@ withDefaults(defineProps<{ size?: number }>(), { size: 32 })
         ry="6"
         pathLength="100"
         stroke-dasharray="22 78"
-        class="animate-halo-sweep stroke-on-tertiary-container motion-reduce:hidden"
+        class="animate-halo-sweep motion-reduce:hidden"
+        :class="inverse ? 'stroke-inverse-surface' : 'stroke-on-tertiary-container'"
       />
     </g>
   </svg>

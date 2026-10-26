@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, readonly, ref } from 'vue'
 
 import type { RightNow } from './activity'
 import type { AuditEntry } from './audit'
@@ -38,6 +38,30 @@ let retryDelay = RETRY_MIN_MS
 let retryTimer: ReturnType<typeof setTimeout> | undefined
 let forbidden = false
 
+/**
+ * Whether the socket is down for longer than a quick reconnect takes, for the banner in App.vue.
+ * Only the browser ever changes these, so the server render always shows no banner.
+ */
+const failing = ref(false)
+/** Closed for lost access: it won't come back without a reload. */
+const lost = ref(false)
+const FAILING_GRACE_MS = 3000
+let failingTimer: ReturnType<typeof setTimeout> | undefined
+
+function markUp() {
+  clearTimeout(failingTimer)
+  failingTimer = undefined
+  failing.value = false
+}
+
+function markDown() {
+  if (failingTimer || failing.value) return
+  failingTimer = setTimeout(() => {
+    failingTimer = undefined
+    failing.value = true
+  }, FAILING_GRACE_MS)
+}
+
 function send(type: 'subscribe' | 'unsubscribe', topic: LiveTopic) {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type, topic }))
 }
@@ -62,6 +86,7 @@ function connect() {
 
   ws.onopen = () => {
     retryDelay = RETRY_MIN_MS
+    markUp()
     for (const topic of listeners.keys()) send('subscribe', topic)
     if (connectedBefore) for (const topic of listeners.keys()) dispatch(topic, null)
     connectedBefore = true
@@ -82,8 +107,11 @@ function connect() {
     if (socket === ws) socket = null
     if (event.code === CLOSE_FORBIDDEN) {
       forbidden = true
+      lost.value = true
+      markUp()
       return
     }
+    markDown()
     // Whatever happened while it was down is caught up on reconnect.
     connectedBefore = true
     scheduleReconnect()
@@ -120,6 +148,11 @@ function unsubscribe<K extends LiveTopic>(topic: K, listener: Listener<K>) {
     listeners.delete(topic)
     send('unsubscribe', topic)
   }
+}
+
+/** The connection's health: `failing` while it keeps retrying, `lost` once access is gone. */
+export function useLiveStatus() {
+  return { failing: readonly(failing), lost: readonly(lost) }
 }
 
 /**
