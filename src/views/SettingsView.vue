@@ -171,9 +171,7 @@ const keysOf = (section: Section) =>
   section.groups.flatMap((group) => group.fields.map((field) => field.key))
 
 /** A failed load shows once, in the first card. */
-const visibleSections = computed(() =>
-  SECTIONS.filter((section) => section.first || !store.error),
-)
+const visibleSections = computed(() => SECTIONS.filter((section) => section.first || !store.error))
 
 onMounted(() => {
   void guild.load()
@@ -293,7 +291,6 @@ async function submit(section: Section) {
 function reset(section: Section) {
   for (const key of keysOf(section)) Object.assign(draft, { [key]: store.settings[key] })
 }
-
 </script>
 
 <template>
@@ -332,7 +329,10 @@ function reset(section: Section) {
           <template #skeleton>
             <div class="segmented-list">
               <template v-for="group in section.groups" :key="group.id">
-                <div v-if="section.titled" class="segmented-item min-h-12 bg-secondary-container px-6">
+                <div
+                  v-if="section.titled"
+                  class="segmented-item min-h-12 bg-secondary-container px-6"
+                >
                   <span class="skeleton h-3.5 w-20" />
                 </div>
                 <div

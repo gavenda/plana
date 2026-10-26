@@ -93,10 +93,11 @@ async function signOut() {
   >
     <AppNavigationRail @sign-out="confirmingSignOut = true" @about="aboutOpen = true" />
 
-    <main class="flex min-h-dvh w-full flex-col px-6 py-6">
+    <main class="flex w-full flex-col px-6 py-6" :class="route.meta.fit ? 'h-dvh' : 'min-h-dvh'">
       <!-- Pages are titled for assistive tech only, as the rail already shows where you are. -->
       <h1 class="sr-only">{{ route.meta.title }}</h1>
-      <div class="flex-1">
+      <!-- A page that fits the window fills what the footer leaves and scrolls its own panes. -->
+      <div class="flex-1" :class="route.meta.fit && 'flex min-h-0 flex-col'">
         <RouterView />
       </div>
       <!-- Schale's emblem closes every page, as on the stand-alone ones: after the content, or at
@@ -110,7 +111,10 @@ async function signOut() {
 
     <!-- Opened from the rail's mark and name. -->
     <SupportingSheet v-model:open="aboutOpen" label="About Plana">
-      <section aria-label="About" class="flex flex-col items-center gap-3 px-2 pt-2 pb-4 text-center">
+      <section
+        aria-label="About"
+        class="flex flex-col items-center gap-3 px-2 pt-2 pb-4 text-center"
+      >
         <PlanaSays mood="content" layout="column"
           >Connection confirmed. I've been waiting for you, Sensei.</PlanaSays
         >

@@ -12,6 +12,7 @@ import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useLive } from '@/lib/live'
+import { rankClass } from '@/lib/rank'
 import { useAsync } from '@/lib/useAsync'
 
 /** `days` null is all time; in the URL and the API it is `all`. */
@@ -227,7 +228,9 @@ onMounted(() => {
 /** The overview's row for the track, which already has its title and art before the answer lands. */
 const sheetTrack = computed(
   () =>
-    trackDetail.value?.track ?? tracks.value.find((track) => track.id === sheetTrackId.value) ?? null,
+    trackDetail.value?.track ??
+    tracks.value.find((track) => track.id === sheetTrackId.value) ??
+    null,
 )
 
 /** The answer for the track in the sheet only. */
@@ -248,6 +251,9 @@ const sheetIcon = computed(
 )
 
 const periodLabel = computed(() => PERIODS.find((period) => period.days === days.value)?.label)
+
+/** The track's page on Spotify; a presence's sync id is its Spotify track id. */
+const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
 
 const plural = (count: number, one: string, many: string) =>
   `${count.toLocaleString()} ${count === 1 ? one : many}`
@@ -372,7 +378,7 @@ const plural = (count: number, one: string, many: string) =>
                 >
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    :class="rankClass(index)"
                     >#{{ index + 1 }}</span
                   >
                   <img
@@ -453,7 +459,7 @@ const plural = (count: number, one: string, many: string) =>
                 >
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    :class="rankClass(index)"
                     >#{{ index + 1 }}</span
                   >
                   <img
@@ -488,7 +494,7 @@ const plural = (count: number, one: string, many: string) =>
                 </button>
                 <RichTooltip
                   title="Open in Spotify"
-                  :href="`https://open.spotify.com/track/${track.id}`"
+                  :href="spotifyUrl(track.id)"
                   icon="open_in_new"
                   narrow
                 />
@@ -544,7 +550,7 @@ const plural = (count: number, one: string, many: string) =>
           >
             <span
               class="w-7 shrink-0 text-center text-label-large tabular-nums"
-              :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+              :class="rankClass(index)"
               >#{{ index + 1 }}</span
             >
             <img
@@ -624,7 +630,7 @@ const plural = (count: number, one: string, many: string) =>
           >
             <span
               class="w-7 shrink-0 text-center text-label-large tabular-nums"
-              :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+              :class="rankClass(index)"
               >#{{ index + 1 }}</span
             >
             <img

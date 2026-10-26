@@ -15,7 +15,11 @@ export function clientInfo(c: Context): ClientInfo {
   let ip: string | null = null
   const proxies = getSettings().trustedProxyHops ?? 0
   if (proxies > 0) {
-    const hops = c.req.header('x-forwarded-for')?.split(',').map((hop) => hop.trim()) ?? []
+    const hops =
+      c.req
+        .header('x-forwarded-for')
+        ?.split(',')
+        .map((hop) => hop.trim()) ?? []
     // Fewer entries than proxies means the header isn't what we were told to expect.
     ip = hops.length >= proxies ? hops[hops.length - proxies]! : null
   }

@@ -212,3 +212,22 @@ export function listAudit(
     total,
   }
 }
+
+const selectMemberAudit = db.query<AuditRow, { member_id: string; limit: number }>(
+  `SELECT * FROM audit_log WHERE target_id = :member_id OR actor_id = :member_id
+   ORDER BY id DESC LIMIT :limit`,
+)
+const countMemberAudit = db.query<{ total: number }, { member_id: string }>(
+  'SELECT COUNT(*) AS total FROM audit_log WHERE target_id = :member_id OR actor_id = :member_id',
+)
+
+/** The latest entries a member did or had done to them, newest first, and how many there are. */
+export function listMemberAudit(
+  memberId: string,
+  limit: number,
+): { entries: AuditEntry[]; total: number } {
+  return {
+    entries: selectMemberAudit.all({ member_id: memberId, limit }).map(toEntry),
+    total: countMemberAudit.get({ member_id: memberId })!.total,
+  }
+}

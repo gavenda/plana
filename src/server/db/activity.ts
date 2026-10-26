@@ -245,3 +245,68 @@ export function listTrackListenerTotals(
       },
     }))
 }
+
+// ---------------------------------------------------------------------------
+// One member
+// ---------------------------------------------------------------------------
+
+const selectMemberGameTotals = db.query<
+  { game: string; sessions: number; ms: number },
+  { member_id: string; since: number; min: number }
+>(
+  `SELECT game, COUNT(*) AS sessions, SUM(ended_at - MAX(started_at, :since)) AS ms
+   FROM game_sessions
+   WHERE member_id = :member_id AND ended_at > :since AND ended_at - started_at >= :min
+   GROUP BY game
+   ORDER BY ms DESC`,
+)
+
+/** Time per game for one member since a moment, most first. */
+export function listMemberGameTotals(
+  memberId: string,
+  since: number,
+): { game: string; sessions: number; ms: number }[] {
+  return selectMemberGameTotals.all({ member_id: memberId, since, min: MIN_GAME_SESSION_MS })
+}
+
+const selectMemberTrackTotals = db.query<
+  {
+    track_id: string
+    title: string
+    artist: string | null
+    album: string | null
+    art_url: string | null
+    plays: number
+    ms: number
+  },
+  { member_id: string; since: number; min: number }
+>(
+  `SELECT track_id,
+     MAX(title) AS title, MAX(artist) AS artist, MAX(album) AS album, MAX(art_url) AS art_url,
+     COUNT(*) AS plays,
+     SUM(ended_at - MAX(started_at, :since)) AS ms
+   FROM spotify_plays
+   WHERE member_id = :member_id AND started_at >= :since AND ended_at - started_at >= :min
+   GROUP BY track_id
+   ORDER BY plays DESC, ms DESC`,
+)
+
+/** Plays per track for one member since a moment, most first. */
+export function listMemberTrackTotals(
+  memberId: string,
+  since: number,
+): { track: Track; plays: number; ms: number }[] {
+  return selectMemberTrackTotals
+    .all({ member_id: memberId, since, min: MIN_TRACK_PLAY_MS })
+    .map((row) => ({
+      track: {
+        id: row.track_id,
+        title: row.title,
+        artist: row.artist,
+        album: row.album,
+        artUrl: row.art_url,
+      },
+      plays: row.plays,
+      ms: row.ms,
+    }))
+}

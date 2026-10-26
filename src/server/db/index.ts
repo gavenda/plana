@@ -113,6 +113,11 @@ const migrations: string[] = [
   `
   DELETE FROM sessions;
   `,
+  // A member's page lists what they did and what was done to them.
+  `
+  CREATE INDEX audit_log_target_id ON audit_log (target_id);
+  CREATE INDEX audit_log_actor_id  ON audit_log (actor_id);
+  `,
 ]
 
 function migrate(database: Database): void {

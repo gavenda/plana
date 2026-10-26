@@ -136,6 +136,18 @@ function schedulePresencePublish(): void {
   }, PRESENCE_PUBLISH_MS)
 }
 
+/** What one member is playing and listening to right now, with when each began. */
+export function memberActivityNow(memberId: string): {
+  games: Map<string, number>
+  track: { track: Track; since: number } | null
+} {
+  const entry = live.get(memberId)
+  return {
+    games: new Map([...(entry?.games ?? [])].map(([game, row]) => [game, row.startedAt])),
+    track: entry?.track ? { track: entry.track.track, since: entry.track.startedAt } : null,
+  }
+}
+
 /** Starts recording whoever is already playing or listening when the bot connects. */
 export async function startActivityTracking(): Promise<void> {
   const guild = await getGuild()

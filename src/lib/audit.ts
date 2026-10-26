@@ -209,21 +209,30 @@ function voiceChannel(name: unknown, channelId: unknown): SummaryPart {
 
 /** A short "Browser on System" from a user-agent string; the raw string when it isn't recognised. */
 export function describeBrowser(userAgent: string): string {
-  const browser =
-    /Edg\//.test(userAgent) ? 'Edge'
-    : /OPR\/|Opera/.test(userAgent) ? 'Opera'
-    : /Firefox\//.test(userAgent) ? 'Firefox'
-    : /Chrome\/|CriOS\//.test(userAgent) ? 'Chrome'
-    : /Safari\//.test(userAgent) ? 'Safari'
-    : null
-  const system =
-    /Android/.test(userAgent) ? 'Android'
-    : /iPhone|iPad|iOS/.test(userAgent) ? 'iOS'
-    : /Windows/.test(userAgent) ? 'Windows'
-    : /Mac OS X|Macintosh/.test(userAgent) ? 'macOS'
-    : /CrOS/.test(userAgent) ? 'ChromeOS'
-    : /Linux|X11/.test(userAgent) ? 'Linux'
-    : null
+  const browser = /Edg\//.test(userAgent)
+    ? 'Edge'
+    : /OPR\/|Opera/.test(userAgent)
+      ? 'Opera'
+      : /Firefox\//.test(userAgent)
+        ? 'Firefox'
+        : /Chrome\/|CriOS\//.test(userAgent)
+          ? 'Chrome'
+          : /Safari\//.test(userAgent)
+            ? 'Safari'
+            : null
+  const system = /Android/.test(userAgent)
+    ? 'Android'
+    : /iPhone|iPad|iOS/.test(userAgent)
+      ? 'iOS'
+      : /Windows/.test(userAgent)
+        ? 'Windows'
+        : /Mac OS X|Macintosh/.test(userAgent)
+          ? 'macOS'
+          : /CrOS/.test(userAgent)
+            ? 'ChromeOS'
+            : /Linux|X11/.test(userAgent)
+              ? 'Linux'
+              : null
   if (!browser && !system) return truncate(userAgent, 60)
   return [browser ?? 'Unknown browser', system && `on ${system}`].filter(Boolean).join(' ')
 }
@@ -506,7 +515,13 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
 
     // Dashboard sign-ins, from the Discord account that made them (also the entry's actor).
     case 'auth.login':
-      return describe('Sign-in', 'success', actor, ' signed in to the dashboard', origin(entry.detail))
+      return describe(
+        'Sign-in',
+        'success',
+        actor,
+        ' signed in to the dashboard',
+        origin(entry.detail),
+      )
 
     case 'auth.denied':
       return describe(
@@ -518,7 +533,13 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       )
 
     case 'auth.logout':
-      return describe('Sign-out', 'neutral', actor, ' signed out of the dashboard', origin(entry.detail))
+      return describe(
+        'Sign-out',
+        'neutral',
+        actor,
+        ' signed out of the dashboard',
+        origin(entry.detail),
+      )
 
     default:
       return describe(entry.action, 'neutral', actor, ` performed ${entry.action}`)

@@ -11,6 +11,7 @@ import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useLive } from '@/lib/live'
+import { rankClass } from '@/lib/rank'
 import { useAsync } from '@/lib/useAsync'
 import type { MemberVoice, VoiceOverview } from '@/lib/voice'
 
@@ -279,7 +280,7 @@ const plural = (count: number, one: string, many: string) =>
                 >
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    :class="rankClass(index)"
                     >#{{ index + 1 }}</span
                   >
                   <img

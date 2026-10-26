@@ -25,6 +25,7 @@ const allDestinations: Destination[] = [
   { to: '/', label: 'Overview', icon: 'dashboard', slim: true },
   { to: '/queue', label: 'Triage', icon: 'how_to_reg', slim: true },
   { to: '/broadcast', label: 'Broadcast', icon: 'campaign', adminOnly: true },
+  { to: '/members', label: 'Members', icon: 'group' },
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
   { to: '/activity', label: 'Games & music', icon: 'sports_esports' },
   { to: '/voice', label: 'Voice', icon: 'headset_mic' },

@@ -27,6 +27,7 @@ import {
   MAX_ACTIVITY_DAYS,
 } from '../discord/activity'
 import { getGuild } from '../discord/client'
+import { getMemberProfile, listMembers } from '../discord/members'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
@@ -174,6 +175,17 @@ api.post('/backup', requireAdmin, async (c) => {
 })
 
 api.get('/members/pending', async (c) => respond(c, await listPendingMembers()))
+
+api.get('/members', async (c) => respond(c, await listMembers()))
+
+api.get('/members/:memberId', async (c) => {
+  const memberId = snowflake.safeParse(c.req.param('memberId'))
+  if (!memberId.success) return c.json({ error: 'Invalid member ID.' }, 400)
+
+  const parsed = activityQuerySchema.safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'Invalid period.' }, 400)
+  return respond(c, await getMemberProfile(memberId.data, parsed.data.days))
+})
 
 const assignSchema = z.object({ roleId: snowflake })
 

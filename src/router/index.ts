@@ -17,6 +17,8 @@ declare module 'vue-router' {
     adminOnly?: boolean
     /** Fills the left of the window with art and moves the page to a column on the right. */
     scene?: boolean
+    /** Fits the window above the footer and scrolls its own panes, rather than the page scrolling. */
+    fit?: boolean
     /** The page's main action, as a FAB in the rail; the page gives it its action (`useRailFab`). */
     fab?: { label: string; icon: string }
   }
@@ -46,6 +48,12 @@ const routes: RouteRecordRaw[] = [
     name: 'broadcast',
     component: () => import('@/views/BroadcastView.vue'),
     meta: { title: 'Broadcast', adminOnly: true },
+  },
+  {
+    path: '/members',
+    name: 'members',
+    component: () => import('@/views/MembersView.vue'),
+    meta: { title: 'Members', fit: true },
   },
   {
     path: '/birthdays',

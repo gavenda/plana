@@ -163,6 +163,7 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
 | Active rail destination, tonal buttons | `secondary-container` / `on-secondary-container`                     |
 | Emphasis tiles                         | `primary-`, `secondary-`, `tertiary-container` and their `on-` roles |
 | Status text (Today, Waiting, New)      | `tertiary`, `warning`, `success` as text colour                      |
+| Ranks #1, #2, #3 (`rankClass`)         | `primary`, `secondary`, `tertiary`; the rest `on-surface-variant`    |
 | Notices (setup unfinished, load error) | `warning-container`, `error-container` cards                         |
 | Her portrait's badge                   | `primary-container`                                                  |
 | Her speech bubble                      | `surface-container-highest` / `on-surface`                           |
@@ -240,6 +241,7 @@ She is in these places and nowhere else.
 | **Phone notice**, in place of the devices icon             | `Uneasy`    | 192  | —                                                        | The existing headline and text              |
 | **Triage queue, empty**                                    | `Asleep`    | 192  | Standing by. No one is waiting in triage.                | —                                           |
 | **Birthdays, none saved**                                  | `Curious`   | 192  | No birthdays yet. I'll remember each one I'm told.       | "Members add theirs with `/birthday set`."  |
+| **Members, none chosen**, the detail pane                  | `Attentive` | 192  | Choose a member. I'll bring up everything I have on file. | —                                           |
 | **Audit log, empty**                                       | `Standby`   | 192  | Nothing to report. I'll record every change here.        | —                                           |
 | **A page that failed to load** (`StateBlock` with `error`) | `Confused`  | 192  | I'm confused... This didn't load.                        | The reason, plain, and a "Try again" button |
 | **Sign-out dialog**                                        | `Hesitant`  | 192  | — (see [Dialogs](#dialogs))                              |                                             |

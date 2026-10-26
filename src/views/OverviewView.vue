@@ -12,6 +12,7 @@ import { formatMonthDay } from '@/lib/dates'
 import { auditIcon, describeAudit, toneContainerClass, type AuditPage } from '@/lib/audit'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
+import { rankClass } from '@/lib/rank'
 import { useAsync } from '@/lib/useAsync'
 import { useLive } from '@/lib/live'
 import type { VoiceOverview } from '@/lib/voice'
@@ -326,7 +327,7 @@ const recent = computed(() =>
                 >
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    :class="rankClass(index)"
                     >#{{ index + 1 }}</span
                   >
                   <img
@@ -382,7 +383,7 @@ const recent = computed(() =>
               <li v-for="(track, index) in topTracks" :key="track.id" class="segmented-item">
                 <span
                   class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                  :class="rankClass(index)"
                   >#{{ index + 1 }}</span
                 >
                 <img
@@ -436,7 +437,7 @@ const recent = computed(() =>
                 >
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                    :class="rankClass(index)"
                     >#{{ index + 1 }}</span
                   >
                   <img
@@ -497,7 +498,7 @@ const recent = computed(() =>
               <li v-for="(channel, index) in topChannels" :key="channel.id" class="segmented-item">
                 <span
                   class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                  :class="rankClass(index)"
                   >#{{ index + 1 }}</span
                 >
                 <span

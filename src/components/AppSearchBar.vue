@@ -3,7 +3,8 @@ import { ref, useId } from 'vue'
 
 /**
  * M3 search bar: a fully rounded 56dp pill on surface-container-high, with a leading search
- * icon and a trailing clear button once there is something to clear.
+ * icon and a trailing clear button once there is something to clear. A `#trailing` slot puts
+ * supporting text (such as a match count) just before that button.
  */
 defineProps<{ placeholder: string; label?: string }>()
 
@@ -37,6 +38,13 @@ function clear() {
       class="h-full min-w-0 flex-1 bg-transparent pl-3 text-body-large text-on-surface placeholder:text-on-surface-variant focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
       @keydown.esc="model ? clear() : input?.blur()"
     />
+
+    <span
+      v-if="$slots.trailing"
+      class="shrink-0 px-2 text-label-large whitespace-nowrap text-on-surface-variant"
+    >
+      <slot name="trailing" />
+    </span>
 
     <button
       v-if="model"

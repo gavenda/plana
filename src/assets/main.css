@@ -278,6 +278,49 @@
     @apply outline-3 outline-offset-2 outline-secondary;
   }
 
+  /* Scrollbars, as Material apps draw them (M3 has no spec for one): a thin, fully rounded thumb
+     tinted from on-surface-variant, on no track and with no arrow buttons. It darkens a little
+     under the pointer. Utilities still win, as the rail's [scrollbar-width:none] does. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-on-surface-variant) 40%, transparent)
+      transparent;
+  }
+
+  *:hover {
+    scrollbar-color: color-mix(in oklab, var(--color-on-surface-variant) 64%, transparent)
+      transparent;
+  }
+
+  /* Safari before scrollbar-color: the same look through its own pseudo-elements. The thumb is
+     inset by a transparent border so it floats clear of the window's edge. */
+  @supports not (scrollbar-color: auto) {
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-button {
+      display: none;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      border: 3px solid transparent;
+      border-radius: 9999px;
+      background-clip: padding-box;
+      background-color: color-mix(in oklab, var(--color-on-surface-variant) 40%, transparent);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: color-mix(in oklab, var(--color-on-surface-variant) 64%, transparent);
+    }
+  }
+
   code {
     @apply font-mono text-[0.9em];
   }
