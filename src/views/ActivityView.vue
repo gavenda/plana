@@ -323,7 +323,9 @@ const plural = (count: number, one: string, many: string) =>
                   >
                   <div class="min-w-0 flex-1 py-1">
                     <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-                    <div class="flex items-center gap-2">
+                    <!-- As tall as a line of body-small (16px), like a track's artist line, so
+                         both lists' rows match; the 20px avatars overhang it by 2px each way. -->
+                    <div class="flex h-4 items-center gap-2">
                       <span class="flex -space-x-1.5">
                         <img
                           v-for="player in game.top"
