@@ -188,7 +188,7 @@ function toMember(member: GuildMember): ActivityMember {
 }
 
 /** Someone who has since left still counts toward the totals, under whatever name is known. */
-function describe(members: Map<string, GuildMember>, id: string): ActivityMember {
+export function describe(members: Map<string, GuildMember>, id: string): ActivityMember {
   const member = members.get(id)
   if (member) return toMember(member)
   const user = client.users.cache.get(id)
@@ -202,7 +202,7 @@ function describe(members: Map<string, GuildMember>, id: string): ActivityMember
   }
 }
 
-function group<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
+export function group<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
   const groups = new Map<K, T[]>()
   for (const item of items) {
     const list = groups.get(key(item))
@@ -213,9 +213,10 @@ function group<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
 }
 
 /** The start of a period of `days`, or of all history when `days` is null. */
-const periodStart = (days: number | null, now: number) => (days == null ? 0 : now - days * DAY_MS)
+export const periodStart = (days: number | null, now: number) =>
+  days == null ? 0 : now - days * DAY_MS
 
-const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
+export const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
 /** Most-played games and Spotify tracks over the last `days` (null: all time), and what is on now. */
 export async function getActivityOverview(days: number | null): Promise<Result<ActivityOverview>> {

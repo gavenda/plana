@@ -7,6 +7,7 @@ import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
 import { primeMemberCache } from './discord/service'
 import { remindStaleTriage } from './discord/triage-reminders'
+import { checkpointVoice } from './discord/voice'
 import { registerEvents } from './events'
 import { initI18n } from './i18n'
 import { env } from './env'
@@ -97,7 +98,10 @@ const pruneTimer = setInterval(() => {
   if (removed > 0) console.log(`[sessions] pruned ${removed} expired session(s)`)
 }, SESSION_PRUNE_INTERVAL_MS)
 
-const activityTimer = setInterval(() => checkpointActivity(), ACTIVITY_CHECKPOINT_INTERVAL_MS)
+const activityTimer = setInterval(() => {
+  checkpointActivity()
+  checkpointVoice()
+}, ACTIVITY_CHECKPOINT_INTERVAL_MS)
 
 const memberRefreshTimer = setInterval(() => {
   void primeMemberCache(true).catch((error: unknown) => {
@@ -119,6 +123,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(triageReminderTimer)
   clearInterval(activityTimer)
   checkpointActivity()
+  checkpointVoice()
   await server.stop(true)
   await renderer.close()
   await client.destroy()

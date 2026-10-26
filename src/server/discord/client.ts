@@ -9,8 +9,9 @@ import { env } from '../env'
  *
  * `GuildMessages` and `MessageContent` let the audit log keep the text of deleted and edited
  * messages. `GuildModeration` delivers moderation actions from Discord's audit log, and
- * `GuildVoiceStates` says who a voice move or disconnect happened to. `GuildPresences` reports
- * the games members play and what they listen to on Spotify, for the Games & music page.
+ * `GuildVoiceStates` says who a voice move or disconnect happened to, and records time spent in
+ * voice for the Voice page. `GuildPresences` reports the games members play and what they
+ * listen to on Spotify, for the Games & music page.
  */
 export const client = new Client({
   intents: [

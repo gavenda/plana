@@ -5,6 +5,7 @@ import { startActivityTracking } from '../discord/activity'
 import { announceBirthdays, syncBirthdayRole } from '../discord/birthdays'
 import { primeMemberCache } from '../discord/service'
 import { remindStaleTriage } from '../discord/triage-reminders'
+import { startVoiceTracking } from '../discord/voice'
 import { env } from '../env'
 import type { AppEvent } from './event'
 
@@ -29,6 +30,9 @@ export const clientReadyEvent: AppEvent<Events.ClientReady> = {
 
     await startActivityTracking().catch((error: unknown) => {
       console.error('[activity] could not start tracking:', error)
+    })
+    await startVoiceTracking().catch((error: unknown) => {
+      console.error('[voice] could not start tracking:', error)
     })
 
     // Catches up on a birthday missed while the bot was down.

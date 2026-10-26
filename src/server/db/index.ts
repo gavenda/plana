@@ -96,6 +96,18 @@ const migrations: string[] = [
     checked_at     INTEGER NOT NULL
   );
   `,
+  `
+  CREATE TABLE voice_sessions (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id    TEXT NOT NULL,
+    channel_id   TEXT NOT NULL,
+    channel_name TEXT NOT NULL,
+    started_at   INTEGER NOT NULL,
+    ended_at     INTEGER NOT NULL
+  );
+  CREATE INDEX voice_sessions_member   ON voice_sessions (member_id, ended_at DESC);
+  CREATE INDEX voice_sessions_ended_at ON voice_sessions (ended_at);
+  `,
 ]
 
 function migrate(database: Database): void {

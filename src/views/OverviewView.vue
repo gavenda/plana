@@ -13,6 +13,7 @@ import { auditIcon, describeAudit, toneContainerClass, type AuditPage } from '@/
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
+import type { VoiceOverview } from '@/lib/voice'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
 import { useSettingsStore, type GuildSettings } from '@/stores/settings'
@@ -34,6 +35,7 @@ const pending = useAsync(() => apiFetch<PendingMember[]>('/api/members/pending')
 const activity = useAsync(() => apiFetch<AuditPage>('/api/audit?limit=6'))
 const play = useAsync(() => apiFetch<ActivityOverview>('/api/activity?days=7'))
 const upcoming = useAsync(() => apiFetch<UpcomingBirthdays>('/api/birthdays/upcoming'))
+const voice = useAsync(() => apiFetch<VoiceOverview>('/api/voice?days=7'))
 
 /** How many games and tracks Overview lists; Games & music has the rest. */
 const PLAY_LIMIT = 5
@@ -47,6 +49,7 @@ const pendingLoading = computed(() => !settings.loaded || waiting(pending))
 const activityLoading = computed(() => waiting(activity))
 const playLoading = computed(() => waiting(play))
 const upcomingLoading = computed(() => waiting(upcoming))
+const voiceLoading = computed(() => waiting(voice))
 const birthdays = computed(() => upcoming.data.value?.birthdays ?? [])
 
 onMounted(async () => {
@@ -56,6 +59,7 @@ onMounted(async () => {
     hasTriageRole.value ? pending.run() : undefined,
     activity.run(),
     play.run(),
+    voice.run(),
     upcoming.run(),
   ])
 })
@@ -106,11 +110,18 @@ const stats = computed(() => [
     tone: 'bg-primary-container text-on-primary-container',
   },
   {
+    label: 'In voice now',
+    value: voice.data.value?.now.length ?? '—',
+    loading: voiceLoading.value,
+    to: '/voice',
+    tone: 'bg-secondary-container text-on-secondary-container',
+  },
+  {
     label: 'Birthdays this month',
     value: upcoming.data.value?.thisMonth ?? '—',
     loading: upcomingLoading.value,
     to: '/birthdays',
-    tone: 'bg-secondary-container text-on-secondary-container',
+    tone: 'bg-tertiary-container text-on-tertiary-container',
   },
 ])
 
