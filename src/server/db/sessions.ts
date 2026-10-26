@@ -3,6 +3,15 @@ import { randomBytes } from 'node:crypto'
 import { db } from './index'
 import { env } from '../env'
 
+/**
+ * The table holds a SHA-256 of each session ID, never the ID itself, so a copy of the database
+ * (a backup, say) cannot be used to sign in. The ID is 32 random bytes, so an unsalted hash is
+ * enough: there is nothing to guess.
+ */
+function hashId(id: string): string {
+  return new Bun.CryptoHasher('sha256').update(id).digest('hex')
+}
+
 export type SessionRow = {
   id: string
   user_id: string
@@ -36,7 +45,7 @@ export function createSession(user: SessionUser): { id: string; expiresAt: numbe
   const expiresAt = now + env.SESSION_TTL_DAYS * 86_400_000
 
   insert.run({
-    id,
+    id: hashId(id),
     user_id: user.id,
     username: user.username,
     display_name: user.displayName,
@@ -49,10 +58,10 @@ export function createSession(user: SessionUser): { id: string; expiresAt: numbe
 }
 
 export function getSession(id: string): SessionUser | null {
-  const row = selectById.get({ id })
+  const row = selectById.get({ id: hashId(id) })
   if (!row) return null
   if (row.expires_at <= Date.now()) {
-    deleteById.run({ id })
+    deleteById.run({ id: row.id })
     return null
   }
   return {
@@ -64,7 +73,7 @@ export function getSession(id: string): SessionUser | null {
 }
 
 export function destroySession(id: string): void {
-  deleteById.run({ id })
+  deleteById.run({ id: hashId(id) })
 }
 
 export function pruneExpiredSessions(): number {

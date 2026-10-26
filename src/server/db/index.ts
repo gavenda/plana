@@ -108,6 +108,11 @@ const migrations: string[] = [
   CREATE INDEX voice_sessions_member   ON voice_sessions (member_id, ended_at DESC);
   CREATE INDEX voice_sessions_ended_at ON voice_sessions (ended_at);
   `,
+  // Session IDs are now stored hashed. Rows from before hold raw IDs that no cookie hashes
+  // to, so they are dropped: everyone signs in once more.
+  `
+  DELETE FROM sessions;
+  `,
 ]
 
 function migrate(database: Database): void {
