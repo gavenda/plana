@@ -89,6 +89,7 @@ const schema = z
     ANNOUNCE_CHANNEL_ID: snowflake.optional(),
     BIRTHDAY_CHANNEL_ID: snowflake.optional(),
     BIRTHDAY_ROLE_ID: snowflake.optional(),
+    RECAP_CHANNEL_ID: snowflake.optional(),
     MODERATOR_ROLE_ID: snowflake.optional(),
   })
   .superRefine((value, ctx) => {

@@ -29,6 +29,7 @@ import {
 import { getGuild } from '../discord/client'
 import { getMemberProfile, listMembers } from '../discord/members'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
+import { postWeeklyRecap } from '../discord/recap'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
 import {
@@ -82,6 +83,7 @@ const settingsSchema = z
     boardersRoleId: snowflake.nullable(),
     announceChannelId: snowflake.nullable(),
     birthdayChannelId: snowflake.nullable(),
+    recapChannelId: snowflake.nullable(),
     triageReminderDays: z.number().int().min(1).max(30).nullable(),
     birthdayRoleId: snowflake.nullable(),
     moderatorRoleId: snowflake.nullable(),
@@ -151,6 +153,7 @@ api.put('/settings', requireAdmin, async (c) => {
     // Turning reminders on (or shortening them) takes effect now, not at the next hourly check.
     if (changed.includes('triageReminderDays')) void remindStaleTriage()
     if (changed.includes('birthdayRoleId')) void syncBirthdayRole(before.birthdayRoleId)
+    if (changed.includes('recapChannelId')) void postWeeklyRecap()
   }
 
   return c.json({ settings, configured: isConfigured(settings), changed })

@@ -11,6 +11,7 @@ export type AuditAction =
   | 'birthday.remove'
   | 'birthday.role'
   | 'triage.remind'
+  | 'recap.post'
   | 'moderation.ban'
   | 'moderation.unban'
   | 'moderation.kick'
@@ -136,6 +137,7 @@ const SETTING_NAMES: Record<string, { label: string; kind: 'role' | 'channel' }>
   announceChannelId: { label: 'the announcement channel', kind: 'channel' },
   birthdayChannelId: { label: 'the birthday channel', kind: 'channel' },
   birthdayRoleId: { label: 'the birthday role', kind: 'role' },
+  recapChannelId: { label: 'the recap channel', kind: 'channel' },
   moderatorRoleId: { label: 'the moderator role', kind: 'role' },
 }
 
@@ -327,6 +329,9 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
 
     case 'birthday.remove':
       return describe('Birthday', 'neutral', actor, ' removed ', ...whose, ' birthday')
+
+    case 'recap.post':
+      return describe('Recap', 'accent', 'Posted the weekly recap in ', targetChannel)
 
     case 'triage.remind': {
       const names = Array.isArray(entry.detail?.memberNames)
@@ -567,6 +572,8 @@ export function auditIcon(action: AuditAction): string {
       return 'cake'
     case 'triage.remind':
       return 'hourglass_top'
+    case 'recap.post':
+      return 'summarize'
     case 'moderation.ban':
     case 'moderation.unban':
     case 'moderation.kick':

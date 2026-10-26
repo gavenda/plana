@@ -9,6 +9,8 @@ export type GuildSettings = {
   announceChannelId: string | null
   /** Optional. Birthday announcements are off while it is unset. */
   birthdayChannelId: string | null
+  /** Optional. The weekly recap is off while it is unset. */
+  recapChannelId: string | null
   /** Days in triage before staff are reminded. Reminders are off while it is unset. */
   triageReminderDays: number | null
   /** Optional. Members with it can use the dashboard and triage, but not change settings. */
@@ -28,6 +30,7 @@ export const SETTING_KEYS = [
   'boardersRoleId',
   'announceChannelId',
   'birthdayChannelId',
+  'recapChannelId',
   'triageReminderDays',
   'birthdayRoleId',
   'moderatorRoleId',
@@ -48,6 +51,7 @@ const EMPTY: GuildSettings = {
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  recapChannelId: null,
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
@@ -102,6 +106,7 @@ export function seedSettingsFromEnv(): void {
     boardersRoleId: env.BOARDERS_ROLE_ID,
     announceChannelId: env.ANNOUNCE_CHANNEL_ID,
     birthdayChannelId: env.BIRTHDAY_CHANNEL_ID,
+    recapChannelId: env.RECAP_CHANNEL_ID,
     birthdayRoleId: env.BIRTHDAY_ROLE_ID,
     moderatorRoleId: env.MODERATOR_ROLE_ID,
     trustedProxyHops: env.TRUSTED_PROXY_HOPS || null,

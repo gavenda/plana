@@ -9,6 +9,8 @@ export type GuildSettings = {
   boardersRoleId: string | null
   announceChannelId: string | null
   birthdayChannelId: string | null
+  /** Where the weekly recap is posted; null is off. */
+  recapChannelId: string | null
   /** Days in triage before staff are reminded; null is off. */
   triageReminderDays: number | null
   /** Can use the dashboard and triage, but not change settings; null is administrators only. */
@@ -27,6 +29,7 @@ const EMPTY: GuildSettings = {
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  recapChannelId: null,
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,

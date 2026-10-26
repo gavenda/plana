@@ -6,6 +6,7 @@ import type { AppContext } from './context'
 import { ACTIVITY_CHECKPOINT_INTERVAL_MS, checkpointActivity } from './discord/activity'
 import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
+import { postWeeklyRecap } from './discord/recap'
 import { primeMemberCache } from './discord/service'
 import { remindStaleTriage } from './discord/triage-reminders'
 import { checkpointVoice } from './discord/voice'
@@ -30,6 +31,9 @@ const BIRTHDAY_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 /** Reminders are measured in days, so an hour late is close enough. */
 const TRIAGE_REMINDER_INTERVAL_MS = 60 * 60 * 1000
+
+/** How soon after Sunday 18:00 the weekly recap is posted. */
+const RECAP_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 seedSettingsFromEnv()
 
@@ -121,6 +125,7 @@ const birthdayTimer = setInterval(() => {
   void syncBirthdayRole()
 }, BIRTHDAY_CHECK_INTERVAL_MS)
 const triageReminderTimer = setInterval(() => void remindStaleTriage(), TRIAGE_REMINDER_INTERVAL_MS)
+const recapTimer = setInterval(() => void postWeeklyRecap(), RECAP_CHECK_INTERVAL_MS)
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n[shutdown] received ${signal}`)
@@ -128,6 +133,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(memberRefreshTimer)
   clearInterval(birthdayTimer)
   clearInterval(triageReminderTimer)
+  clearInterval(recapTimer)
   clearInterval(activityTimer)
   stopBackups()
   checkpointActivity()

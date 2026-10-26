@@ -12,6 +12,7 @@ export type AuditAction =
   | 'birthday.remove'
   | 'birthday.role'
   | 'triage.remind'
+  | 'recap.post'
   | 'moderation.ban'
   | 'moderation.unban'
   | 'moderation.kick'
@@ -83,7 +84,7 @@ export const AUDIT_CATEGORY_ACTIONS = {
   moderation: ['moderation.%'],
   messages: ['message.%'],
   birthdays: ['birthday.%'],
-  broadcasts: ['broadcast.%'],
+  broadcasts: ['broadcast.%', 'recap.%'],
   settings: ['settings.%', 'backup.%'],
   access: ['auth.%'],
 } as const satisfies Record<string, readonly string[]>

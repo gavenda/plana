@@ -118,6 +118,15 @@ const migrations: string[] = [
   CREATE INDEX audit_log_target_id ON audit_log (target_id);
   CREATE INDEX audit_log_actor_id  ON audit_log (actor_id);
   `,
+  // One row per weekly recap posted, so a restart never posts the same week twice.
+  `
+  CREATE TABLE recaps (
+    week       TEXT PRIMARY KEY,
+    channel_id TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    posted_at  INTEGER NOT NULL
+  );
+  `,
 ]
 
 function migrate(database: Database): void {

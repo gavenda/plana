@@ -78,6 +78,35 @@
     "birthday": {
       "announcement_one": "🎉 Happy birthday, {{mentions}}! 🎂",
       "announcement_other": "🎉 Happy birthday to {{mentions}}! 🎂"
+    },
+    "recap": {
+      "title": "-# Weekly Retrospective — {{date}}",
+      "intros": [
+        "Weekly summary compiled. Here is what happened in the server.",
+        "Records for the week are in. Please take a look.",
+        "Report prepared. This is how everyone spent the week.",
+        "Logs reviewed. Here is the week, in short.",
+        "Another week recorded. I've summarised it for you.",
+        "Data collected. The week's highlights are below."
+      ],
+      "voice_title": "-# Voice",
+      "voice_summary_one": "**{{total}}** in voice, from **{{count}}** member.",
+      "voice_summary_other": "**{{total}}** in voice, across **{{count}}** members.",
+      "voice_busiest": "Busiest channel: {{channel}}, occupied for {{time}}.",
+      "voice_line": "{{rank}}. {{member}} — {{time}}",
+      "games_title": "-# Games",
+      "game_line_one": "{{rank}}. **{{game}}** — {{time}}, {{count}} player",
+      "game_line_other": "{{rank}}. **{{game}}** — {{time}}, {{count}} players",
+      "music_title": "-# Music",
+      "track_line": "{{rank}}. **{{title}}**{{artist}} — {{plays}}",
+      "track_artist": " by {{artist}}",
+      "plays_one": "{{count}} play",
+      "plays_other": "{{count}} plays",
+      "members_title": "-# New members",
+      "members_line_one": "{{mentions}} joined us this week. Please make them feel at home.",
+      "members_line_other": "{{count}} members joined us this week: {{mentions}}. Please make them feel at home.",
+      "members_more_one": "{{count}} more",
+      "members_more_other": "{{count}} more"
     }
   }
 }

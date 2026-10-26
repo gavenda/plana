@@ -20,6 +20,7 @@ const draft = reactive<GuildSettings>({
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  recapChannelId: null,
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
@@ -31,7 +32,7 @@ const saving = ref(false)
 
 type RoleKey =
   'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId' | 'moderatorRoleId' | 'birthdayRoleId'
-type ChannelKey = 'announceChannelId' | 'birthdayChannelId'
+type ChannelKey = 'announceChannelId' | 'birthdayChannelId' | 'recapChannelId'
 
 type Field = { label: string; hint: string } & (
   | {
@@ -107,6 +108,19 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         key: 'birthdayRoleId',
         label: 'Role',
         hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: it is removed from everyone else.',
+        empty: 'Off',
+      },
+    ],
+  },
+  {
+    id: 'settings-recap',
+    title: 'Weekly recap',
+    fields: [
+      {
+        kind: 'channel',
+        key: 'recapChannelId',
+        label: 'Channel',
+        hint: 'Where a summary of the week is posted every Sunday at 18:00, in the bot’s time zone: voice time, top games and music, and new members. Names members without pinging them. Optional.',
         empty: 'Off',
       },
     ],

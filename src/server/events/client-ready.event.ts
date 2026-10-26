@@ -3,6 +3,7 @@ import { Events } from 'discord.js'
 import { chatInputCommandData } from '../commands/chat-input'
 import { startActivityTracking } from '../discord/activity'
 import { announceBirthdays, syncBirthdayRole } from '../discord/birthdays'
+import { postWeeklyRecap } from '../discord/recap'
 import { primeMemberCache } from '../discord/service'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { startVoiceTracking } from '../discord/voice'
@@ -38,6 +39,8 @@ export const clientReadyEvent: AppEvent<Events.ClientReady> = {
     // Catches up on a birthday missed while the bot was down.
     await announceBirthdays()
     await syncBirthdayRole()
+    // Catches up on a recap missed while the bot was down, if it is still within a day.
+    await postWeeklyRecap()
     await remindStaleTriage()
   },
 }
