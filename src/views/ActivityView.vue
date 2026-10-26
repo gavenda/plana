@@ -364,10 +364,15 @@ const plural = (count: number, one: string, many: string) =>
             compact
           >
             <template #skeleton>
-              <SkeletonList :rows="5" leading="art" two-line trailing="stack" />
+              <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
             </template>
             <ol class="segmented-list">
-              <li v-for="track in tracks" :key="track.id" class="segmented-item">
+              <li v-for="(track, index) in tracks" :key="track.id" class="segmented-item">
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="index === 0 ? 'text-primary' : 'text-on-surface-variant'"
+                  >#{{ index + 1 }}</span
+                >
                 <img
                   v-if="track.artUrl"
                   class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
