@@ -44,6 +44,25 @@ export function decodeGameNightId(customId: string): { response: 'in' | 'out' } 
   return { response }
 }
 
+export const STATS_PREFIX = 'stats'
+
+export type StatsTab = 'games' | 'music' | 'voice'
+
+/** Whose stats, over how many days (0 for all time) and which tab to show. */
+export type StatsCustomId = { memberId: string; days: number | null; tab: StatsTab }
+
+export function encodeStatsId({ memberId, days, tab }: StatsCustomId): string {
+  return `${STATS_PREFIX}:${memberId}:${days ?? 0}:${tab}`
+}
+
+export function decodeStatsId(customId: string): StatsCustomId | null {
+  const [prefix, memberId, days, tab] = customId.split(':')
+  if (prefix !== STATS_PREFIX || !memberId || !days || !/^\d+$/.test(days)) return null
+  if (tab !== 'games' && tab !== 'music' && tab !== 'voice') return null
+  const count = Number(days)
+  return { memberId, days: count === 0 ? null : count, tab }
+}
+
 /** The dispatcher matches handlers on this, so ids must keep the prefix first. */
 export function customIdPrefix(customId: string): string {
   return customId.split(':')[0] ?? ''

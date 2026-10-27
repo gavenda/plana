@@ -1,10 +1,4 @@
-import {
-  escapeMarkdown,
-  MessageFlags,
-  PermissionFlagsBits,
-  TextDisplayBuilder,
-  type GuildMember,
-} from 'discord.js'
+import { MessageFlags, PermissionFlagsBits, TextDisplayBuilder, type GuildMember } from 'discord.js'
 
 import { getGuild, isReady } from './client'
 import { today, type CalendarDate } from './birthdays'
@@ -17,6 +11,7 @@ import { listChannelActiveTotals, listVoiceTotals } from '../db/voice'
 import { env } from '../env'
 import { DEFAULT_LOCALE, t, tlList } from '../i18n'
 import { logger } from '../logging'
+import { clip, duration } from '../utils/format'
 
 const log = logger('recap')
 
@@ -34,8 +29,6 @@ const TOP = 3
 
 /** New members named before the rest are counted, to stay well under the 4000 characters a message allows. */
 const MAX_NEW_MEMBERS = 10
-
-const TITLE_LIMIT = 80
 
 // ---------------------------------------------------------------------------
 // Schedule
@@ -112,21 +105,6 @@ export function latestRecapWeek(now = Date.now(), timeZone = env.BIRTHDAY_TIMEZO
 // ---------------------------------------------------------------------------
 // Content
 // ---------------------------------------------------------------------------
-
-/** "45m", "3h 20m", "12h". Minutes stop mattering past ten hours. */
-function duration(ms: number): string {
-  const minutes = Math.round(ms / 60_000)
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
-  if (hours === 0) return `${rest}m`
-  if (rest === 0 || hours >= 10) return `${hours}h`
-  return `${hours}h ${rest}m`
-}
-
-function clip(value: string): string {
-  const text = value.length > TITLE_LIMIT ? `${value.slice(0, TITLE_LIMIT - 1)}…` : value
-  return escapeMarkdown(text)
-}
 
 /** Sums time per key, most first, keeping the members behind each. */
 function rank<T extends { memberId: string; ms: number }>(
