@@ -3,7 +3,11 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
+  SectionBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
   TextDisplayBuilder,
+  ThumbnailBuilder,
   time,
   TimestampStyles,
   type InteractionEditReplyOptions,
@@ -25,7 +29,7 @@ function hours(ms: number, locale: string): string {
   })
 }
 
-/** Name, roles, dates, what they're doing right now and the totals. Shown above every tab. */
+/** Name, dates, what they're doing right now and the totals. Shown above every tab. */
 function summary(profile: MemberProfile, locale: string): string[] {
   const { member, voice, games, music } = profile
   const period =
@@ -33,13 +37,8 @@ function summary(profile: MemberProfile, locale: string): string[] {
       ? tl('stats.period_all', locale)
       : tl('stats.period_days', locale, { count: profile.days })
 
-  const header = [tl('stats.title', locale, { period }), `## ${clip(member.displayName)}`]
+  const header = [tl('stats.title', locale, { period }), `### ${clip(member.displayName)}`]
   if (!profile.inServer) header.push(tl('stats.left', locale))
-  if (profile.roles.length > 0) {
-    header.push(
-      tl('stats.roles', locale, { roles: profile.roles.map((role) => clip(role.name)).join(', ') }),
-    )
-  }
   if (profile.joinedAt != null) {
     header.push(tl('stats.joined', locale, { when: since(profile.joinedAt) }))
   }
@@ -170,10 +169,22 @@ export async function renderStats(
     }
   }
 
-  const sections = [...summary(result.data, locale), tabSection(result.data, tab, locale)]
+  const { member } = result.data
+  const [header, ...rest] = summary(result.data, locale)
+  const sections = [...rest, tabSection(result.data, tab, locale)]
   return {
     flags: MessageFlags.IsComponentsV2,
     components: [
+      // Who it is, beside their avatar.
+      new SectionBuilder()
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(header))
+        .setThumbnailAccessory(
+          new ThumbnailBuilder()
+            // The profile carries a small avatar for the dashboard's lists; a thumbnail wants more.
+            .setURL(member.avatarUrl.replace(/size=\d+/, 'size=256'))
+            .setDescription(tl('announcement.avatar_alt', locale, { username: member.username })),
+        ),
+      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large),
       ...sections.map((content) => new TextDisplayBuilder().setContent(content)),
       tabButtons(memberId, days, tab, locale),
     ],
