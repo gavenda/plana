@@ -6,6 +6,7 @@ import {
   type RouterHistory,
 } from 'vue-router'
 
+import { pageSwapped } from '@/lib/page-transition'
 import { useSessionStore } from '@/stores/session'
 
 declare module 'vue-router' {
@@ -21,8 +22,18 @@ declare module 'vue-router' {
     fit?: boolean
     /** The page's main action, as a FAB in the rail; the page gives it its action (`useRailFab`). */
     fab?: { label: string; icon: string }
+    /** How far below a rail destination the page sits; 0 (unset) is a destination itself. */
+    depth?: number
+    /** Set on each navigation: how the page arrives. */
+    transition?: PageTransition
   }
 }
+
+/**
+ * M3 transition patterns: going deeper or back up slides along the x axis (shared axis); moving
+ * between rail destinations, which have no order, fades through.
+ */
+export type PageTransition = 'page-forward' | 'page-back' | 'page-fade'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -71,7 +82,7 @@ const routes: RouteRecordRaw[] = [
     path: '/activity/game-nights',
     name: 'game-nights',
     component: () => import('@/views/GameNightsView.vue'),
-    meta: { title: 'Game nights', adminOnly: true },
+    meta: { title: 'Game nights', adminOnly: true, depth: 1 },
   },
   {
     path: '/voice',
@@ -104,10 +115,12 @@ export function createAppRouter(history?: RouterHistory): Router {
     history: history ?? createWebHistory(import.meta.env.BASE_URL),
     routes,
     scrollBehavior: (to, from, savedPosition) => {
-      if (savedPosition) return savedPosition
+      // The first page is already in place: nothing to wait for.
+      if (from.matched.length === 0) return savedPosition ?? { top: 0 }
       // Query-only changes (opening a supporting pane, changing a filter) stay where the reader is.
       if (to.path === from.path) return false
-      return { top: 0 }
+      // Scroll once the new page is in, not under the old one as it leaves.
+      return pageSwapped().then(() => savedPosition ?? { top: 0 })
     },
   })
 
@@ -124,6 +137,13 @@ export function createAppRouter(history?: RouterHistory): Router {
       return { name: 'overview' }
     }
     return true
+  })
+
+  router.afterEach((to, from) => {
+    const toDepth = to.meta.depth ?? 0
+    const fromDepth = from.meta.depth ?? 0
+    to.meta.transition =
+      toDepth > fromDepth ? 'page-forward' : toDepth < fromDepth ? 'page-back' : 'page-fade'
   })
 
   // SSR emits the initial title; this keeps it correct across client-side routing.

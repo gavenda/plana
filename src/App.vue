@@ -11,12 +11,30 @@ import PlanaSays from '@/components/PlanaSays.vue'
 import SchaleMark from '@/components/SchaleMark.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import { useLiveStatus } from '@/lib/live'
+import { notifyPageSwapped } from '@/lib/page-transition'
 import { backdropUrl } from '@/lib/plana'
 import { useRail } from '@/lib/rail'
 import { useSnackbar } from '@/lib/snackbar'
 import { useSessionStore } from '@/stores/session'
 
 const route = useRoute()
+
+/**
+ * Both pages animate at once, so the leaving one is taken out of the flow and fixed where it
+ * stands: the new page lays out in its place, and scrolling to it doesn't move the old one.
+ */
+function pinLeavingPage(el: Element) {
+  if (!(el instanceof HTMLElement)) return
+  const { top, left, width, height } = el.getBoundingClientRect()
+  Object.assign(el.style, {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+    margin: '0',
+  })
+}
 const session = useSessionStore()
 const { expanded: railExpanded, still: railStill, restore: restoreRail } = useRail()
 
@@ -93,12 +111,25 @@ async function signOut() {
   >
     <AppNavigationRail @sign-out="confirmingSignOut = true" @about="aboutOpen = true" />
 
-    <main class="flex w-full flex-col px-6 py-6" :class="route.meta.fit ? 'h-dvh' : 'min-h-dvh'">
+    <!-- Clipped sideways so a page sliding in or out never brings up a horizontal scrollbar. -->
+    <main
+      class="flex w-full flex-col overflow-x-clip px-6 py-6"
+      :class="route.meta.fit ? 'h-dvh' : 'min-h-dvh'"
+    >
       <!-- Pages are titled for assistive tech only, as the rail already shows where you are. -->
       <h1 class="sr-only">{{ route.meta.title }}</h1>
       <!-- A page that fits the window fills what the footer leaves and scrolls its own panes. -->
       <div class="flex-1" :class="route.meta.fit && 'flex min-h-0 flex-col'">
-        <RouterView />
+        <!-- Only a change of page animates; a change of query keeps the same page in place. -->
+        <RouterView v-slot="{ Component, route: shown }">
+          <Transition
+            :name="shown.meta.transition ?? 'page-fade'"
+            @before-leave="pinLeavingPage"
+            @before-enter="notifyPageSwapped"
+          >
+            <component :is="Component" :key="shown.path" />
+          </Transition>
+        </RouterView>
       </div>
       <!-- Schale's emblem closes every page, as on the stand-alone ones: after the content, or at
            the foot of the window when the page is short. -->
