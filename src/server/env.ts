@@ -21,11 +21,8 @@ const schema = z
     PUBLIC_BASE_URL: z.url().default('http://localhost:3000'),
 
     /**
-     * How many reverse proxies sit in front of the app (a proxy, or a CDN and a proxy: 2). The
-     * client's address is then read from X-Forwarded-For, counting that many entries in from the
-     * end, since each proxy appends the address it saw and anything before them is the client's
-     * say-so. Leave at 0 when reached directly, or the header is ignored. Only seeds the
-     * dashboard's Settings the first time; after that it is changed there.
+     * Reverse proxies in front of the app (0 = direct); see http/client-info.ts. Only seeds
+     * Settings the first time.
      */
     TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 

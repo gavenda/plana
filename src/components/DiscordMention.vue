@@ -3,12 +3,7 @@ import { computed } from 'vue'
 
 import { discordTextColor, roleColor } from '@/lib/discord'
 
-/**
- * A role, channel or user name, drawn the way Discord draws a mention: a role in its own colour
- * on a faint wash of it, a channel (#name) or user (@name) in Discord's mention blurple. Role
- * colours are mixed a little towards on-surface so a dark one still reads on the dark theme; a
- * role without a colour takes secondary (lilac), as navigation and selection do.
- */
+/** A role, channel or user drawn like a Discord mention. */
 const props = defineProps<{
   kind: 'role' | 'channel' | 'user'
   /** Without the leading # or @. */

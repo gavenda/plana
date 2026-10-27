@@ -102,15 +102,9 @@ export async function getAccessLevel(userId: string): Promise<AccessLevel | null
 // Join announcements
 // ---------------------------------------------------------------------------
 
-/** Puts a new member into triage and posts the announcement card. */
 /**
- * Announces a member entering triage. Driven by the triage role appearing rather than by
- * the join itself: Discord assigns that role through onboarding or an auto-role, which
- * can be well after the member arrived, and announcing on join would post a card for
- * someone who has not reached triage yet.
- *
- * Idempotent. An unresolved card already means this member is announced and waiting, so
- * the two events that can both fire for one arrival cannot produce two cards.
+ * Announces a member entering triage, triggered by the role rather than the join.
+ * Idempotent: an open card means they're already announced.
  */
 export async function announceTriage(member: GuildMember): Promise<Result<{ messageId: string }>> {
   const settings = getSettings()

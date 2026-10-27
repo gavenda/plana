@@ -4,11 +4,7 @@ import { computed, nextTick, ref, useId } from 'vue'
 import OutlinedField from '@/components/OutlinedField.vue'
 import { daysIn, firstWeekday, formatMonthDay, MONTHS, parseMonthDay } from '@/lib/dates'
 
-/**
- * M3 modal date picker for a date without a year (a birthday): an outlined field that opens the
- * picker in a dialog, with a calendar of one month at a time, a month menu in place of M3's
- * month-and-year menu, and an input mode for typing the date. Nothing changes until OK.
- */
+/** M3 modal date picker for a month and day (no year); nothing changes until OK. */
 const props = defineProps<{
   label: string
   disabled?: boolean

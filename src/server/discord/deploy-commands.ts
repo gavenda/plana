@@ -1,9 +1,4 @@
-/**
- * Standalone command registration, for when you want to push command definitions
- * without starting the gateway: `bun run commands:deploy`.
- *
- * The bot also registers commands on every startup, so this is only a convenience.
- */
+/** Registers commands without starting the gateway (`bun run commands:deploy`); startup does this too. */
 import '../logging'
 
 import { REST, Routes } from 'discord.js'

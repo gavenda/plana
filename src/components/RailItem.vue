@@ -3,10 +3,8 @@ import { computed } from 'vue'
 import { useLink } from 'vue-router'
 
 /**
- * One entry in the navigation rail, drawn so it can morph. The slim and the open rail are the same
- * element with different geometry, and CSS (`.rail-item` in main.css) moves it between them: the pill
- * grows from a small capsule into one that hugs the icon and its label, the icon settles into its new
- * height, and the label glides from under the icon to beside it. Nothing is swapped, so nothing pops.
+ * One rail entry. The slim and open rail are the same element, morphed by `.rail-item` in
+ * main.css, so nothing pops.
  */
 const props = withDefaults(
   defineProps<{

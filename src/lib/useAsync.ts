@@ -1,11 +1,6 @@
 import { ref, shallowRef } from 'vue'
 
-/**
- * Minimal request state helper. Views that load one resource all need the same
- * loading/error/data triple, and this keeps that out of every component.
- *
- * Runs can overlap (a live update arriving mid-load), so only the latest one's answer is kept.
- */
+/** Loading/error/data state for one resource; only the latest run's answer is kept. */
 export function useAsync<T>(loader: () => Promise<T>) {
   const data = shallowRef<T | null>(null)
   const loading = ref(false)

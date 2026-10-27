@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { ref, useId } from 'vue'
 
-/**
- * M3 search bar: a fully rounded 56dp pill on surface-container-high, with a leading search
- * icon and a trailing clear button once there is something to clear. A `#trailing` slot puts
- * supporting text (such as a match count) just before that button.
- */
+/** M3 search bar; `#trailing` puts text such as a match count before the clear button. */
 defineProps<{ placeholder: string; label?: string }>()
 
 const model = defineModel<string>({ required: true })

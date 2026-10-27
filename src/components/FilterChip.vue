@@ -1,8 +1,5 @@
 <script setup lang="ts">
-/**
- * M3 filter chip: 32dp, small corners, outlined at rest. Selected, it fills with
- * secondary-container and gains a leading check.
- */
+/** M3 filter chip. */
 defineProps<{ label: string }>()
 
 const selected = defineModel<boolean>({ required: true })

@@ -55,10 +55,7 @@ export const events: AnyAppEvent[] = [
 ]
 
 export function registerEvents(client: Client, context: AppContext): void {
-  // Every entry is internally consistent — AppEvent<E> ties `event` to its own argument
-  // types — but the list is deliberately heterogeneous, so the emitter cannot be typed
-  // against a union of event names. One narrow cast here keeps all of the event files
-  // themselves fully typed.
+  // Erased emitter type; see AnyAppEvent.
   const emitter = client as unknown as {
     on: (event: string, listener: (...args: never[]) => void) => void
     once: (event: string, listener: (...args: never[]) => void) => void
