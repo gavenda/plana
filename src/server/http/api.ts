@@ -42,8 +42,10 @@ import {
   primeMemberCache,
   type ErrorCode,
   type Result,
+  type BroadcastBody,
 } from '../discord/service'
 import { requireAdmin, requireStaff, type AppEnv } from './session'
+import { validateComponents } from '../../lib/components-v2'
 
 const snowflake = z.string().regex(/^\d{17,20}$/, 'Expected a Discord ID')
 
@@ -218,10 +220,13 @@ api.post('/members/:memberId/assign', async (c) => {
   )
 })
 
-const broadcastSchema = z.object({
-  channelId: snowflake,
-  content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
-})
+const broadcastSchema = z.union([
+  z.object({
+    channelId: snowflake,
+    content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+  }),
+  z.object({ channelId: snowflake, components: z.unknown() }),
+])
 
 api.post('/broadcast', requireAdmin, async (c) => {
   const parsed = broadcastSchema.safeParse(await c.req.json().catch(() => null))
@@ -229,11 +234,22 @@ api.post('/broadcast', requireAdmin, async (c) => {
     return c.json({ error: 'A channel and a message of up to 2000 characters are required.' }, 400)
   }
 
+  // A layout is checked on its own, so the reply can say which part is wrong.
+  let body: BroadcastBody
+  if ('components' in parsed.data) {
+    const layout = validateComponents(parsed.data.components)
+    if (!layout.ok) return c.json({ error: layout.error }, 400)
+    body = { components: layout.components }
+  } else {
+    body = { content: parsed.data.content }
+  }
+
   const user = c.get('user')
   return respond(
     c,
     await broadcast({
-      ...parsed.data,
+      ...body,
+      channelId: parsed.data.channelId,
       actor: { id: user.id, name: user.username },
       source: 'dashboard',
     }),

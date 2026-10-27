@@ -2,6 +2,7 @@
   "extends": "@tsconfig/node22/tsconfig.json",
   "include": [
     "src/server/**/*",
+    "src/lib/components-v2.ts",
     "env.d.ts"
   ],
   "compilerOptions": {

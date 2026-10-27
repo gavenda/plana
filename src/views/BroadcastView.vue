@@ -1,12 +1,23 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import AppSelect from '@/components/AppSelect.vue'
 import AppTextArea from '@/components/AppTextArea.vue'
+import ComponentList from '@/components/ComponentList.vue'
+import ComponentsPreview from '@/components/ComponentsPreview.vue'
 import DiscordMention from '@/components/DiscordMention.vue'
 import DiscordMessage from '@/components/DiscordMessage.vue'
+import SegmentedButtons from '@/components/SegmentedButtons.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
+import { BLOCK_KINDS } from '@/lib/components-builder'
+import {
+  MAX_COMPONENTS,
+  countComponents,
+  readComponentsJson,
+  validateComponents,
+  type TopLevelComponent,
+} from '@/lib/components-v2'
 import { groupOptions, type SelectOption } from '@/lib/select'
 import { useSnackbar } from '@/lib/snackbar'
 import { useGuildStore } from '@/stores/guild'
@@ -21,8 +32,52 @@ const session = useSessionStore()
 const snackbar = useSnackbar()
 
 const channelId = ref<string | null>(null)
-const content = ref('')
 const sending = ref(false)
+
+/** Plain text, or a Components V2 layout. */
+const mode = ref<'text' | 'components'>('text')
+const content = ref('')
+
+const newLayout = (): TopLevelComponent[] => [BLOCK_KINDS[0]!.create()]
+
+/**
+ * The layout, in Discord's JSON shape. The builder edits it in place; the JSON tab replaces it
+ * whenever what is typed there reads as a component array.
+ */
+const components = ref<TopLevelComponent[]>(newLayout())
+const editor = ref<'builder' | 'json'>('builder')
+const json = ref('')
+const jsonError = ref<string | null>(null)
+
+const layout = computed(() => validateComponents(components.value))
+const componentCount = computed(() => countComponents(components.value))
+
+// Opening the JSON tab writes out the layout as it stands, tidied if it is ready to send.
+watch(editor, (value) => {
+  if (value !== 'json') return
+  json.value = JSON.stringify(layout.value.ok ? layout.value.components : components.value, null, 2)
+  jsonError.value = null
+})
+
+function onJsonInput(text: string) {
+  json.value = text
+  const read = readComponentsJson(text)
+  if (read.ok) {
+    components.value = read.components
+    jsonError.value = null
+  } else {
+    jsonError.value = read.error
+  }
+}
+
+async function copyJson() {
+  try {
+    await navigator.clipboard.writeText(json.value)
+    snackbar.show('JSON copied.')
+  } catch {
+    snackbar.show('Could not copy the JSON.')
+  }
+}
 
 onMounted(() => {
   void guild.load()
@@ -46,20 +101,29 @@ const selected = computed(
 )
 
 const remaining = computed(() => MAX_LENGTH - content.value.length)
-const canSend = computed(
-  () => channelId.value != null && content.value.trim().length > 0 && remaining.value >= 0,
-)
+const canSend = computed(() => {
+  if (channelId.value == null) return false
+  if (mode.value === 'components') return layout.value.ok && !jsonError.value
+  return content.value.trim().length > 0 && remaining.value >= 0
+})
 
 async function send() {
   if (!canSend.value || !channelId.value) return
 
+  const body =
+    mode.value === 'components' && layout.value.ok
+      ? { channelId: channelId.value, components: layout.value.components }
+      : { channelId: channelId.value, content: content.value }
+
   sending.value = true
   try {
-    const result = await apiFetch<BroadcastResult>('/api/broadcast', {
-      method: 'POST',
-      body: { channelId: channelId.value, content: content.value },
-    })
-    content.value = ''
+    const result = await apiFetch<BroadcastResult>('/api/broadcast', { method: 'POST', body })
+    if (mode.value === 'components') {
+      components.value = newLayout()
+      if (editor.value === 'json') json.value = JSON.stringify(components.value, null, 2)
+    } else {
+      content.value = ''
+    }
     snackbar.show(`Posted to #${result.channelName}.`, {
       action: { label: 'Open in Discord', href: result.url },
     })
@@ -97,12 +161,77 @@ async function send() {
             <form class="flex flex-col gap-6" @submit.prevent="send">
               <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 
+              <SegmentedButtons
+                v-model="mode"
+                label="Message type"
+                :options="[
+                  { value: 'text', label: 'Text', icon: 'notes' },
+                  { value: 'components', label: 'Components', icon: 'widgets' },
+                ]"
+              />
+
               <AppTextArea
+                v-if="mode === 'text'"
                 v-model="content"
                 label="Message"
                 :maxlength="MAX_LENGTH"
                 supporting-text="Discord markdown is supported."
               />
+
+              <template v-else>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <SegmentedButtons
+                    v-model="editor"
+                    label="Edit with"
+                    :options="[
+                      {
+                        value: 'builder',
+                        label: 'Builder',
+                        icon: 'widgets',
+                        disabled: jsonError != null,
+                      },
+                      { value: 'json', label: 'JSON', icon: 'data_object' },
+                    ]"
+                  />
+                  <span
+                    class="text-body-small tabular-nums"
+                    :class="
+                      componentCount > MAX_COMPONENTS ? 'text-error' : 'text-on-surface-variant'
+                    "
+                  >
+                    {{ componentCount }} / {{ MAX_COMPONENTS }} components
+                  </span>
+                </div>
+
+                <ComponentList v-if="editor === 'builder'" v-model="components" />
+
+                <div v-else class="flex flex-col gap-2">
+                  <AppTextArea
+                    :model-value="json"
+                    label="Components JSON"
+                    mono
+                    :error="jsonError != null"
+                    :supporting-text="
+                      jsonError ??
+                      'A component array, or a message payload with `components`. Fix any errors here to go back to the builder.'
+                    "
+                    @update:model-value="onJsonInput"
+                  />
+                  <button type="button" class="btn btn-text btn-sm self-end" @click="copyJson">
+                    <span class="icon [--icon-size:18px]" aria-hidden="true">content_copy</span>
+                    Copy JSON
+                  </button>
+                </div>
+
+                <p
+                  v-if="!layout.ok && !jsonError"
+                  class="supporting-text flex items-start gap-2"
+                  role="status"
+                >
+                  <span class="icon [--icon-size:16px]" aria-hidden="true">info</span>
+                  Not ready to send — {{ layout.error }}
+                </p>
+              </template>
 
               <div class="flex justify-end">
                 <button
@@ -128,7 +257,7 @@ async function send() {
             >
               P
             </div>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-title-small">Plana</span>
                 <span
@@ -141,10 +270,15 @@ async function send() {
                   <template v-else>no channel selected</template>
                 </span>
               </div>
-              <p class="mt-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-on-surface">
+              <ComponentsPreview
+                v-if="mode === 'components'"
+                class="mt-1"
+                :components="components"
+              />
+              <div v-else class="mt-1 text-on-surface">
                 <DiscordMessage v-if="content" :content="content" />
                 <template v-else>Your message will appear here.</template>
-              </p>
+              </div>
             </div>
           </div>
 

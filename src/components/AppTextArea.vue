@@ -9,6 +9,10 @@ const props = defineProps<{
   maxlength?: number
   disabled?: boolean
   supportingText?: string
+  /** Monospaced, for code such as JSON. */
+  mono?: boolean
+  /** Shown as invalid, with supportingText as the reason. */
+  error?: boolean
 }>()
 
 const model = defineModel<string>({ required: true })
@@ -19,7 +23,9 @@ const focused = ref(false)
 const counter = computed(() =>
   props.maxlength != null ? `${model.value.length} / ${props.maxlength}` : undefined,
 )
-const invalid = computed(() => props.maxlength != null && model.value.length > props.maxlength)
+const invalid = computed(
+  () => props.error || (props.maxlength != null && model.value.length > props.maxlength),
+)
 </script>
 
 <template>
@@ -43,7 +49,9 @@ const invalid = computed(() => props.maxlength != null && model.value.length > p
       :disabled="disabled"
       :aria-describedby="supportingText ? `${id}-supporting` : undefined"
       :aria-invalid="invalid || undefined"
-      class="block min-h-40 w-full resize-y rounded-xs bg-transparent px-4 py-4 text-body-large text-on-surface focus-visible:outline-none disabled:text-on-surface/38"
+      :spellcheck="mono ? false : undefined"
+      class="block w-full resize-y rounded-xs bg-transparent px-4 py-4 text-on-surface focus-visible:outline-none disabled:text-on-surface/38"
+      :class="mono ? 'min-h-80 font-mono text-body-medium' : 'min-h-40 text-body-large'"
       @focus="focused = true"
       @blur="focused = false"
     ></textarea>

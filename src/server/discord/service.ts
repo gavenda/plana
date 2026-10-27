@@ -2,9 +2,12 @@ import {
   ChannelType,
   MessageFlags,
   PermissionFlagsBits,
+  type APIMessageTopLevelComponent,
   type GuildMember,
   type Role,
 } from 'discord.js'
+
+import { messageText, type TopLevelComponent } from '../../lib/components-v2'
 
 import { getGuild } from './client'
 import { cached, CacheKey, CacheTtl, invalidate } from '../cache'
@@ -424,13 +427,17 @@ export type BroadcastResult = {
   url: string
 }
 
-export async function broadcast(input: {
-  channelId: string
-  content: string
-  actor: Actor
-  source: ActionSource
-}): Promise<Result<BroadcastResult>> {
-  const { channelId, content, actor, source } = input
+/** A broadcast is plain text, or a Components V2 layout (already checked by the caller). */
+export type BroadcastBody = { content: string } | { components: TopLevelComponent[] }
+
+export async function broadcast(
+  input: BroadcastBody & {
+    channelId: string
+    actor: Actor
+    source: ActionSource
+  },
+): Promise<Result<BroadcastResult>> {
+  const { channelId, actor, source } = input
 
   const guild = await getGuild()
   const channel =
@@ -452,7 +459,24 @@ export async function broadcast(input: {
   try {
     // Mention scope is deliberately left to Discord: the bot only reaches @everyone
     // if its own permissions in the channel allow it.
-    const message = await channel.send({ content })
+    const message =
+      'components' in input
+        ? await channel.send({
+            // The shared schema matches Discord's JSON, with plain numbers for its enums.
+            components: input.components as unknown as APIMessageTopLevelComponent[],
+            flags: MessageFlags.IsComponentsV2,
+          })
+        : await channel.send({ content: input.content })
+
+    // The audit summary quotes `content`, so a layout is logged by its text, with the layout itself.
+    const detail =
+      'components' in input
+        ? {
+            content: messageText(input.components).join('\n'),
+            components: input.components,
+            messageId: message.id,
+          }
+        : { content: input.content, messageId: message.id }
 
     recordAudit({
       action: 'broadcast.send',
@@ -461,7 +485,7 @@ export async function broadcast(input: {
       actorName: actor.name,
       targetId: channel.id,
       targetName: `#${channel.name}`,
-      detail: { content, messageId: message.id },
+      detail,
     })
 
     return ok({
