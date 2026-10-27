@@ -39,6 +39,8 @@ ENV NODE_ENV=production \
 COPY --from=prod-deps --chown=bun:bun /app/node_modules ./node_modules
 COPY --from=build --chown=bun:bun /app/dist ./dist
 COPY --chown=bun:bun src/server ./src/server
+# Shared with the dashboard: the server validates and reads Components V2 layouts with it.
+COPY --chown=bun:bun src/lib/components-v2.ts ./src/lib/components-v2.ts
 COPY --chown=bun:bun package.json ./
 
 # SQLite lives on a volume; the image itself can stay read-only.
