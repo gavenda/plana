@@ -14,7 +14,7 @@ const log = logger('ssr')
 const VITE_DEV_PORT = Number(Bun.env.VITE_DEV_PORT ?? 5174)
 
 /** Requests Vite owns in development: its client runtime, source modules and deps. */
-const VITE_PREFIXES = ['/@', '/src/', '/node_modules/', '/__vite', '/public/']
+export const VITE_PREFIXES = ['/@', '/src/', '/node_modules/', '/__vite', '/public/']
 
 export type SSRContext = {
   url: string

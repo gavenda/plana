@@ -3,6 +3,7 @@ import {
   getConsoleSink,
   getLogger,
   getTextFormatter,
+  isLogLevel,
   type LogLevel,
   type LogRecord,
   type Sink,
@@ -84,6 +85,18 @@ export function recentLogs(): LogEntry[] {
   return [...entries]
 }
 
+/**
+ * `LOG_LEVEL` overrides the default, e.g. `debug` in production to see request timings.
+ * Read straight from the environment because this module loads before `env.ts`.
+ */
+const requestedLevel = process.env.LOG_LEVEL?.trim().toLowerCase()
+const lowestLevel: LogLevel =
+  requestedLevel && isLogLevel(requestedLevel)
+    ? requestedLevel
+    : process.env.NODE_ENV === 'production'
+      ? 'info'
+      : 'debug'
+
 configureSync({
   sinks: {
     console: getConsoleSink({
@@ -94,7 +107,7 @@ configureSync({
   loggers: [
     {
       category: [ROOT],
-      lowestLevel: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+      lowestLevel,
       sinks: ['console', 'viewer'],
     },
     { category: ['logtape', 'meta'], lowestLevel: 'warning', sinks: ['console'] },

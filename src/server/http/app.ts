@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
-import { logger } from 'hono/logger'
 
 import { backupStatus } from '../backup'
 import { cacheStatus } from '../cache'
@@ -10,6 +9,7 @@ import { isProduction } from '../env'
 import { api } from './api'
 import { authRoutes } from './auth'
 import { upgradeLiveSocket } from './live-socket'
+import { requestLog } from './request-log'
 import type { Renderer } from './ssr'
 
 /** Paths that look like a file on disk, e.g. `/assets/index-abc123.js`. */
@@ -18,7 +18,7 @@ const FILE_PATH = /\.[a-z0-9]+$/i
 export function createHttpApp(renderer: Renderer): Hono {
   const app = new Hono()
 
-  app.use('*', logger())
+  app.use('*', requestLog)
 
   app.get('/healthz', (c) =>
     c.json({
