@@ -68,6 +68,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Games & music' },
   },
   {
+    path: '/activity/game-nights',
+    name: 'game-nights',
+    component: () => import('@/views/GameNightsView.vue'),
+    meta: { title: 'Game nights', adminOnly: true },
+  },
+  {
     path: '/voice',
     name: 'voice',
     component: () => import('@/views/VoiceView.vue'),

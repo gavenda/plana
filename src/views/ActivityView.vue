@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import AppSelect from '@/components/AppSelect.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
@@ -14,13 +13,8 @@ import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useLive } from '@/lib/live'
 import { rankClass } from '@/lib/rank'
-import type { SelectOption } from '@/lib/select'
-import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
-import { roleColor } from '@/lib/discord'
-import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
-import { useSettingsStore } from '@/stores/settings'
 
 /** `days` null is all time; in the URL and the API it is `all`. */
 const PERIODS: { days: number | null; label: string }[] = [
@@ -36,9 +30,6 @@ const daysParam = (days: number | null) => (days == null ? 'all' : String(days))
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const guild = useGuildStore()
-const settings = useSettingsStore()
-const snackbar = useSnackbar()
 
 function daysFromQuery(): number | null {
   const raw = route.query.days
@@ -261,52 +252,6 @@ const sheetIcon = computed(
     null,
 )
 
-/** Any role can be pinged, whether or not the bot could grant it. */
-const roleOptions = computed<SelectOption<string | null>[]>(() => [
-  { value: null, label: 'Nobody' },
-  ...guild.roles.map((role) => ({
-    value: role.id,
-    label: role.name,
-    swatch: roleColor(role.color),
-  })),
-])
-
-const savingRole = ref(false)
-
-/** The game's ping role, saved as soon as it is picked. */
-const gameRole = computed({
-  get: () => detail.value?.roleId ?? null,
-  set: (roleId: string | null) => void saveGameRole(roleId),
-})
-
-async function saveGameRole(roleId: string | null) {
-  const current = detail.value
-  if (!current || roleId === current.roleId) return
-
-  savingRole.value = true
-  try {
-    await apiFetch('/api/activity/game/role', {
-      method: 'PUT',
-      body: { name: current.name, roleId },
-    })
-    // Only if the sheet still shows the same game.
-    if (gamePlayers.data.value?.name === current.name) {
-      gamePlayers.data.value = { ...gamePlayers.data.value, roleId }
-    }
-    snackbar.show(roleId ? 'Game night ping saved.' : 'Game nights will no longer ping anyone.')
-  } catch (cause) {
-    snackbar.showError(cause, 'Could not save the ping role.')
-  } finally {
-    savingRole.value = false
-  }
-}
-
-onMounted(() => {
-  if (!session.isAdmin) return
-  void guild.load()
-  void settings.load()
-})
-
 const periodLabel = computed(() => PERIODS.find((period) => period.days === days.value)?.label)
 
 /** The track's page on Spotify; a presence's sync id is its Spotify track id. */
@@ -318,14 +263,20 @@ const plural = (count: number, one: string, many: string) =>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap gap-2" role="group" aria-label="Period">
-      <FilterChip
-        v-for="period in PERIODS"
-        :key="period.label"
-        :label="period.label"
-        :model-value="days === period.days"
-        @update:model-value="days = period.days"
-      />
+    <div class="flex items-start gap-4">
+      <div class="flex flex-1 flex-wrap gap-2" role="group" aria-label="Period">
+        <FilterChip
+          v-for="period in PERIODS"
+          :key="period.label"
+          :label="period.label"
+          :model-value="days === period.days"
+          @update:model-value="days = period.days"
+        />
+      </div>
+      <RouterLink v-if="session.isAdmin" to="/activity/game-nights" class="btn btn-tonal btn-wide">
+        <span class="icon [--icon-size:18px]" aria-hidden="true">celebration</span>
+        Game nights
+      </RouterLink>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
@@ -583,27 +534,6 @@ const plural = (count: number, one: string, many: string) =>
         {{ formatDuration(detail.ms) }} · {{ plural(detail.players.length, 'player', 'players') }} ·
         {{ periodLabel }}
       </template>
-      <div v-if="session.isAdmin && detail" class="mb-4 flex flex-col gap-1">
-        <div class="flex items-center gap-1">
-          <AppSelect
-            v-model="gameRole"
-            class="min-w-0 flex-1"
-            label="Game night ping"
-            :options="roleOptions"
-            :disabled="savingRole"
-          />
-          <RichTooltip
-            title="Game night ping"
-            text="The role pinged when a game night of this game is announced. Discord only pings it if the role allows anyone to mention it, or the bot can mention all roles."
-          />
-        </div>
-        <p
-          v-if="settings.loaded && !settings.settings.gameNightChannelId"
-          class="supporting-text text-on-surface-variant"
-        >
-          Game nights are off until a channel is chosen in Settings.
-        </p>
-      </div>
       <StateBlock
         :loading="gamePlayers.loading.value && !detail"
         :error="gamePlayers.error.value"

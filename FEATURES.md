@@ -27,7 +27,7 @@ Plana is a Discord bot with a web dashboard for running one server.
 - `/broadcast channel [message]` posts as the bot. Leave out the message to open a multi-line composer. Admins only.
 
 ### Stats
-- `/stats [member] [period]` shows a member's dashboard profile as plain text: roles, when they joined, what they're doing right now, and their totals. The period defaults to the last 30 days; 7 days, 90 days and all time are also offered.
+- `/stats [member] [period]` shows a member's dashboard profile as plain text: when they joined, what they're doing right now, and their totals. The period defaults to the last 30 days; 7 days, 90 days and all time are also offered.
 - Games, Music and Voice buttons switch the list underneath, showing up to 10 rows each.
 - Only the person who ran it can see the reply.
 
@@ -47,7 +47,8 @@ Members sign in with Discord. **Administrators** can use everything. **Moderator
 | **Broadcast** | Builder for Components V2 messages (sections, galleries, button rows) with a live preview, or pasted JSON |
 | **Members** | Searchable member list. Each profile has facts, birthday, voice channels, games, tracks and audit history |
 | **Birthdays** | Upcoming birthdays; add, edit or remove them |
-| **Games & music** | Who's playing or listening right now, most-played games, most-played tracks, and per-game ping roles |
+| **Games & music** | Who's playing or listening right now, most-played games, and most-played tracks |
+| **Game nights** | Opened from Games & music: every game played, each with the role its game nights ping |
 | **Voice** | Who's in voice now, members with the most voice time, and the busiest channels |
 | **Audit log** | Searchable, filterable log covering triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |
 | **Settings** | Roles and channels grouped by feature, triage reminder days, game night minimum players, backups, live server logs, and an About pane |

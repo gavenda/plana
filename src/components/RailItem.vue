@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLink } from 'vue-router'
+import { useLink, useRoute } from 'vue-router'
 
 /**
  * One rail entry. The slim and open rail are the same element, morphed by `.rail-item` in
@@ -22,9 +22,15 @@ const props = withDefaults(
 
 const emit = defineEmits<{ click: [] }>()
 
+const route = useRoute()
 const link = useLink({ to: computed(() => props.to ?? '/') })
+/** Pages under an item's path (Game nights under Games & music) keep it current too. */
 const isActive = computed(
-  () => props.to !== undefined && (props.exact ? link.isExactActive.value : link.isActive.value),
+  () =>
+    props.to !== undefined &&
+    (props.exact
+      ? link.isExactActive.value
+      : link.isActive.value || route.path.startsWith(`${props.to}/`)),
 )
 
 function onClick(event: MouseEvent) {

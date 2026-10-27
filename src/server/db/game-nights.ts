@@ -8,6 +8,9 @@ const upsertRole = db.query<void, { game: string; role_id: string }>(
    ON CONFLICT (game) DO UPDATE SET role_id = excluded.role_id`,
 )
 const deleteRole = db.query<void, { game: string }>('DELETE FROM game_roles WHERE game = :game')
+const selectRoles = db.query<{ game: string; role_id: string }, []>(
+  'SELECT game, role_id FROM game_roles',
+)
 
 const selectAnnounced = db.query<{ announced_at: number }, { channel_id: string; game: string }>(
   'SELECT announced_at FROM game_nights WHERE channel_id = :channel_id AND game = :game',
@@ -20,6 +23,11 @@ const upsertAnnounced = db.query<void, { channel_id: string; game: string; annou
 /** The role pinged when a game night of this game starts, or null for no ping. */
 export function getGameRole(game: string): string | null {
   return selectRole.get({ game })?.role_id ?? null
+}
+
+/** Every game with a ping role, by game name. */
+export function listGameRoles(): Map<string, string> {
+  return new Map(selectRoles.all().map((row) => [row.game, row.role_id]))
 }
 
 /** `null` stops pinging anyone for this game. */

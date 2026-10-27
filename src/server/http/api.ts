@@ -22,6 +22,7 @@ import {
 } from '../discord/birthdays'
 import {
   getActivityOverview,
+  getGameNightRoles,
   getGamePlayers,
   getTrackListeners,
   MAX_ACTIVITY_DAYS,
@@ -357,7 +358,10 @@ const gameRoleSchema = z.object({
   roleId: snowflake.nullable(),
 })
 
-/** The role pinged when a game night of this game starts, set from Games & music. */
+/** Every game and the role its game nights ping, for the Game nights page. */
+api.get('/activity/game/roles', requireAdmin, (c) => respond(c, getGameNightRoles()))
+
+/** The role pinged when a game night of this game starts, set from Game nights. */
 api.put('/activity/game/role', requireAdmin, async (c) => {
   const parsed = gameRoleSchema.safeParse(await c.req.json().catch(() => null))
   if (!parsed.success)

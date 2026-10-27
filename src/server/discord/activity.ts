@@ -13,7 +13,7 @@ import {
   type Track,
 } from '../db/activity'
 import { gameIconUrl, requestGameIcon } from './game-icons'
-import { getGameRole } from '../db/game-nights'
+import { listGameRoles } from '../db/game-nights'
 import { env } from '../env'
 import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { hasSubscribers, publish } from '../live'
@@ -344,8 +344,6 @@ export type GamePlayers = {
   /** Null for all time. */
   days: number | null
   ms: number
-  /** Pinged when a game night of this game starts; null for no ping. */
-  roleId: string | null
   /** Most hours first; `playingSince` is set for whoever is playing it right now. */
   players: (ActivityMember & { ms: number; playingSince: number | null })[]
 }
@@ -372,9 +370,43 @@ export async function getGamePlayers(
     iconUrl: gameIconUrl(name),
     days,
     ms: sum(players.map((player) => player.ms)),
-    roleId: getGameRole(name),
     players,
   })
+}
+
+export type GameNightRole = {
+  name: string
+  iconUrl: string | null
+  /** All-time hours and players, so the games people actually play come first. */
+  ms: number
+  players: number
+  /** Pinged when a game night of this game starts; null for no ping. */
+  roleId: string | null
+}
+
+/**
+ * Every game ever played, and any game that still has a ping role though nobody has played it,
+ * each with its role. Most played first.
+ */
+export function getGameNightRoles(): Result<GameNightRole[]> {
+  checkpointActivity(Date.now())
+
+  const roles = listGameRoles()
+  const games: GameNightRole[] = [...group(listGameTotals(0), (row) => row.game)].map(
+    ([name, rows]) => ({
+      name,
+      iconUrl: gameIconUrl(name),
+      ms: sum(rows.map((row) => row.ms)),
+      players: rows.length,
+      roleId: roles.get(name) ?? null,
+    }),
+  )
+  const played = new Set(games.map((game) => game.name))
+  for (const [name, roleId] of roles) {
+    if (!played.has(name))
+      games.push({ name, iconUrl: gameIconUrl(name), ms: 0, players: 0, roleId })
+  }
+  return ok(games.sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name)))
 }
 
 export type TrackListeners = {

@@ -138,7 +138,7 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         kind: 'channel',
         key: 'gameNightChannelId',
         label: 'Channel',
-        hint: 'Where a game night is announced once enough people in one voice channel have played the same game together for 5 minutes. Each game is announced at most once every 4 hours per voice channel. Pick who to ping for each game in Games & music. Optional.',
+        hint: 'Where a game night is announced once enough people in one voice channel have played the same game together for 5 minutes. Each game is announced at most once every 4 hours per voice channel. Pick who to ping for each game under Games & music → Game nights. Optional.',
         empty: 'Off',
       },
       {
