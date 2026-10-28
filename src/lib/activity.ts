@@ -93,7 +93,7 @@ export type DailyTrends = {
 
 /** What `/api/activity/heatmap` returns; see src/server/discord/heatmaps.ts. */
 export type Heatmap = {
-  kind: 'voice' | 'music'
+  kind: 'voice' | 'games' | 'music'
   /** Null for all time. */
   days: number | null
   timeZone: string

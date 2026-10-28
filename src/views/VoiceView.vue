@@ -79,24 +79,21 @@ const inVoice = computed(() => data.value?.now ?? [])
 const hours = (ms: number) =>
   (ms / 3_600_000).toLocaleString('en', { maximumFractionDigits: ms < 36_000_000 ? 1 : 0 })
 
-/** Each tile takes a different tonal container, as on Overview. */
+/** Plain surface tiles, as on Overview. */
 const stats = computed(() => {
   const totals = data.value?.totals
   return [
     {
       label: 'Hours in voice',
       value: totals ? hours(totals.ms) : '—',
-      tone: 'bg-primary-container text-on-primary-container',
     },
     {
       label: totals?.members === 1 ? 'Member in voice' : 'Members in voice',
       value: totals?.members.toLocaleString() ?? '—',
-      tone: 'bg-secondary-container text-on-secondary-container',
     },
     {
       label: totals?.sessions === 1 ? 'Session' : 'Sessions',
       value: totals?.sessions.toLocaleString() ?? '—',
-      tone: 'bg-tertiary-container text-on-tertiary-container',
     },
   ]
 })
@@ -193,12 +190,7 @@ const plural = (count: number, one: string, many: string) =>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-      <div
-        v-for="stat in stats"
-        :key="stat.label"
-        class="card flex flex-col gap-1 px-6 py-5"
-        :class="stat.tone"
-      >
+      <div v-for="stat in stats" :key="stat.label" class="card flex flex-col gap-1 px-6 py-5">
         <span class="text-display-small font-medium">
           <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
           <template v-else>{{ stat.value }}</template>

@@ -1,4 +1,10 @@
-import { firstTrackAt, listTrackSpans, type Span } from '../db/activity'
+import {
+  firstGameAt,
+  firstTrackAt,
+  listPlayingSpans,
+  listTrackSpans,
+  type Span,
+} from '../db/activity'
 import { firstVoiceAt, listVoiceIntervals } from '../db/voice'
 import { env } from '../env'
 import { eachHour, makeSlotter } from '../utils/zoned-hours'
@@ -6,8 +12,8 @@ import { checkpointActivity, periodStart } from './activity'
 import { ok, type Result } from './service'
 import { checkpointVoice } from './voice'
 
-/** What a heatmap counts: members in voice, or members listening on Spotify. */
-export type HeatmapKind = 'voice' | 'music'
+/** What a heatmap counts: members in voice, playing a game, or listening on Spotify. */
+export type HeatmapKind = 'voice' | 'games' | 'music'
 
 const WEEKDAYS = 7
 
@@ -29,10 +35,11 @@ const SOURCES: Record<
   { spans: (since: number) => Span[]; first: () => number | null }
 > = {
   voice: { spans: listVoiceIntervals, first: firstVoiceAt },
+  games: { spans: listPlayingSpans, first: firstGameAt },
   music: { spans: listTrackSpans, first: firstTrackAt },
 }
 
-/** When the server is in voice or listening, by weekday and hour, over the last `days`. */
+/** When the server is in voice, playing or listening, by weekday and hour, over the last `days`. */
 export function getHeatmap(kind: HeatmapKind, days: number | null): Result<Heatmap> {
   const now = Date.now()
   // Open sessions count up to this moment, not to their last checkpoint.

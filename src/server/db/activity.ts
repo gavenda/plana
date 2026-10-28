@@ -1,3 +1,4 @@
+import { union } from '../utils/spans'
 import { db } from './index'
 
 /**
@@ -369,4 +370,36 @@ export function listMemberGameSpans(memberId: string, since: number): Span[] {
   return selectMemberGameSpans
     .all({ member_id: memberId, since, min: MIN_GAME_SESSION_MS })
     .map((row) => ({ start: row.start, end: row.ended_at }))
+}
+
+const selectFirstGame = db.query<{ first: number | null }, []>(
+  'SELECT MIN(started_at) AS first FROM game_sessions',
+)
+
+/** When the first game session started, or null before any. */
+export function firstGameAt(): number | null {
+  return selectFirstGame.get()?.first ?? null
+}
+
+const selectGameSpansByMember = db.query<
+  { member_id: string; start: number; ended_at: number },
+  { since: number; min: number }
+>(
+  `SELECT member_id, MAX(started_at, :since) AS start, ended_at FROM game_sessions
+   WHERE ended_at > :since AND ended_at - started_at >= :min`,
+)
+
+/**
+ * Time each member spent in a game since a moment, with two games at once counted once, so
+ * it says how many people were playing rather than how many games were running.
+ */
+export function listPlayingSpans(since: number): Span[] {
+  const byMember = new Map<string, Span[]>()
+  for (const row of selectGameSpansByMember.all({ since, min: MIN_GAME_SESSION_MS })) {
+    const spans = byMember.get(row.member_id)
+    const span = { start: row.start, end: row.ended_at }
+    if (spans) spans.push(span)
+    else byMember.set(row.member_id, [span])
+  }
+  return [...byMember.values()].flatMap(union)
 }

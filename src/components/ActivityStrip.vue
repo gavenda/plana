@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 import {
   clearActive,
@@ -7,6 +7,7 @@ import {
   loadChart,
   mix,
   reducedMotion,
+  scaleStep,
   showActive,
   token,
   type ChartType,
@@ -90,6 +91,29 @@ function cellColor(index: number): string {
 
 /** The gap between squares, in pixels. */
 const GAP = 3
+/** A day's square and the gap after it, in pixels: as big as fits, between these. */
+const MAX_CELL = 18
+const MIN_CELL = 10
+/** The weekday labels' column and the gap after it. */
+const LABELS_WIDTH = 40
+
+/** How wide the strip's box is, followed as the pane or column resizes. */
+const boxWidth = ref(0)
+const box = shallowRef<HTMLElement | null>(null)
+let observer: ResizeObserver | null = null
+
+const cell = computed(() => {
+  if (boxWidth.value === 0) return MAX_CELL
+  const fits = Math.floor((boxWidth.value - LABELS_WIDTH) / weeks.value)
+  return Math.min(MAX_CELL, Math.max(MIN_CELL, fits))
+})
+
+/** Days stay square: as big as the tighter of a column or a row allows. */
+const square = (target: ChartType) =>
+  Math.max(Math.min(scaleStep(target, 'x'), scaleStep(target, 'y')) - GAP, 0)
+
+/** Weekday labels down the side: every other day, as on a calendar, so they stay legible. */
+const DAY_LABELS = [0, 2, 4]
 
 async function draw() {
   const element = canvas.value
@@ -120,8 +144,8 @@ async function draw() {
           hoverBorderWidth: 2,
           hoverBorderColor: token('--color-on-surface'),
           borderRadius: 3,
-          width: ({ chart: target }) => (target.chartArea?.width ?? 0) / weeks.value - GAP,
-          height: ({ chart: target }) => (target.chartArea?.height ?? 0) / 7 - GAP,
+          width: ({ chart: target }) => square(target),
+          height: ({ chart: target }) => square(target),
         },
       ],
     },
@@ -129,44 +153,13 @@ async function draw() {
       responsive: true,
       maintainAspectRatio: false,
       animation: reducedMotion() ? false : { duration: 300 },
+      // No axes: the canvas is just the grid, and the months and weekdays are HTML around it,
+      // so a day is exactly `cell` pixels and nothing in Chart.js's layout can shift or stretch it.
       scales: {
-        x: {
-          type: 'linear',
-          position: 'top',
-          min: -0.5,
-          max: weeks.value - 0.5,
-          grid: { display: false },
-          border: { display: false },
-          afterBuildTicks: (scale) => {
-            scale.ticks = monthTicks.value.map(({ week }) => ({ value: week }))
-          },
-          ticks: {
-            padding: 2,
-            font: { size: 11 },
-            autoSkip: false,
-            maxRotation: 0,
-            callback: (value) =>
-              monthTicks.value.find((tick) => tick.week === Number(value))?.label ?? '',
-          },
-        },
-        y: {
-          type: 'linear',
-          min: -0.5,
-          max: 6.5,
-          // Numbers count up the axis; reversed, Monday (0) is on top.
-          reverse: true,
-          grid: { display: false },
-          border: { display: false },
-          // Every other day, as on a calendar strip, so the labels stay legible.
-          afterBuildTicks: (scale) => {
-            scale.ticks = [0, 2, 4].map((value) => ({ value }))
-          },
-          ticks: {
-            padding: 6,
-            font: { size: 11 },
-            callback: (value) => SHORT_DAYS[Number(value)] ?? '',
-          },
-        },
+        // The matrix chart turns `offset` on, which pads the ends and squeezes the columns.
+        x: { type: 'linear', display: false, offset: false, min: -0.5, max: weeks.value - 0.5 },
+        // Numbers count up the axis; reversed, Monday (0) is on top.
+        y: { type: 'linear', display: false, offset: false, min: -0.5, max: 6.5, reverse: true },
       },
       plugins: {
         legend: { display: false },
@@ -189,10 +182,20 @@ async function draw() {
   })
 }
 
-onMounted(() => void draw())
+onMounted(() => {
+  void draw()
+  if (box.value) {
+    boxWidth.value = box.value.clientWidth
+    observer = new ResizeObserver(([entry]) => {
+      boxWidth.value = entry?.contentRect.width ?? 0
+    })
+    observer.observe(box.value)
+  }
+})
 watch(cells, () => void draw())
 
 onBeforeUnmount(() => {
+  observer?.disconnect()
   chart?.destroy()
   chart = null
 })
@@ -216,15 +219,40 @@ function step(event: KeyboardEvent) {
 
 <template>
   <div class="card flex flex-col gap-3 px-4 py-4">
-    <div
-      class="relative h-36 rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
-      tabindex="0"
-      role="img"
-      :aria-label="`Time in voice or games each day for ${weeks} weeks: ${formatDuration(totals.active)} on ${totals.activeDays} days. Use the arrow keys to read a day.`"
-      @keydown="step"
-      @blur="clearActive(chart)"
-    >
-      <canvas ref="canvas" />
+    <!-- Squares shrink to fit the column, down to MIN_CELL; past that it scrolls sideways. -->
+    <div ref="box" class="overflow-x-auto">
+      <div class="grid w-max grid-cols-[auto_auto] grid-rows-[auto_auto] gap-x-2 gap-y-1">
+        <span />
+        <div class="relative h-4" :style="{ width: `${weeks * cell}px` }" aria-hidden="true">
+          <span
+            v-for="tick in monthTicks"
+            :key="tick.week"
+            class="absolute top-0 text-label-small text-on-surface-variant"
+            :style="{ left: `${tick.week * cell}px` }"
+            >{{ tick.label }}</span
+          >
+        </div>
+        <div class="flex w-8 flex-col text-label-small text-on-surface-variant" aria-hidden="true">
+          <span
+            v-for="row in 7"
+            :key="row"
+            class="flex items-center leading-none"
+            :style="{ height: `${cell}px` }"
+            >{{ DAY_LABELS.includes(row - 1) ? SHORT_DAYS[row - 1] : '' }}</span
+          >
+        </div>
+        <div
+          class="relative rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+          :style="{ width: `${weeks * cell}px`, height: `${7 * cell}px` }"
+          tabindex="0"
+          role="img"
+          :aria-label="`Time in voice or games each day for ${weeks} weeks: ${formatDuration(totals.active)} on ${totals.activeDays} days. Use the arrow keys to read a day.`"
+          @keydown="step"
+          @blur="clearActive(chart)"
+        >
+          <canvas ref="canvas" />
+        </div>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">

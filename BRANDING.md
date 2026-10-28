@@ -143,9 +143,9 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
   portrait, the logo's ground.
 - **Lilac (secondary)** is navigation and selection: the active rail destination, tonal
   buttons, focus outlines.
-- **Halo pink (tertiary)** is for what wants a glance without being good or bad: the third
-  stat tile on Overview, today's birthdays ("Today" in `tertiary`), the selected item in a menu,
-  her name in About, and her halo wherever it is drawn in code.
+- **Halo pink (tertiary)** is for what wants a glance without being good or bad: today's
+  birthdays ("Today" in `tertiary`), the selected item in a menu, her name in About, and her
+  halo wherever it is drawn in code. Stat tiles stay on the plain card surface.
 
 | Use                                    | Roles                                                                |
 | -------------------------------------- | -------------------------------------------------------------------- |

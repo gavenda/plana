@@ -217,24 +217,21 @@ const plural = (count: number, one: string, many: string) =>
 const hours = (ms: number) =>
   (ms / 3_600_000).toLocaleString('en', { maximumFractionDigits: ms < 36_000_000 ? 1 : 0 })
 
-/** Each tile takes a different tonal container, as on Overview. */
+/** Plain surface tiles, as on Overview. */
 const stats = computed(() => {
   const data = detail.value
   return [
     {
       label: 'Hours in voice',
       value: data ? hours(data.voice.ms) : '—',
-      tone: 'bg-primary-container text-on-primary-container',
     },
     {
       label: 'Hours played',
       value: data ? hours(data.games.ms) : '—',
-      tone: 'bg-secondary-container text-on-secondary-container',
     },
     {
       label: data?.music.plays === 1 ? 'Track played' : 'Tracks played',
       value: data?.music.plays.toLocaleString() ?? '—',
-      tone: 'bg-tertiary-container text-on-tertiary-container',
     },
   ]
 })
@@ -505,7 +502,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                 <li
                   v-for="item in rightNow"
                   :key="item.key"
-                  class="card flex items-center gap-3 bg-tertiary-container px-4 py-3 text-body-medium text-on-tertiary-container"
+                  class="card flex items-center gap-3 bg-primary-container px-4 py-3 text-body-medium text-on-primary-container"
                 >
                   <span class="icon [--icon-size:20px]" aria-hidden="true">{{ item.icon }}</span>
                   <span class="min-w-0 flex-1 truncate"
@@ -518,21 +515,6 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   >
                 </li>
               </ul>
-
-              <section aria-labelledby="member-activity">
-                <div class="section-header">
-                  <h3 id="member-activity" class="text-title-medium">Last 6 months</h3>
-                </div>
-                <StateBlock
-                  :loading="!strip && !activity.error.value"
-                  :error="activity.error.value"
-                  :retry="activity.run"
-                  compact
-                >
-                  <template #skeleton><div class="skeleton h-48 rounded-md" /></template>
-                  <ActivityStrip v-if="strip" :days="strip.days" :time-zone="strip.timeZone" />
-                </StateBlock>
-              </section>
 
               <div class="flex flex-wrap gap-2" role="group" aria-label="Period">
                 <FilterChip
@@ -549,7 +531,6 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   v-for="stat in stats"
                   :key="stat.label"
                   class="card flex flex-col gap-1 px-6 py-5"
-                  :class="stat.tone"
                 >
                   <span class="text-display-small font-medium">{{ stat.value }}</span>
                   <span class="text-label-large opacity-80">{{ stat.label }}</span>
@@ -692,6 +673,22 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       }}</span>
                     </li>
                   </ol>
+                </section>
+
+                <!-- Beside Music, in the space the grid leaves; it covers 6 months whatever the period. -->
+                <section aria-labelledby="member-activity">
+                  <div class="section-header">
+                    <h3 id="member-activity" class="text-title-medium">Last 6 months</h3>
+                  </div>
+                  <StateBlock
+                    :loading="!strip && !activity.error.value"
+                    :error="activity.error.value"
+                    :retry="activity.run"
+                    compact
+                  >
+                    <template #skeleton><div class="skeleton h-48 rounded-md" /></template>
+                    <ActivityStrip v-if="strip" :days="strip.days" :time-zone="strip.timeZone" />
+                  </StateBlock>
                 </section>
               </div>
 

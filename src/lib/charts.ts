@@ -116,3 +116,14 @@ export function clearActive(chart: ChartType | null): void {
   chart.tooltip?.setActiveElements([], { x: 0, y: 0 })
   chart.update()
 }
+
+/**
+ * The distance between neighbouring values on a scale, in pixels, for sizing grid cells. Read
+ * from the scale itself rather than the chart area, which can be stale while the chart is
+ * still being laid out and would make cells overlap.
+ */
+export function scaleStep(chart: ChartType, axis: 'x' | 'y'): number {
+  const scale = chart.scales[axis]
+  if (!scale) return 0
+  return Math.abs(scale.getPixelForValue(1) - scale.getPixelForValue(0))
+}

@@ -27,10 +27,12 @@ const SLOTS = 4
 
 type Segment = { key: string; name: string; ms: number; share: number; color: string }
 
+/** Every segment's time together: the bar's full length. */
+const total = computed(() => props.channels.reduce((sum, channel) => sum + channel.ms, 0))
+
 const segments = computed<Segment[]>(() => {
-  const total = props.channels.reduce((sum, channel) => sum + channel.ms, 0)
-  if (total === 0) return []
-  const share = (ms: number) => ms / total
+  if (total.value === 0) return []
+  const share = (ms: number) => ms / total.value
   const top = props.channels.slice(0, SLOTS).map((channel, index) => ({
     key: channel.id,
     name: channel.name,
@@ -90,6 +92,7 @@ async function draw() {
 
   if (chart) {
     chart.data.datasets = datasets()
+    chart.options.scales!.x!.max = total.value
     chart.update()
     return
   }
@@ -107,7 +110,9 @@ async function draw() {
       animation: reducedMotion() ? false : { duration: 300 },
       interaction: { mode: 'nearest', intersect: true },
       scales: {
-        x: { stacked: true, display: false, min: 0 },
+        // Ends at the exact total, not the rounder number Chart.js would pick, so the bar fills
+        // the card.
+        x: { stacked: true, display: false, min: 0, max: total.value },
         y: { stacked: true, display: false },
       },
       plugins: {

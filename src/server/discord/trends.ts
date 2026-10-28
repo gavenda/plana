@@ -1,6 +1,7 @@
 import { listGameSpans, listMemberGameSpans, listTrackSpans, type Span } from '../db/activity'
 import { listMemberVoiceSpans, listVoiceIntervals } from '../db/voice'
 import { env } from '../env'
+import { union } from '../utils/spans'
 import { eachHour, makeSlotter, shiftDate } from '../utils/zoned-hours'
 import { checkpointActivity } from './activity'
 import { ok, type Result } from './service'
@@ -108,18 +109,6 @@ export type MemberActivity = {
   timeZone: string
   /** Oldest first, starting on a Monday; the last is today so far. */
   days: MemberDay[]
-}
-
-/** Spans merged so overlapping time counts once, in start order. */
-function union(spans: Span[]): Span[] {
-  const sorted = [...spans].sort((a, b) => a.start - b.start)
-  const merged: Span[] = []
-  for (const span of sorted) {
-    const last = merged.at(-1)
-    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end)
-    else merged.push({ ...span })
-  }
-  return merged
 }
 
 /**

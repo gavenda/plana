@@ -418,13 +418,13 @@ api.get('/voice', async (c) => {
   return respond(c, await getVoiceOverview(parsed.data.days))
 })
 
-const heatmapQuerySchema = activityQuerySchema.extend({ kind: z.enum(['voice', 'music']) })
+const heatmapQuerySchema = activityQuerySchema.extend({ kind: z.enum(['voice', 'games', 'music']) })
 
-/** When the server is in voice or listening, by weekday and hour, for the pages' heatmaps. */
+/** When the server is in voice, playing or listening, by weekday and hour, for the heatmaps. */
 api.get('/activity/heatmap', (c) => {
   const parsed = heatmapQuerySchema.safeParse(c.req.query())
   if (!parsed.success)
-    return c.json({ error: 'A kind (voice or music) and a valid period are required.' }, 400)
+    return c.json({ error: 'A kind (voice, games or music) and a valid period are required.' }, 400)
   return respond(c, getHeatmap(parsed.data.kind, parsed.data.days))
 })
 

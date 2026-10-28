@@ -44,14 +44,33 @@ const overview = useAsync(() =>
   apiFetch<ActivityOverview>(`/api/activity?days=${daysParam(days.value)}`),
 )
 
-/** Averages over weeks barely move with one play, so the heatmap follows the period only. */
-const heatmap = useAsync(() =>
-  apiFetch<Heatmap>(`/api/activity/heatmap?kind=music&days=${daysParam(days.value)}`),
-)
+/** Averages over weeks barely move with one play, so the heatmaps follow the period only. */
+const heatmapFor = (kind: Heatmap['kind']) =>
+  useAsync(() =>
+    apiFetch<Heatmap>(`/api/activity/heatmap?kind=${kind}&days=${daysParam(days.value)}`),
+  )
+const heatmaps = [
+  {
+    kind: 'games' as const,
+    id: 'activity-heatmap-games',
+    title: 'When people play',
+    tooltip:
+      'Each square is how many members were playing a game at that hour on average over the period. Brighter squares are busier.',
+    state: heatmapFor('games'),
+  },
+  {
+    kind: 'music' as const,
+    id: 'activity-heatmap-music',
+    title: 'When people listen',
+    tooltip:
+      'Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier.',
+    state: heatmapFor('music'),
+  },
+]
 
 onMounted(() => {
   void overview.run()
-  void heatmap.run()
+  for (const heatmap of heatmaps) void heatmap.state.run()
 })
 
 /** "Right now" follows along; the totals wait for a change of period or a reload. */
@@ -66,7 +85,7 @@ watch(days, (value) => {
     query: { ...route.query, days: value === DEFAULT_DAYS ? undefined : daysParam(value) },
   })
   void overview.run()
-  void heatmap.run()
+  for (const heatmap of heatmaps) void heatmap.state.run()
 })
 
 const data = computed(() => overview.data.value)
@@ -74,10 +93,6 @@ const data = computed(() => overview.data.value)
 const loading = computed(() => !data.value && !overview.error.value)
 const games = computed(() => data.value?.games ?? [])
 const tracks = computed(() => data.value?.tracks ?? [])
-
-/** Each game's playtime as a share of the top game's, for the bar under its row. */
-const topGameMs = computed(() => Math.max(0, ...games.value.map((game) => game.ms)))
-const gameShare = (ms: number) => (topGameMs.value > 0 ? (ms / topGameMs.value) * 100 : 0)
 
 /** Who is playing and listening right now, games first. */
 const live = computed(() => [
@@ -104,24 +119,21 @@ const live = computed(() => [
 const hours = (ms: number) =>
   (ms / 3_600_000).toLocaleString('en', { maximumFractionDigits: ms < 36_000_000 ? 1 : 0 })
 
-/** Each tile takes a different tonal container, as on Overview. */
+/** Plain surface tiles, as on Overview. */
 const stats = computed(() => {
   const totals = data.value?.totals
   return [
     {
       label: 'Hours played',
       value: totals ? hours(totals.gameMs) : '—',
-      tone: 'bg-primary-container text-on-primary-container',
     },
     {
       label: totals?.games === 1 ? 'Game played' : 'Games played',
       value: totals?.games ?? '—',
-      tone: 'bg-secondary-container text-on-secondary-container',
     },
     {
       label: 'Spotify plays',
       value: totals?.trackPlays.toLocaleString() ?? '—',
-      tone: 'bg-tertiary-container text-on-tertiary-container',
     },
   ]
 })
@@ -294,12 +306,7 @@ const plural = (count: number, one: string, many: string) =>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-      <div
-        v-for="stat in stats"
-        :key="stat.label"
-        class="card flex flex-col gap-1 px-6 py-5"
-        :class="stat.tone"
-      >
+      <div v-for="stat in stats" :key="stat.label" class="card flex flex-col gap-1 px-6 py-5">
         <span class="text-display-small font-medium">
           <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
           <template v-else>{{ stat.value }}</template>
@@ -369,6 +376,31 @@ const plural = (count: number, one: string, many: string) =>
       </div>
     </section>
 
+    <!-- Playing, then listening, side by side from the expanded class like the lists below. -->
+    <div class="grid items-start gap-6 expanded:grid-cols-2">
+      <section v-for="heatmap in heatmaps" :key="heatmap.kind" :aria-labelledby="heatmap.id">
+        <div class="section-header">
+          <div class="flex items-center gap-1">
+            <h2 :id="heatmap.id" class="text-title-medium">{{ heatmap.title }}</h2>
+            <RichTooltip :title="heatmap.title" :text="heatmap.tooltip" />
+          </div>
+        </div>
+        <StateBlock
+          :loading="!heatmap.state.data.value && !heatmap.state.error.value"
+          :error="heatmap.state.error.value"
+          compact
+        >
+          <template #skeleton><div class="skeleton h-56 rounded-md" /></template>
+          <ActivityHeatmap
+            v-if="heatmap.state.data.value"
+            :kind="heatmap.kind"
+            :grid="heatmap.state.data.value.grid"
+            :time-zone="heatmap.state.data.value.timeZone"
+          />
+        </StateBlock>
+      </section>
+    </div>
+
     <!-- Two columns from the expanded class however narrow a docked sheet makes them, so opening
          a game never moves Spotify. -->
     <div class="grid items-start gap-6 expanded:grid-cols-2">
@@ -398,16 +430,6 @@ const plural = (count: number, one: string, many: string) =>
                   :aria-current="game.name === chosenGame ? 'true' : undefined"
                   @click="chooseGame(game.name)"
                 >
-                  <!-- Playtime against the top game's, along the foot of the row. -->
-                  <span
-                    class="pointer-events-none absolute inset-x-4 bottom-1 h-1 overflow-hidden rounded-full"
-                    aria-hidden="true"
-                  >
-                    <span
-                      class="block h-full rounded-full bg-primary/60"
-                      :style="{ width: `${gameShare(game.ms)}%` }"
-                    />
-                  </span>
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
                     :class="rankClass(index)"
@@ -536,31 +558,6 @@ const plural = (count: number, one: string, many: string) =>
         </div>
       </section>
     </div>
-
-    <section aria-labelledby="activity-heatmap">
-      <div class="section-header">
-        <div class="flex items-center gap-1">
-          <h2 id="activity-heatmap" class="text-title-medium">When people listen</h2>
-          <RichTooltip
-            title="Listening hours"
-            text="Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier."
-          />
-        </div>
-      </div>
-      <StateBlock
-        :loading="!heatmap.data.value && !heatmap.error.value"
-        :error="heatmap.error.value"
-        compact
-      >
-        <template #skeleton><div class="skeleton h-56 rounded-md" /></template>
-        <ActivityHeatmap
-          v-if="heatmap.data.value"
-          kind="music"
-          :grid="heatmap.data.value.grid"
-          :time-zone="heatmap.data.value.timeZone"
-        />
-      </StateBlock>
-    </section>
 
     <SupportingSheet v-model:open="sheetOpen" :headline="sheetGame ?? ''">
       <template #leading>

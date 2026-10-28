@@ -47,7 +47,7 @@ Members sign in with Discord. **Administrators** can use everything. **Moderator
 | **Broadcast** | Builder for Components V2 messages (sections, galleries, button rows) with a live preview, or pasted JSON |
 | **Members** | Searchable member list. Each profile has facts, birthday, a 6-month strip of their days in voice or games, voice channels, games, tracks and audit history |
 | **Birthdays** | Upcoming birthdays; add, edit or remove them |
-| **Games & music** | Who's playing or listening right now, most-played games (each with a bar against the top game), most-played tracks, and a weekday-by-hour heatmap of when people listen |
+| **Games & music** | Who's playing or listening right now, weekday-by-hour heatmaps of when people play and when they listen, most-played games, and most-played tracks |
 | **Game nights** | Opened from Games & music: every game played, each with the role its game nights ping |
 | **Voice** | Who's in voice now, a weekday-by-hour heatmap of when people are in voice, members with the most voice time, and the busiest channels with each one's share of the time |
 | **Audit log** | Searchable, filterable log covering triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |

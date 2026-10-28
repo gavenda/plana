@@ -7,28 +7,30 @@ import {
   loadChart,
   mix,
   reducedMotion,
+  scaleStep,
   showActive,
   token,
   type ChartType,
 } from '@/lib/charts'
 
 /**
- * When the server is in voice, or listening on Spotify: a weekday by hour grid, each cell the
- * average number of members doing it then, drawn with Chart.js and its matrix chart. One hue, from the empty surface up to
- * primary, scaled to the busiest hour. Hover a cell, or focus the grid and use the arrow keys,
+ * When the server is in voice, playing games or listening on Spotify: a weekday by hour grid,
+ * each cell the average number of members doing it then, drawn with Chart.js and its matrix
+ * chart. One hue, from the empty surface up to primary, scaled to the busiest hour. Hover a cell, or focus the grid and use the arrow keys,
  * to read it. A hidden table carries the same numbers for screen readers.
  */
 const props = defineProps<{
   /** Average members doing it, by weekday (Monday first) then hour. */
   grid: number[][]
   /** What the cells count, which sets the wording. */
-  kind: 'voice' | 'music'
+  kind: 'voice' | 'games' | 'music'
   timeZone: string
 }>()
 
-const DOING = { voice: 'in voice', music: 'listening' } as const
+const DOING = { voice: 'in voice', games: 'playing', music: 'listening' } as const
 const NOBODY = {
   voice: 'Nobody spent time in voice in this period.',
+  games: 'Nobody played games in this period.',
   music: 'Nobody listened on Spotify in this period.',
 } as const
 
@@ -121,8 +123,8 @@ async function draw() {
           hoverBorderWidth: 2,
           hoverBorderColor: token('--color-on-surface'),
           borderRadius: 4,
-          width: ({ chart: target }) => (target.chartArea?.width ?? 0) / 24 - GAP,
-          height: ({ chart: target }) => (target.chartArea?.height ?? 0) / 7 - GAP,
+          width: ({ chart: target }) => Math.max(scaleStep(target, 'x') - GAP, 0),
+          height: ({ chart: target }) => Math.max(scaleStep(target, 'y') - GAP, 0),
         },
       ],
     },
@@ -151,6 +153,8 @@ async function draw() {
         },
         y: {
           type: 'linear',
+          // The matrix chart turns `offset` on, which pads the ends and squeezes the rows.
+          offset: false,
           min: -0.5,
           max: 6.5,
           // Numbers count up the axis; reversed, Monday (0) is on top.
