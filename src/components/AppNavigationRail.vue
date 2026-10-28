@@ -16,19 +16,21 @@ type Destination = {
   label: string
   icon: string
   adminOnly?: boolean
+  /** Open to viewers (the stats role); match the route's `stats`. */
+  stats?: boolean
   /** Shown in the slim rail too. The rest appear only once it opens, as in Yuuka's. */
   slim?: boolean
 }
 
 /** Icon names are Material Symbols; add new ones to the icon_names list in index.html. */
 const allDestinations: Destination[] = [
-  { to: '/', label: 'Overview', icon: 'dashboard', slim: true },
+  { to: '/', label: 'Overview', icon: 'dashboard', slim: true, stats: true },
   { to: '/queue', label: 'Triage', icon: 'how_to_reg', slim: true },
   { to: '/broadcast', label: 'Broadcast', icon: 'campaign', adminOnly: true },
   { to: '/members', label: 'Members', icon: 'group' },
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
-  { to: '/activity', label: 'Games & music', icon: 'sports_esports' },
-  { to: '/voice', label: 'Voice', icon: 'headset_mic' },
+  { to: '/activity', label: 'Games & music', icon: 'sports_esports', stats: true },
+  { to: '/voice', label: 'Voice', icon: 'headset_mic', stats: true },
   { to: '/audit', label: 'Audit log', icon: 'history', slim: true },
   { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
@@ -38,10 +40,18 @@ const emit = defineEmits<{ signOut: []; about: [] }>()
 const version = __APP_VERSION__
 const session = useSessionStore()
 
-/** Moderators see only the pages they can use. */
-const destinations = computed(() =>
-  allDestinations.filter((destination) => !destination.adminOnly || session.isAdmin),
-)
+/**
+ * Everyone sees only the pages they can use. Viewers have just the stats pages, so all of
+ * them fit the slim rail.
+ */
+const destinations = computed(() => {
+  if (session.isViewer) {
+    return allDestinations
+      .filter((destination) => destination.stats)
+      .map((destination) => ({ ...destination, slim: true }))
+  }
+  return allDestinations.filter((destination) => !destination.adminOnly || session.isAdmin)
+})
 const { expanded, toggle, collapse } = useRail()
 
 const guild = useGuildStore()

@@ -67,11 +67,11 @@ export async function takeStateCookie(c: Context): Promise<OAuthState | null> {
 }
 
 /**
- * Guards every API endpoint: administrators and moderators only. Access is re-checked against
+ * Guards every API endpoint: anyone with dashboard access. Access is re-checked against
  * Discord on each request rather than trusted from the session, so revoking someone's
  * permissions or role in Discord locks them out of the dashboard immediately.
  */
-export const requireStaff: MiddlewareHandler<AppEnv> = async (c, next) => {
+export const requireAccess: MiddlewareHandler<AppEnv> = async (c, next) => {
   const user = await readSession(c)
   if (!user) return c.json({ error: 'Not signed in.', code: 'unauthenticated' }, 401)
 
@@ -83,7 +83,7 @@ export const requireStaff: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!access) {
     await endSession(c)
     return c.json(
-      { error: 'You are not an administrator or moderator of this server.', code: 'forbidden' },
+      { error: 'You don’t have a role that can use this dashboard.', code: 'forbidden' },
       403,
     )
   }
@@ -93,7 +93,32 @@ export const requireStaff: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next()
 }
 
-/** For the endpoints moderators may not use: changing settings and posting as the bot. Runs after `requireStaff`. */
+/**
+ * What viewers (the stats role) may call: reading the stats pages and what their frame needs.
+ * An allowlist, so an endpoint added later is staff-only unless it is listed here.
+ */
+const VIEWER_ROUTES: RegExp[] = [
+  /^\/api\/me$/,
+  /^\/api\/guild$/,
+  /^\/api\/activity$/,
+  /^\/api\/activity\/(game|track|daily|heatmap)$/,
+  /^\/api\/voice$/,
+  /^\/api\/voice\/member$/,
+  /^\/api\/birthdays\/upcoming$/,
+]
+
+/** Keeps viewers to `VIEWER_ROUTES`, read-only. Runs after `requireAccess`. */
+export const limitViewers: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (c.get('access') === 'viewer') {
+    const allowed = c.req.method === 'GET' && VIEWER_ROUTES.some((route) => route.test(c.req.path))
+    if (!allowed) {
+      return c.json({ error: 'Your role can only see the stats pages.', code: 'stats_only' }, 403)
+    }
+  }
+  await next()
+}
+
+/** For the endpoints moderators may not use: changing settings and posting as the bot. Runs after `requireAccess`. */
 export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (c.get('access') !== 'admin') {
     return c.json({ error: 'Only administrators can do that.', code: 'admin_only' }, 403)

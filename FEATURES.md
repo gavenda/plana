@@ -38,7 +38,7 @@ Plana is a Discord bot with a web dashboard for running one server.
 
 ## Dashboard
 
-Members sign in with Discord. **Administrators** can use everything. **Moderators** (the moderator role) can use everything except Settings and Broadcast. Pages update live over a WebSocket.
+Members sign in with Discord. **Administrators** can use everything. **Moderators** (the moderator role) can use everything except Settings and Broadcast. **Viewers** (the stats role) can see only the stats: Overview without its triage and audit sections, Games & music, and Voice. Pages update live over a WebSocket.
 
 | Page | What it shows |
 | --- | --- |

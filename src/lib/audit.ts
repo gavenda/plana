@@ -142,6 +142,7 @@ const SETTING_NAMES: Record<string, { label: string; kind: 'role' | 'channel' }>
   recapChannelId: { label: 'the recap channel', kind: 'channel' },
   gameNightChannelId: { label: 'the game night channel', kind: 'channel' },
   moderatorRoleId: { label: 'the moderator role', kind: 'role' },
+  statsRoleId: { label: 'the stats role', kind: 'role' },
 }
 
 /** Settings that hold a number of days rather than an ID. */

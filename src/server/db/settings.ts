@@ -18,6 +18,8 @@ export type GuildSettings = {
   triageReminderDays: number | null
   /** Optional. Members with it can use the dashboard and triage, but not change settings. */
   moderatorRoleId: string | null
+  /** Optional. Members with it can sign in to see the stats pages, and nothing staff-only. */
+  statsRoleId: string | null
   /** Optional. Held by members only on their birthday; off while unset. */
   birthdayRoleId: string | null
   /** Reverse proxies in front of the app, for reading visitors' addresses. Unset is none. */
@@ -45,6 +47,7 @@ export const SETTING_KEYS = [
   'triageReminderDays',
   'birthdayRoleId',
   'moderatorRoleId',
+  'statsRoleId',
   'trustedProxyHops',
   'gameNightChannelId',
   'gameNightMinPlayers',
@@ -68,6 +71,7 @@ const EMPTY: GuildSettings = {
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
+  statsRoleId: null,
   trustedProxyHops: null,
   gameNightChannelId: null,
   gameNightMinPlayers: null,

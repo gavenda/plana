@@ -6,14 +6,14 @@ import { getSession } from '../db/sessions'
 import { isReady } from '../discord/client'
 import { getAccessLevel, type AccessLevel } from '../discord/service'
 import { env } from '../env'
-import { ADMIN_TOPICS, LIVE_TOPICS, type LiveTopic } from '../live'
+import { ADMIN_TOPICS, LIVE_TOPICS, VIEWER_TOPICS, type LiveTopic } from '../live'
 import { SESSION_COOKIE } from './session'
 import { logger } from '../logging'
 
 const log = logger('live')
 
 /**
- * `requireStaff` asks Discord on every request so revoked access takes effect at once. A
+ * `requireAccess` asks Discord on every request so revoked access takes effect at once. A
  * socket stays open for hours, so it asks again on this interval and closes when access is gone.
  */
 const ACCESS_RECHECK_MS = 60_000
@@ -30,8 +30,16 @@ const sockets = new Set<LiveSocket>()
 const isTopic = (value: unknown): value is LiveTopic =>
   typeof value === 'string' && (LIVE_TOPICS as readonly string[]).includes(value)
 
-const allowed = (socket: LiveSocket, topic: LiveTopic) =>
-  socket.data.access === 'admin' || !ADMIN_TOPICS.has(topic)
+function allowed(socket: LiveSocket, topic: LiveTopic): boolean {
+  switch (socket.data.access) {
+    case 'admin':
+      return true
+    case 'moderator':
+      return !ADMIN_TOPICS.has(topic)
+    case 'viewer':
+      return VIEWER_TOPICS.has(topic)
+  }
+}
 
 /**
  * Only pages served from this origin may connect. A browser sends the session cookie with
@@ -48,7 +56,7 @@ function sameOrigin(c: Context): boolean {
   }
 }
 
-/** `GET /ws`: the same staff check as `requireStaff`, then the upgrade. */
+/** `GET /ws`: the same access check as `requireAccess`, then the upgrade. */
 export async function upgradeLiveSocket(c: Context): Promise<Response> {
   if (c.req.header('upgrade')?.toLowerCase() !== 'websocket') {
     return c.text('Expected a WebSocket upgrade.', 426)
@@ -61,7 +69,7 @@ export async function upgradeLiveSocket(c: Context): Promise<Response> {
   if (!isReady()) return c.text('The bot is still connecting to Discord.', 503)
 
   const access = await getAccessLevel(user.id)
-  if (!access) return c.text('Not an administrator or moderator of this server.', 403)
+  if (!access) return c.text('No role that can use this dashboard.', 403)
 
   const server = c.env as Server<LiveSocketData>
   const data: LiveSocketData = { sessionId, userId: user.id, access }
@@ -95,7 +103,7 @@ export const liveSocketHandler: WebSocketHandler<LiveSocketData> = {
   },
 }
 
-/** Closes sockets whose session ended or whose access was revoked; drops admin topics on a demotion. */
+/** Closes sockets whose session ended or whose access was revoked; drops topics a demotion loses. */
 async function recheckAccess(): Promise<void> {
   if (!isReady()) return
   for (const socket of sockets) {
@@ -108,7 +116,7 @@ async function recheckAccess(): Promise<void> {
         continue
       }
       socket.data.access = access
-      for (const topic of ADMIN_TOPICS) {
+      for (const topic of LIVE_TOPICS) {
         if (!allowed(socket, topic)) socket.unsubscribe(topic)
       }
     } catch (error) {

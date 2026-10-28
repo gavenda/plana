@@ -47,7 +47,7 @@ import {
   type Result,
   type BroadcastBody,
 } from '../discord/service'
-import { requireAdmin, requireStaff, type AppEnv } from './session'
+import { limitViewers, requireAccess, requireAdmin, type AppEnv } from './session'
 import { validateComponents } from '../../lib/components-v2'
 
 const snowflake = z.string().regex(/^\d{17,20}$/, 'Expected a Discord ID')
@@ -72,7 +72,7 @@ function respond<T>(c: Context, result: Result<T>): Response {
 
 export const api = new Hono<AppEnv>()
 
-api.use('*', requireStaff)
+api.use('*', requireAccess, limitViewers)
 
 api.get('/me', (c) => c.json({ user: { ...c.get('user'), access: c.get('access') } }))
 
@@ -94,6 +94,7 @@ const settingsSchema = z
     triageReminderDays: z.number().int().min(1).max(30).nullable(),
     birthdayRoleId: snowflake.nullable(),
     moderatorRoleId: snowflake.nullable(),
+    statsRoleId: snowflake.nullable(),
     trustedProxyHops: z.number().int().min(1).max(5).nullable(),
     gameNightChannelId: snowflake.nullable(),
     gameNightMinPlayers: z.number().int().min(2).max(10).nullable(),
@@ -111,9 +112,10 @@ async function checkBirthdayRole(roleId: string, settings: GuildSettings): Promi
     settings.unitOwnerRoleId,
     settings.boardersRoleId,
     settings.moderatorRoleId,
+    settings.statsRoleId,
   ]
   if (otherRoles.includes(roleId)) {
-    return 'The birthday role must be its own role, not the triage or moderator role.'
+    return 'The birthday role must be its own role, not the triage, moderator or stats role.'
   }
 
   await primeMemberCache()

@@ -22,6 +22,14 @@ export type LiveTopic = (typeof LIVE_TOPICS)[number]
 /** Topics only administrators may follow. */
 export const ADMIN_TOPICS: ReadonlySet<LiveTopic> = new Set(['settings', 'backup', 'logs'])
 
+/** The only topics viewers (the stats role) may follow: what the stats pages reload on. */
+export const VIEWER_TOPICS: ReadonlySet<LiveTopic> = new Set([
+  'presence',
+  'voice',
+  'guild',
+  'birthdays',
+])
+
 /** Bursts of the same notice (a role edit touches many members) go out as one. */
 const NOTICE_DELAY_MS = 500
 

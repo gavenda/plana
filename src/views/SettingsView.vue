@@ -25,6 +25,7 @@ const draft = reactive<GuildSettings>({
   triageReminderDays: null,
   birthdayRoleId: null,
   moderatorRoleId: null,
+  statsRoleId: null,
   trustedProxyHops: null,
   gameNightChannelId: null,
   gameNightMinPlayers: null,
@@ -34,7 +35,12 @@ const snackbar = useSnackbar()
 const saving = ref(false)
 
 type RoleKey =
-  'triageRoleId' | 'unitOwnerRoleId' | 'boardersRoleId' | 'moderatorRoleId' | 'birthdayRoleId'
+  | 'triageRoleId'
+  | 'unitOwnerRoleId'
+  | 'boardersRoleId'
+  | 'moderatorRoleId'
+  | 'statsRoleId'
+  | 'birthdayRoleId'
 type ChannelKey =
   'announceChannelId' | 'birthdayChannelId' | 'recapChannelId' | 'gameNightChannelId'
 
@@ -159,6 +165,14 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         label: 'Moderator role',
         hint: 'Can sign in here and handle triage, but cannot change settings or broadcast. Administrators always have full access.',
         empty: 'Administrators only',
+        readOnly: true,
+      },
+      {
+        kind: 'role',
+        key: 'statsRoleId',
+        label: 'Stats role',
+        hint: 'Can sign in here to see Overview’s stats, Games & music and Voice, and nothing else: no triage, members, birthdays, audit log or settings.',
+        empty: 'Off',
         readOnly: true,
       },
       {

@@ -16,6 +16,8 @@ declare module 'vue-router' {
     public?: boolean
     /** Administrators only; moderators are sent to the overview. */
     adminOnly?: boolean
+    /** Open to viewers (the stats role) too; every other page is staff-only. */
+    stats?: boolean
     /** Fills the left of the window with art and moves the page to a column on the right. */
     scene?: boolean
     /** Fits the window above the footer and scrolls its own panes, rather than the page scrolling. */
@@ -46,7 +48,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'overview',
     component: () => import('@/views/OverviewView.vue'),
-    meta: { title: 'Overview' },
+    meta: { title: 'Overview', stats: true },
   },
   {
     path: '/queue',
@@ -76,7 +78,7 @@ const routes: RouteRecordRaw[] = [
     path: '/activity',
     name: 'activity',
     component: () => import('@/views/ActivityView.vue'),
-    meta: { title: 'Games & music' },
+    meta: { title: 'Games & music', stats: true },
   },
   {
     path: '/activity/game-nights',
@@ -88,7 +90,7 @@ const routes: RouteRecordRaw[] = [
     path: '/voice',
     name: 'voice',
     component: () => import('@/views/VoiceView.vue'),
-    meta: { title: 'Voice' },
+    meta: { title: 'Voice', stats: true },
   },
   {
     path: '/settings',
@@ -134,6 +136,9 @@ export function createAppRouter(history?: RouterHistory): Router {
       return { name: 'overview' }
     }
     if (to.meta.adminOnly && !session.isAdmin) {
+      return { name: 'overview' }
+    }
+    if (session.isViewer && !to.meta.public && !to.meta.stats) {
       return { name: 'overview' }
     }
     return true

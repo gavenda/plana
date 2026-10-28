@@ -83,7 +83,14 @@ const upcomingLoading = computed(() => waiting(upcoming))
 const voiceLoading = computed(() => waiting(voice))
 const birthdays = computed(() => upcoming.data.value?.birthdays ?? [])
 
+/** Viewers (the stats role) get the stats only: no triage, audit log or settings. */
+const staff = computed(() => !session.isViewer)
+
 onMounted(async () => {
+  if (!staff.value) {
+    await Promise.all([guild.load(), play.run(), voice.run(), upcoming.run(), daily.run()])
+    return
+  }
   await Promise.all([guild.load(), settings.load()])
   // Without a triage role there is no one to list; "Finish setting up" above says so.
   await Promise.all([
@@ -98,7 +105,7 @@ onMounted(async () => {
 
 // Live updates. Each waits for the first load to finish, so a message never stands in for it.
 useLive('triage', () => {
-  if (hasTriageRole.value && !waiting(pending)) void pending.run()
+  if (staff.value && hasTriageRole.value && !waiting(pending)) void pending.run()
 })
 useLive('audit', (message) => {
   const page = activity.data.value
@@ -138,44 +145,49 @@ const missing = computed(() => CHECKLIST.filter((item) => settings.settings[item
 const countMembers = (entries: { member: { id: string } }[]) =>
   new Set(entries.map((entry) => entry.member.id)).size
 
-const stats = computed(() => [
-  {
-    label: 'Awaiting a role',
-    value: pending.data.value?.length ?? '—',
-    loading: (!settings.loaded || hasTriageRole.value) && pendingLoading.value,
-    to: '/queue',
-  },
-  {
-    label: 'Server members',
-    value: guild.directory?.guild.memberCount ?? '—',
-    loading: !guild.directory && !guild.error,
-    to: null,
-  },
-  {
-    label: 'Playing now',
-    value: play.data.value ? countMembers(play.data.value.playing) : '—',
-    loading: playLoading.value,
-    to: '/activity',
-  },
-  {
-    label: 'Listening now',
-    value: play.data.value ? countMembers(play.data.value.listening) : '—',
-    loading: playLoading.value,
-    to: '/activity',
-  },
-  {
-    label: 'In voice now',
-    value: voice.data.value?.now.length ?? '—',
-    loading: voiceLoading.value,
-    to: '/voice',
-  },
-  {
-    label: 'Birthdays this month',
-    value: upcoming.data.value?.thisMonth ?? '—',
-    loading: upcomingLoading.value,
-    to: '/birthdays',
-  },
-])
+const stats = computed(() =>
+  [
+    {
+      staffOnly: true,
+      label: 'Awaiting a role',
+      value: pending.data.value?.length ?? '—',
+      loading: (!settings.loaded || hasTriageRole.value) && pendingLoading.value,
+      to: '/queue',
+    },
+    {
+      label: 'Server members',
+      value: guild.directory?.guild.memberCount ?? '—',
+      loading: !guild.directory && !guild.error,
+      to: null,
+    },
+    {
+      label: 'Playing now',
+      value: play.data.value ? countMembers(play.data.value.playing) : '—',
+      loading: playLoading.value,
+      to: '/activity',
+    },
+    {
+      label: 'Listening now',
+      value: play.data.value ? countMembers(play.data.value.listening) : '—',
+      loading: playLoading.value,
+      to: '/activity',
+    },
+    {
+      label: 'In voice now',
+      value: voice.data.value?.now.length ?? '—',
+      loading: voiceLoading.value,
+      to: '/voice',
+    },
+    {
+      label: 'Birthdays this month',
+      value: upcoming.data.value?.thisMonth ?? '—',
+      loading: upcomingLoading.value,
+      to: staff.value ? '/birthdays' : null,
+    },
+  ]
+    .filter((stat) => staff.value || !('staffOnly' in stat))
+    .map(({ label, value, loading, to }) => ({ label, value, loading, to })),
+)
 
 const recent = computed(() =>
   (activity.data.value?.entries ?? []).map((entry) => ({
@@ -253,7 +265,7 @@ const recent = computed(() =>
     </section>
 
     <div class="grid items-start gap-6 expanded:grid-cols-2">
-      <section aria-labelledby="overview-activity">
+      <section v-if="staff" aria-labelledby="overview-activity">
         <div class="section-header">
           <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
           <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
@@ -293,7 +305,10 @@ const recent = computed(() =>
         </div>
       </section>
 
-      <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="overview-triage">
+      <section
+        v-if="staff && (!settings.loaded || hasTriageRole)"
+        aria-labelledby="overview-triage"
+      >
         <div class="section-header">
           <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
           <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
@@ -568,7 +583,7 @@ const recent = computed(() =>
       <section aria-labelledby="overview-birthdays">
         <div class="section-header">
           <h2 id="overview-birthdays" class="text-title-medium">Upcoming birthdays</h2>
-          <RouterLink class="btn btn-text" to="/birthdays">View all</RouterLink>
+          <RouterLink v-if="staff" class="btn btn-text" to="/birthdays">View all</RouterLink>
         </div>
         <div :class="!upcomingLoading && birthdays.length === 0 && 'card'">
           <StateBlock
