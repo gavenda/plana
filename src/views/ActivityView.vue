@@ -2,12 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import type { ActivityOverview, GamePlayers, TrackListeners } from '@/lib/activity'
+import type { ActivityOverview, GamePlayers, Heatmap, TrackListeners } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
@@ -43,7 +44,15 @@ const overview = useAsync(() =>
   apiFetch<ActivityOverview>(`/api/activity?days=${daysParam(days.value)}`),
 )
 
-onMounted(() => void overview.run())
+/** Averages over weeks barely move with one play, so the heatmap follows the period only. */
+const heatmap = useAsync(() =>
+  apiFetch<Heatmap>(`/api/activity/heatmap?kind=music&days=${daysParam(days.value)}`),
+)
+
+onMounted(() => {
+  void overview.run()
+  void heatmap.run()
+})
 
 /** "Right now" follows along; the totals wait for a change of period or a reload. */
 useLive('presence', (message) => {
@@ -57,6 +66,7 @@ watch(days, (value) => {
     query: { ...route.query, days: value === DEFAULT_DAYS ? undefined : daysParam(value) },
   })
   void overview.run()
+  void heatmap.run()
 })
 
 const data = computed(() => overview.data.value)
@@ -64,6 +74,10 @@ const data = computed(() => overview.data.value)
 const loading = computed(() => !data.value && !overview.error.value)
 const games = computed(() => data.value?.games ?? [])
 const tracks = computed(() => data.value?.tracks ?? [])
+
+/** Each game's playtime as a share of the top game's, for the bar under its row. */
+const topGameMs = computed(() => Math.max(0, ...games.value.map((game) => game.ms)))
+const gameShare = (ms: number) => (topGameMs.value > 0 ? (ms / topGameMs.value) * 100 : 0)
 
 /** Who is playing and listening right now, games first. */
 const live = computed(() => [
@@ -384,6 +398,16 @@ const plural = (count: number, one: string, many: string) =>
                   :aria-current="game.name === chosenGame ? 'true' : undefined"
                   @click="chooseGame(game.name)"
                 >
+                  <!-- Playtime against the top game's, along the foot of the row. -->
+                  <span
+                    class="pointer-events-none absolute inset-x-4 bottom-1 h-1 overflow-hidden rounded-full"
+                    aria-hidden="true"
+                  >
+                    <span
+                      class="block h-full rounded-full bg-primary/60"
+                      :style="{ width: `${gameShare(game.ms)}%` }"
+                    />
+                  </span>
                   <span
                     class="w-7 shrink-0 text-center text-label-large tabular-nums"
                     :class="rankClass(index)"
@@ -512,6 +536,31 @@ const plural = (count: number, one: string, many: string) =>
         </div>
       </section>
     </div>
+
+    <section aria-labelledby="activity-heatmap">
+      <div class="section-header">
+        <div class="flex items-center gap-1">
+          <h2 id="activity-heatmap" class="text-title-medium">When people listen</h2>
+          <RichTooltip
+            title="Listening hours"
+            text="Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier."
+          />
+        </div>
+      </div>
+      <StateBlock
+        :loading="!heatmap.data.value && !heatmap.error.value"
+        :error="heatmap.error.value"
+        compact
+      >
+        <template #skeleton><div class="skeleton h-56 rounded-md" /></template>
+        <ActivityHeatmap
+          v-if="heatmap.data.value"
+          kind="music"
+          :grid="heatmap.data.value.grid"
+          :time-zone="heatmap.data.value.timeZone"
+        />
+      </StateBlock>
+    </section>
 
     <SupportingSheet v-model:open="sheetOpen" :headline="sheetGame ?? ''">
       <template #leading>

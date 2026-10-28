@@ -42,14 +42,14 @@ Members sign in with Discord. **Administrators** can use everything. **Moderator
 
 | Page | What it shows |
 | --- | --- |
-| **Overview** | Recent activity, who's waiting in triage, and this week's top games and their players |
+| **Overview** | Charts of daily hours in voice, played and listened over the last 4 weeks (each with the last 7 days against the 7 before), recent activity, who's waiting in triage, and this week's top games and their players |
 | **Triage queue** | Members waiting in triage |
 | **Broadcast** | Builder for Components V2 messages (sections, galleries, button rows) with a live preview, or pasted JSON |
-| **Members** | Searchable member list. Each profile has facts, birthday, voice channels, games, tracks and audit history |
+| **Members** | Searchable member list. Each profile has facts, birthday, a 6-month strip of their days in voice or games, voice channels, games, tracks and audit history |
 | **Birthdays** | Upcoming birthdays; add, edit or remove them |
-| **Games & music** | Who's playing or listening right now, most-played games, and most-played tracks |
+| **Games & music** | Who's playing or listening right now, most-played games (each with a bar against the top game), most-played tracks, and a weekday-by-hour heatmap of when people listen |
 | **Game nights** | Opened from Games & music: every game played, each with the role its game nights ping |
-| **Voice** | Who's in voice now, members with the most voice time, and the busiest channels |
+| **Voice** | Who's in voice now, a weekday-by-hour heatmap of when people are in voice, members with the most voice time, and the busiest channels with each one's share of the time |
 | **Audit log** | Searchable, filterable log covering triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |
 | **Settings** | Roles and channels grouped by feature, triage reminder days, game night minimum players, backups, live server logs, and an About pane |
 

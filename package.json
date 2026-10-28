@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@logtape/logtape": "^2.4.2",
+    "chart.js": "^4.6.1",
+    "chartjs-chart-matrix": "^3.1.0",
     "discord.js": "^14.27.0",
     "hono": "^4.13.14",
     "i18next": "^26.5.10",

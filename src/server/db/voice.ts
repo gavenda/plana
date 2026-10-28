@@ -135,3 +135,46 @@ export function listVoiceTotals(since: number): VoiceTotal[] {
     ms: row.ms,
   }))
 }
+
+const selectMemberIntervals = db.query<
+  { start: number; ended_at: number },
+  { since: number; min: number }
+>(
+  `SELECT MAX(started_at, :since) AS start, ended_at
+   FROM voice_sessions
+   WHERE ended_at > :since AND ended_at - started_at >= :min`,
+)
+
+/** Every member's time in voice since a moment, as start and end pairs. */
+export function listVoiceIntervals(since: number): { start: number; end: number }[] {
+  return selectMemberIntervals
+    .all({ since, min: MIN_VOICE_SESSION_MS })
+    .map((row) => ({ start: row.start, end: row.ended_at }))
+}
+
+const selectFirstVoice = db.query<{ first: number | null }, []>(
+  'SELECT MIN(started_at) AS first FROM voice_sessions',
+)
+
+/** When the first voice session started, or null before any. */
+export function firstVoiceAt(): number | null {
+  return selectFirstVoice.get()?.first ?? null
+}
+
+const selectMemberVoiceSpans = db.query<
+  { start: number; ended_at: number },
+  { member_id: string; since: number; min: number }
+>(
+  `SELECT MAX(started_at, :since) AS start, ended_at FROM voice_sessions
+   WHERE member_id = :member_id AND ended_at > :since AND ended_at - started_at >= :min`,
+)
+
+/** One member's time in voice since a moment, as start and end pairs. */
+export function listMemberVoiceSpans(
+  memberId: string,
+  since: number,
+): { start: number; end: number }[] {
+  return selectMemberVoiceSpans
+    .all({ member_id: memberId, since, min: MIN_VOICE_SESSION_MS })
+    .map((row) => ({ start: row.start, end: row.ended_at }))
+}

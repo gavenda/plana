@@ -5,7 +5,8 @@ import { RouterLink } from 'vue-router'
 import AuditSummary from '@/components/AuditSummary.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import type { ActivityOverview } from '@/lib/activity'
+import TrendChart from '@/components/TrendChart.vue'
+import type { ActivityOverview, DailyTrends, TrendMetric } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { formatUntil, type UpcomingBirthdays } from '@/lib/birthdays'
 import { formatMonthDay } from '@/lib/dates'
@@ -41,6 +42,13 @@ const activity = useAsync(() => apiFetch<AuditPage>(`/api/audit?limit=${RECENT_L
 const play = useAsync(() => apiFetch<ActivityOverview>('/api/activity?days=7'))
 const upcoming = useAsync(() => apiFetch<UpcomingBirthdays>('/api/birthdays/upcoming'))
 const voice = useAsync(() => apiFetch<VoiceOverview>('/api/voice?days=7'))
+const daily = useAsync(() => apiFetch<DailyTrends>('/api/activity/daily'))
+
+const TRENDS: { metric: TrendMetric; label: string; icon: string }[] = [
+  { metric: 'voice', label: 'Hours in voice', icon: 'headset_mic' },
+  { metric: 'games', label: 'Hours played', icon: 'sports_esports' },
+  { metric: 'music', label: 'Hours of music', icon: 'music_note' },
+]
 
 /** How many games and tracks Overview lists; Games & music has the rest. */
 const PLAY_LIMIT = 5
@@ -84,6 +92,7 @@ onMounted(async () => {
     play.run(),
     voice.run(),
     upcoming.run(),
+    daily.run(),
   ])
 })
 
@@ -217,6 +226,31 @@ const recent = computed(() =>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
       </component>
     </div>
+
+    <section aria-labelledby="overview-trends">
+      <div class="section-header">
+        <h2 id="overview-trends" class="text-title-medium">Last 4 weeks</h2>
+        <span v-if="daily.data.value" class="pr-4 text-label-medium text-on-surface-variant"
+          >Days in {{ daily.data.value.timeZone }}</span
+        >
+      </div>
+      <p v-if="daily.error.value" class="card px-6 py-4 text-body-medium text-on-surface-variant">
+        Couldn't load the last 4 weeks: {{ daily.error.value }}
+      </p>
+      <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+        <TrendChart
+          v-for="trend in TRENDS"
+          :key="trend.metric"
+          :label="trend.label"
+          :icon="trend.icon"
+          :loading="!daily.data.value"
+          :daily="daily.data.value?.trends[trend.metric].daily"
+          :dates="daily.data.value?.dates"
+          :week="daily.data.value?.trends[trend.metric].week"
+          :previous-week="daily.data.value?.trends[trend.metric].previousWeek"
+        />
+      </div>
+    </section>
 
     <div class="grid items-start gap-6 expanded:grid-cols-2">
       <section aria-labelledby="overview-activity">

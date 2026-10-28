@@ -5,6 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
+import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
+import ChannelShare from '@/components/ChannelShare.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
@@ -13,6 +15,7 @@ import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useLive } from '@/lib/live'
 import { rankClass } from '@/lib/rank'
 import { useAsync } from '@/lib/useAsync'
+import type { Heatmap } from '@/lib/activity'
 import type { MemberVoice, VoiceOverview } from '@/lib/voice'
 
 /** `days` null is all time; in the URL and the API it is `all`. */
@@ -39,7 +42,18 @@ function daysFromQuery(): number | null {
 const days = ref(daysFromQuery())
 const overview = useAsync(() => apiFetch<VoiceOverview>(`/api/voice?days=${daysParam(days.value)}`))
 
-onMounted(() => void overview.run())
+/**
+ * Averages over weeks barely move when one person joins, so the heatmap follows the period
+ * only, not every live voice change.
+ */
+const heatmap = useAsync(() =>
+  apiFetch<Heatmap>(`/api/activity/heatmap?kind=voice&days=${daysParam(days.value)}`),
+)
+
+onMounted(() => {
+  void overview.run()
+  void heatmap.run()
+})
 
 /** Someone joining, leaving or moving reloads the page, and the open member with it. */
 useLive('voice', () => {
@@ -52,6 +66,7 @@ watch(days, (value) => {
     query: { ...route.query, days: value === DEFAULT_DAYS ? undefined : daysParam(value) },
   })
   void overview.run()
+  void heatmap.run()
 })
 
 const data = computed(() => overview.data.value)
@@ -248,6 +263,31 @@ const plural = (count: number, one: string, many: string) =>
       </div>
     </section>
 
+    <section aria-labelledby="voice-heatmap">
+      <div class="section-header">
+        <div class="flex items-center gap-1">
+          <h2 id="voice-heatmap" class="text-title-medium">When people are in voice</h2>
+          <RichTooltip
+            title="Busy hours"
+            text="Each square is how many members were in voice at that hour on average over the period. Brighter squares are busier."
+          />
+        </div>
+      </div>
+      <StateBlock
+        :loading="!heatmap.data.value && !heatmap.error.value"
+        :error="heatmap.error.value"
+        compact
+      >
+        <template #skeleton><div class="skeleton h-56 rounded-md" /></template>
+        <ActivityHeatmap
+          v-if="heatmap.data.value"
+          kind="voice"
+          :grid="heatmap.data.value.grid"
+          :time-zone="heatmap.data.value.timeZone"
+        />
+      </StateBlock>
+    </section>
+
     <!-- Two columns from the expanded class however narrow a docked sheet makes them, so opening
          a member never moves the channels. -->
     <div class="grid items-start gap-6 expanded:grid-cols-2">
@@ -329,6 +369,7 @@ const plural = (count: number, one: string, many: string) =>
             />
           </div>
         </div>
+        <ChannelShare v-if="channels.length > 1" class="mb-2" :channels="channels" />
         <div :class="!loading && channels.length === 0 && 'card'">
           <StateBlock
             :loading="loading"

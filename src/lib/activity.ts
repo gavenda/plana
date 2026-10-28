@@ -70,3 +70,40 @@ export type TrackListeners = {
 
 /** Who is playing and listening at this moment; also what the `presence` live topic sends. */
 export type RightNow = Pick<ActivityOverview, 'playing' | 'listening'>
+
+export type TrendMetric = 'voice' | 'games' | 'music'
+
+/** What `/api/activity/daily` returns; see src/server/discord/trends.ts. */
+export type DailyTrends = {
+  timeZone: string
+  /** Local dates as YYYY-MM-DD, oldest first; the last is today. */
+  dates: string[]
+  trends: Record<
+    TrendMetric,
+    {
+      /** Milliseconds per day, oldest first; the last is today so far. */
+      daily: number[]
+      /** The last 7 days. */
+      week: number
+      /** The 7 days before those. */
+      previousWeek: number
+    }
+  >
+}
+
+/** What `/api/activity/heatmap` returns; see src/server/discord/heatmaps.ts. */
+export type Heatmap = {
+  kind: 'voice' | 'music'
+  /** Null for all time. */
+  days: number | null
+  timeZone: string
+  /** Average members doing it, by weekday (Monday first) then hour of the day. */
+  grid: number[][]
+}
+
+/** What `/api/members/:id/activity` returns; see src/server/discord/trends.ts. */
+export type MemberActivity = {
+  timeZone: string
+  /** Oldest first, starting on a Monday; the last is today so far. */
+  days: { date: string; voiceMs: number; gameMs: number; activeMs: number }[]
+}

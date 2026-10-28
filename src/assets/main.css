@@ -290,6 +290,19 @@
   --spacing-sheet: 400px;
 }
 
+/* Categorical chart colours, for charts whose series are different things (channels in a
+   share bar). Not M3 roles: the scheme's tones are too light and too close to tell apart.
+   Validated as a set on surface-container for colour-blind separation and 3:1 contrast;
+   use them in this order and fold anything past the fourth into "other". `static` keeps them
+   in the stylesheet, since charts read them from script rather than through a class. */
+@theme static {
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
+  --color-chart-3: #199e70;
+  --color-chart-4: #c98500;
+  --color-chart-other: #5f6069;
+}
+
 /* ------------------------------------------------------------ utilities --- */
 /* M3 state layer: an overlay in the content color, at 8% on hover and 10% on
    focus, press, or keyboard highlight. `.group:hover` lets a whole nav item light up its indicator. */

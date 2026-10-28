@@ -310,3 +310,63 @@ export function listMemberTrackTotals(
       ms: row.ms,
     }))
 }
+
+// ---------------------------------------------------------------------------
+// Spans, for daily trends
+// ---------------------------------------------------------------------------
+
+export type Span = { start: number; end: number }
+
+const selectGameSpans = db.query<
+  { start: number; ended_at: number },
+  { since: number; min: number }
+>(
+  `SELECT MAX(started_at, :since) AS start, ended_at FROM game_sessions
+   WHERE ended_at > :since AND ended_at - started_at >= :min`,
+)
+
+/** Every game session since a moment, as start and end pairs. */
+export function listGameSpans(since: number): Span[] {
+  return selectGameSpans
+    .all({ since, min: MIN_GAME_SESSION_MS })
+    .map((row) => ({ start: row.start, end: row.ended_at }))
+}
+
+const selectTrackSpans = db.query<
+  { start: number; ended_at: number },
+  { since: number; min: number }
+>(
+  `SELECT MAX(started_at, :since) AS start, ended_at FROM spotify_plays
+   WHERE ended_at > :since AND ended_at - started_at >= :min`,
+)
+
+/** Every Spotify play since a moment, as start and end pairs. */
+export function listTrackSpans(since: number): Span[] {
+  return selectTrackSpans
+    .all({ since, min: MIN_TRACK_PLAY_MS })
+    .map((row) => ({ start: row.start, end: row.ended_at }))
+}
+
+const selectFirstTrack = db.query<{ first: number | null }, []>(
+  'SELECT MIN(started_at) AS first FROM spotify_plays',
+)
+
+/** When the first Spotify play started, or null before any. */
+export function firstTrackAt(): number | null {
+  return selectFirstTrack.get()?.first ?? null
+}
+
+const selectMemberGameSpans = db.query<
+  { start: number; ended_at: number },
+  { member_id: string; since: number; min: number }
+>(
+  `SELECT MAX(started_at, :since) AS start, ended_at FROM game_sessions
+   WHERE member_id = :member_id AND ended_at > :since AND ended_at - started_at >= :min`,
+)
+
+/** One member's game sessions since a moment, as start and end pairs. */
+export function listMemberGameSpans(memberId: string, since: number): Span[] {
+  return selectMemberGameSpans
+    .all({ member_id: memberId, since, min: MIN_GAME_SESSION_MS })
+    .map((row) => ({ start: row.start, end: row.ended_at }))
+}

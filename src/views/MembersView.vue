@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import ActivityStrip from '@/components/ActivityStrip.vue'
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
 import DiscordMention from '@/components/DiscordMention.vue'
@@ -9,6 +10,7 @@ import FilterChip from '@/components/FilterChip.vue'
 import PlanaSays from '@/components/PlanaSays.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import type { MemberActivity } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { auditIcon, describeAudit, toneContainerClass } from '@/lib/audit'
 import { formatUntil } from '@/lib/birthdays'
@@ -132,6 +134,21 @@ watch([chosen, days], () => {
   if (chosen.value) void profile.run()
 })
 
+/** The last 6 months a day at a time, for the activity strip; it doesn't follow the period. */
+const activity = useAsync(async () => {
+  const id = chosen.value
+  return { id, ...(await apiFetch<MemberActivity>(`/api/members/${id}/activity`)) }
+})
+
+watch(chosen, () => {
+  if (chosen.value) void activity.run()
+})
+
+/** Only the chosen member's strip, so a slow earlier answer never shows under a later name. */
+const strip = computed(() =>
+  activity.data.value?.id === chosen.value ? activity.data.value : null,
+)
+
 /** Only the chosen member's answer, so a slow earlier one never shows under a later name. */
 const detail = computed(() =>
   profile.data.value?.member.id === chosen.value ? profile.data.value : null,
@@ -146,7 +163,10 @@ onMounted(() => {
   // Role colours in the audit summaries; they show without them if this fails.
   void guild.load()
   void list.run()
-  if (chosen.value) void profile.run()
+  if (chosen.value) {
+    void profile.run()
+    void activity.run()
+  }
 })
 
 // ---------------------------------------------------------------------------
@@ -498,6 +518,21 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   >
                 </li>
               </ul>
+
+              <section aria-labelledby="member-activity">
+                <div class="section-header">
+                  <h3 id="member-activity" class="text-title-medium">Last 6 months</h3>
+                </div>
+                <StateBlock
+                  :loading="!strip && !activity.error.value"
+                  :error="activity.error.value"
+                  :retry="activity.run"
+                  compact
+                >
+                  <template #skeleton><div class="skeleton h-48 rounded-md" /></template>
+                  <ActivityStrip v-if="strip" :days="strip.days" :time-zone="strip.timeZone" />
+                </StateBlock>
+              </section>
 
               <div class="flex flex-wrap gap-2" role="group" aria-label="Period">
                 <FilterChip

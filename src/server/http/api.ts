@@ -31,7 +31,9 @@ import { getGuild } from '../discord/client'
 import { getGameRole, setGameRole } from '../db/game-nights'
 import { getMemberProfile, listMembers } from '../discord/members'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
+import { getHeatmap } from '../discord/heatmaps'
 import { postWeeklyRecap } from '../discord/recap'
+import { getDailyTrends, getMemberActivity } from '../discord/trends'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
 import { recentLogs } from '../logging'
@@ -200,6 +202,13 @@ api.get('/members/:memberId', async (c) => {
   return respond(c, await getMemberProfile(memberId.data, parsed.data.days))
 })
 
+/** A member's time in voice and games per day, for the activity strip on their profile. */
+api.get('/members/:memberId/activity', (c) => {
+  const memberId = snowflake.safeParse(c.req.param('memberId'))
+  if (!memberId.success) return c.json({ error: 'Invalid member ID.' }, 400)
+  return respond(c, getMemberActivity(memberId.data))
+})
+
 const assignSchema = z.object({ roleId: snowflake })
 
 api.post('/members/:memberId/assign', async (c) => {
@@ -343,6 +352,9 @@ api.get('/activity', async (c) => {
   return respond(c, await getActivityOverview(parsed.data.days))
 })
 
+/** Daily hours in voice, gaming and listening for the last 4 weeks, for Overview's charts. */
+api.get('/activity/daily', (c) => respond(c, getDailyTrends()))
+
 const gamePlayersQuerySchema = activityQuerySchema.extend({
   name: z.string().trim().min(1).max(200),
 })
@@ -404,6 +416,16 @@ api.get('/voice', async (c) => {
   const parsed = activityQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'Invalid period.' }, 400)
   return respond(c, await getVoiceOverview(parsed.data.days))
+})
+
+const heatmapQuerySchema = activityQuerySchema.extend({ kind: z.enum(['voice', 'music']) })
+
+/** When the server is in voice or listening, by weekday and hour, for the pages' heatmaps. */
+api.get('/activity/heatmap', (c) => {
+  const parsed = heatmapQuerySchema.safeParse(c.req.query())
+  if (!parsed.success)
+    return c.json({ error: 'A kind (voice or music) and a valid period are required.' }, 400)
+  return respond(c, getHeatmap(parsed.data.kind, parsed.data.days))
 })
 
 const memberVoiceQuerySchema = activityQuerySchema.extend({ id: snowflake })
