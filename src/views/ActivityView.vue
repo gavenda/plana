@@ -8,7 +8,13 @@ import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import type { ActivityOverview, GamePlayers, Heatmap, TrackListeners } from '@/lib/activity'
+import type {
+  ActivityOverview,
+  GamePlayers,
+  Heatmap,
+  TrackListeners,
+  VivyMusic,
+} from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
@@ -68,8 +74,12 @@ const heatmaps = [
   },
 ]
 
+/** What Vivy, the music bot, played; its section only shows once Plana is connected to Vivy. */
+const vivy = useAsync(() => apiFetch<VivyMusic>(`/api/activity/vivy?days=${daysParam(days.value)}`))
+
 onMounted(() => {
   void overview.run()
+  void vivy.run()
   for (const heatmap of heatmaps) void heatmap.state.run()
 })
 
@@ -85,6 +95,7 @@ watch(days, (value) => {
     query: { ...route.query, days: value === DEFAULT_DAYS ? undefined : daysParam(value) },
   })
   void overview.run()
+  void vivy.run()
   for (const heatmap of heatmaps) void heatmap.state.run()
 })
 
@@ -119,6 +130,39 @@ const live = computed(() => [
 const hours = (ms: number) =>
   (ms / 3_600_000).toLocaleString('en', { maximumFractionDigits: ms < 36_000_000 ? 1 : 0 })
 
+const vivyData = computed(() => (vivy.data.value?.enabled ? vivy.data.value : null))
+/** Hidden when Vivy isn't connected; an error only comes back when it is. */
+const vivyShown = computed(() => vivyData.value != null || vivy.error.value != null)
+const vivyLoading = computed(() => !vivyData.value && !vivy.error.value)
+const vivyTracks = computed(() => vivyData.value?.tracks ?? [])
+const vivyRequesters = computed(() => vivyData.value?.requesters ?? [])
+
+/** A date as YYYY-MM-DD in a time zone, `back` days before today. */
+function zonedDate(timeZone: string, back = 0): string {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date())
+  const [year, month, day] = today.split('-').map(Number)
+  return new Date(Date.UTC(year!, month! - 1, day! - back)).toISOString().slice(0, 10)
+}
+
+/**
+ * Vivy counts by day only since it was updated, so a period reaching further back is cut short.
+ * Says so under the heading; all time is always complete.
+ */
+const vivyCaption = computed(() => {
+  const music = vivyData.value
+  if (!music || music.days == null) return null
+  if (!music.dailySince) return 'Vivy hasn’t counted any days yet. All time has everything.'
+  if (zonedDate(music.timeZone, music.days - 1) >= music.dailySince) return null
+  const [year, month, day] = music.dailySince.split('-').map(Number)
+  const since = new Date(Date.UTC(year!, month! - 1, day!)).toLocaleDateString('en', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+  return `Counted by day since ${since}.`
+})
+
 /** Plain surface tiles, as on Overview. */
 const stats = computed(() => {
   const totals = data.value?.totals
@@ -135,6 +179,9 @@ const stats = computed(() => {
       label: 'Spotify plays',
       value: totals?.trackPlays.toLocaleString() ?? '—',
     },
+    ...(vivyData.value
+      ? [{ label: 'Vivy plays', value: vivyData.value.totals.plays.toLocaleString() }]
+      : []),
   ]
 })
 
@@ -552,6 +599,142 @@ const plural = (count: number, one: string, many: string) =>
                   icon="open_in_new"
                   narrow
                 />
+              </li>
+            </ol>
+          </StateBlock>
+        </div>
+      </section>
+    </div>
+
+    <!-- Vivy, the music bot: only with VIVY_STATS on, reading the Redis both bots share. -->
+    <div v-if="vivyShown" class="grid items-start gap-6 expanded:grid-cols-2">
+      <section aria-labelledby="activity-vivy-tracks">
+        <div class="section-header">
+          <div class="flex items-center gap-1">
+            <h2 id="activity-vivy-tracks" class="text-title-medium">Most played with Vivy</h2>
+            <RichTooltip
+              title="Most played with Vivy"
+              text="Tracks the music bot played in this server, most played first. Tracks Vivy picked on its own with autoplay aren’t counted."
+            />
+          </div>
+        </div>
+        <p v-if="vivyCaption" class="-mt-1 mb-3 px-4 text-body-small text-on-surface-variant">
+          {{ vivyCaption }}
+        </p>
+        <div :class="!vivyLoading && vivyTracks.length === 0 && 'card'">
+          <StateBlock
+            :loading="vivyLoading"
+            :error="vivy.error.value"
+            :empty="vivyTracks.length === 0"
+            empty-text="Vivy played nothing in this period."
+            compact
+          >
+            <template #skeleton>
+              <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
+            </template>
+            <ol class="segmented-list">
+              <li
+                v-for="(track, index) in vivyTracks"
+                :key="track.id"
+                class="segmented-item gap-4"
+                :class="track.url && 'pr-2'"
+              >
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="rankClass(index)"
+                  >#{{ index + 1 }}</span
+                >
+                <img
+                  v-if="track.artUrl"
+                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                  :src="track.artUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <span
+                  v-else
+                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                  aria-hidden="true"
+                  ><span class="icon [--icon-size:20px]">music_note</span></span
+                >
+                <div class="min-w-0 flex-1 py-1">
+                  <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
+                  <p class="truncate text-body-small text-on-surface-variant">
+                    {{ track.artist ?? 'Unknown artist' }}
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-col items-end">
+                  <span class="text-body-large tabular-nums">{{
+                    plural(track.plays, 'play', 'plays')
+                  }}</span>
+                  <span v-if="track.ms > 0" class="text-label-small text-on-surface-variant">{{
+                    formatDuration(track.ms)
+                  }}</span>
+                </div>
+                <RichTooltip
+                  v-if="track.url"
+                  title="Open track"
+                  :href="track.url"
+                  icon="open_in_new"
+                  narrow
+                />
+              </li>
+            </ol>
+          </StateBlock>
+        </div>
+      </section>
+
+      <section aria-labelledby="activity-vivy-requesters">
+        <div class="section-header">
+          <h2 id="activity-vivy-requesters" class="text-title-medium">Top Vivy requesters</h2>
+          <span
+            v-if="vivyData && vivyData.totals.requesters > 0"
+            class="pr-4 text-label-large text-on-surface-variant"
+            >{{ vivyData.totals.requesters }}</span
+          >
+        </div>
+        <div :class="!vivyLoading && vivyRequesters.length === 0 && 'card'">
+          <StateBlock
+            :loading="vivyLoading"
+            :error="vivy.error.value"
+            :empty="vivyRequesters.length === 0"
+            empty-text="Nobody asked Vivy for a track in this period."
+            compact
+          >
+            <template #skeleton><SkeletonList :rows="5" rank two-line trailing="text" /></template>
+            <ol class="segmented-list">
+              <li
+                v-for="(requester, index) in vivyRequesters"
+                :key="requester.id"
+                class="segmented-item"
+              >
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="rankClass(index)"
+                  >#{{ index + 1 }}</span
+                >
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="requester.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <div class="min-w-0 flex-1 py-1">
+                  <p
+                    class="truncate text-body-large"
+                    :style="{ color: discordTextColor(requester.color) }"
+                  >
+                    {{ requester.displayName }}
+                  </p>
+                  <p class="truncate font-mono text-body-small text-on-surface-variant">
+                    {{ requester.username }}
+                  </p>
+                </div>
+                <span class="shrink-0 text-body-large tabular-nums">{{
+                  plural(requester.requests, 'request', 'requests')
+                }}</span>
               </li>
             </ol>
           </StateBlock>

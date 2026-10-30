@@ -33,6 +33,7 @@ Plana is a Discord bot with a web dashboard for running one server.
 
 ### Tracking
 - Game playtime and Spotify listening, from member presence.
+- What Vivy, the server's music bot, played and who asked for it, read from the Redis both bots share when `VIVY_STATS` is on. Read only; Plana never writes Vivy's data.
 - Time in voice, per member and per channel. The AFK channel and time spent deafened don't count.
 - Game icons are fetched from Discord or Steam and cached.
 
@@ -47,7 +48,7 @@ Members sign in with Discord. **Administrators** can use everything. **Moderator
 | **Broadcast** | Builder for Components V2 messages (sections, galleries, button rows) with a live preview, or pasted JSON |
 | **Members** | Searchable member list. Each profile has facts, birthday, a 6-month strip of their days in voice or games, voice channels, games, tracks and audit history |
 | **Birthdays** | Upcoming birthdays; add, edit or remove them |
-| **Games & music** | Who's playing or listening right now, weekday-by-hour heatmaps of when people play and when they listen, most-played games, and most-played tracks |
+| **Games & music** | Who's playing or listening right now, weekday-by-hour heatmaps of when people play and when they listen, most-played games, and most-played tracks; with Vivy connected, a Vivy plays tile, Vivy's most-played tracks and its top requesters (periods only reach back to when Vivy began counting by day) |
 | **Game nights** | Opened from Games & music: every game played, each with the role its game nights ping |
 | **Voice** | Who's in voice now, a weekday-by-hour heatmap of when people are in voice, members with the most voice time, and the busiest channels with each one's share of the time |
 | **Audit log** | Searchable, filterable log covering triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |

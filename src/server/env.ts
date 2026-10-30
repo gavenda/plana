@@ -38,10 +38,18 @@ const schema = z
     DATABASE_PATH: z.string().default('./data/plana.db'),
 
     /**
-     * Cache only, never a source of truth. Set to an empty string to run without it;
-     * the bot then serves everything live.
+     * Plana keeps only a cache here (keys under `plana:`, each with an expiry), never a source
+     * of truth. Set to an empty string to run without it; the bot then serves everything live.
+     * It can be the Redis Vivy uses, which VIVY_STATS needs.
      */
     REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
+
+    /**
+     * Shows what Vivy, the music bot, played on Games & music, read from REDIS_URL, so both
+     * bots must share one Redis. Read only. Vivy's STATS_TIMEZONE should match
+     * BIRTHDAY_TIMEZONE, so both count the same days.
+     */
+    VIVY_STATS: z.stringbool().default(false),
 
     /** IANA time zone the bot's day starts in, e.g. `Europe/Dublin`. Birthdays post at its midnight. */
     BIRTHDAY_TIMEZONE: z

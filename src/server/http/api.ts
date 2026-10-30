@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { z } from 'zod'
 
 import { getBackupOverview, runBackup } from '../backup'
-import { CacheKey, invalidate } from '../cache'
+import { CacheKey, cached, invalidate } from '../cache'
 import { AUDIT_CATEGORY_ACTIONS, listAudit, recordAudit, type AuditCategory } from '../db/audit'
 import {
   getSettings,
@@ -32,11 +32,12 @@ import { getGameRole, setGameRole } from '../db/game-nights'
 import { getMemberProfile, listMembers } from '../discord/members'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { getHeatmap } from '../discord/heatmaps'
+import { getVivyMusic, isVivyEnabled } from '../discord/vivy'
 import { postWeeklyRecap } from '../discord/recap'
 import { getDailyTrends, getMemberActivity } from '../discord/trends'
 import { remindStaleTriage } from '../discord/triage-reminders'
 import { MAX_MESSAGE_LENGTH } from '../constants'
-import { recentLogs } from '../logging'
+import { logger, recentLogs } from '../logging'
 import {
   assignRole,
   broadcast,
@@ -418,6 +419,28 @@ api.get('/voice', async (c) => {
   const parsed = activityQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'Invalid period.' }, 400)
   return respond(c, await getVoiceOverview(parsed.data.days))
+})
+
+/** How long Vivy's numbers are cached; music doesn't need to be counted to the second. */
+const VIVY_TTL_SECONDS = 60
+
+/** What Vivy, the music bot, played; `{ enabled: false }` when it isn't connected. */
+api.get('/activity/vivy', async (c) => {
+  const parsed = activityQuerySchema.safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'Invalid period.' }, 400)
+  if (!isVivyEnabled()) return c.json({ enabled: false })
+
+  const days = parsed.data.days
+  try {
+    const music = await cached(`vivy:music:${days ?? 'all'}`, VIVY_TTL_SECONDS, () =>
+      getVivyMusic(days),
+    )
+    return c.json({ enabled: true, ...music })
+  } catch (error) {
+    logger('vivy')
+      .warning`Vivy's stats unavailable: ${error instanceof Error ? error.message : error}`
+    return c.json({ error: "Couldn't reach Vivy's stats." }, 503)
+  }
 })
 
 const heatmapQuerySchema = activityQuerySchema.extend({ kind: z.enum(['voice', 'games', 'music']) })

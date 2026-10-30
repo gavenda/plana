@@ -107,3 +107,30 @@ export type MemberActivity = {
   /** Oldest first, starting on a Monday; the last is today so far. */
   days: { date: string; voiceMs: number; gameMs: number; activeMs: number }[]
 }
+
+/** A track Vivy, the music bot, played; see src/server/discord/vivy.ts. */
+export type VivyTrack = {
+  id: string
+  title: string
+  artist: string | null
+  /** Where it plays from, such as its YouTube page. */
+  url: string | null
+  artUrl: string | null
+  plays: number
+  ms: number
+}
+
+/** What `/api/activity/vivy` returns: `enabled: false` when Plana isn't connected to Vivy. */
+export type VivyMusic =
+  | { enabled: false }
+  | {
+      enabled: true
+      /** Null for all time. */
+      days: number | null
+      timeZone: string
+      /** The first local date Vivy counted by day, as YYYY-MM-DD; null if none yet. */
+      dailySince: string | null
+      totals: { plays: number; tracks: number; requesters: number; ms: number }
+      tracks: VivyTrack[]
+      requesters: (ActivityMember & { requests: number })[]
+    }

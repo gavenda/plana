@@ -3,6 +3,7 @@ import { logger } from './logging'
 
 import { startBackups, stopBackups } from './backup'
 import { closeCache, connectCache } from './cache'
+import { closeVivy, connectVivy } from './discord/vivy'
 import { pruneExpiredSessions } from './db/sessions'
 import { getSettings, isConfigured, seedSettingsFromEnv } from './db/settings'
 import type { AppContext } from './context'
@@ -48,6 +49,7 @@ seedSettingsFromEnv()
 
 await initI18n()
 await connectCache()
+await connectVivy()
 await startBackups()
 
 const context: AppContext = {
@@ -154,6 +156,7 @@ async function shutdown(signal: string): Promise<void> {
   await renderer.close()
   await client.destroy()
   closeCache()
+  closeVivy()
   process.exit(0)
 }
 
