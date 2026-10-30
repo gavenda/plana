@@ -48,6 +48,32 @@ function getClient(): RedisClient | null {
   return client
 }
 
+/** How often to try connecting again while Redis is unreachable. */
+const RETRY_MS = 30_000
+let lastAttempt = 0
+
+/**
+ * The client once connected, else null so the caller serves live. Redis can be a service
+ * outside this pod that starts after it, and a client whose first connect failed never retries on
+ * its own, so this tries again, at most every RETRY_MS so an outage doesn't slow every request.
+ * Once connected, the client reconnects by itself after a Redis restart.
+ */
+async function ready(): Promise<RedisClient | null> {
+  const redis = getClient()
+  if (!redis || redis.connected) return redis
+
+  const now = Date.now()
+  if (now - lastAttempt < RETRY_MS) return null
+  lastAttempt = now
+  try {
+    await redis.connect()
+    return redis
+  } catch (error) {
+    degrade(error)
+    return null
+  }
+}
+
 /**
  * Redis is a cache, never a source of truth, so every failure falls through to the
  * live value. The warning is logged once per outage rather than once per request.
@@ -64,7 +90,7 @@ export async function cached<T>(
   ttlSeconds: number,
   produce: () => Promise<T>,
 ): Promise<T> {
-  const redis = getClient()
+  const redis = await ready()
 
   if (redis) {
     try {
@@ -91,7 +117,7 @@ export async function cached<T>(
 export async function invalidate(...keys: string[]): Promise<void> {
   notify(...keys.flatMap((key) => LIVE_TOPIC[key] ?? []))
 
-  const redis = getClient()
+  const redis = await ready()
   if (!redis || keys.length === 0) return
 
   try {
@@ -116,6 +142,7 @@ export async function connectCache(): Promise<void> {
     return
   }
 
+  lastAttempt = Date.now()
   try {
     await redis.connect()
     log.info`connected to Redis`

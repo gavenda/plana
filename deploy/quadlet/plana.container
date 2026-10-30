@@ -4,8 +4,6 @@ After=network-online.target
 Wants=network-online.target
 Requires=plana-volume.service
 After=plana-volume.service
-Requires=plana-redis.service
-After=plana-redis.service
 
 [Container]
 ContainerName=plana
@@ -28,8 +26,9 @@ Environment=DATABASE_PATH=/data/plana.db
 Volume=plana.volume:/data
 Pod=plana.pod
 
-# Same network namespace as the cache, so this is the Redis container's own port.
-Environment=REDIS_URL=redis://127.0.0.1:6379
+# REDIS_URL (the host's Valkey, as the plana user) and VIVY_STATS are in plana.env. The
+# pod waits for Valkey at startup (valkey-wait.service); if it goes away
+# later, Plana keeps running without it and reconnects when it's back.
 
 HealthCmd=wget -q -O /dev/null http://127.0.0.1:3000/healthz
 HealthInterval=30s
