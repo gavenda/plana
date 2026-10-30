@@ -76,8 +76,8 @@
       "reminder_more_other": "- …and {{count}} more"
     },
     "birthday": {
-      "announcement_one": "🎉 Happy birthday, {{mentions}}! 🎂",
-      "announcement_other": "🎉 Happy birthday to {{mentions}}! 🎂"
+      "announcement_one": "-# Birthday Announcement\n🎉 Happy birthday, {{mentions}}! 🎂",
+      "announcement_other": "-# Birthday Announcement\n🎉 Happy birthday to {{mentions}}! 🎂"
     },
     "recap": {
       "title": "-# Weekly Retrospective — {{date}}",
