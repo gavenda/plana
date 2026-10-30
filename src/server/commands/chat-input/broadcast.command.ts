@@ -13,7 +13,7 @@ import {
 import { MAX_MESSAGE_LENGTH } from '../../constants'
 import { BROADCAST_INPUT_ID, encodeBroadcastId } from '../../discord/ids'
 import { broadcast } from '../../discord/service'
-import { tl } from '../../i18n'
+import { t, tl } from '../../i18n'
 import { isAdministrator } from '../../utils/is-administrator'
 import type { AppChatInputCommand } from './chat-input-command'
 
@@ -23,25 +23,27 @@ const MODAL_TITLE_LIMIT = 45
 export const broadcastCommand: AppChatInputCommand = {
   // `setDefaultMemberPermissions` hides the command from everyone else in the client;
   // `execute` re-checks, because a server owner can override that.
-  data: new SlashCommandBuilder()
-    .setName('broadcast')
-    .setDescription('Post a message to a channel as the bot')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .setContexts(InteractionContextType.Guild)
-    .addChannelOption((option) =>
-      option
-        .setName('channel')
-        .setDescription('Channel to post in')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setRequired(true),
-    )
-    .addStringOption((option) =>
-      option
-        .setName('message')
-        .setDescription('Message text. Omit this to open a multi-line composer instead.')
-        .setMaxLength(MAX_MESSAGE_LENGTH),
-    )
-    .toJSON(),
+  name: 'broadcast',
+  data: () =>
+    new SlashCommandBuilder()
+      .setName('broadcast')
+      .setDescription(t('command.broadcast.description'))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+      .setContexts(InteractionContextType.Guild)
+      .addChannelOption((option) =>
+        option
+          .setName('channel')
+          .setDescription(t('command.broadcast.channel_description'))
+          .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+          .setRequired(true),
+      )
+      .addStringOption((option) =>
+        option
+          .setName('message')
+          .setDescription(t('command.broadcast.message_description'))
+          .setMaxLength(MAX_MESSAGE_LENGTH),
+      )
+      .toJSON(),
 
   execute: async (_context, interaction) => {
     const locale = interaction.locale

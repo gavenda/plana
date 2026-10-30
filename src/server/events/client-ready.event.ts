@@ -1,6 +1,6 @@
 import { Events } from 'discord.js'
 
-import { chatInputCommandData } from '../commands/chat-input'
+import { getChatInputCommandData } from '../commands/chat-input'
 import { startActivityTracking } from '../discord/activity'
 import { announceBirthdays, syncBirthdayRole } from '../discord/birthdays'
 import { postWeeklyRecap } from '../discord/recap'
@@ -23,8 +23,9 @@ export const clientReadyEvent: AppEvent<Events.ClientReady> = {
 
     try {
       const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID)
-      await guild.commands.set(chatInputCommandData)
-      discordLog.info`registered ${chatInputCommandData.length} command(s) in ${guild.name}`
+      const commandData = getChatInputCommandData()
+      await guild.commands.set(commandData)
+      discordLog.info`registered ${commandData.length} command(s) in ${guild.name}`
     } catch (error) {
       discordLog.error`command registration failed: ${error}`
     }

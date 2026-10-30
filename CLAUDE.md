@@ -9,6 +9,20 @@ Discord admin bot with a Vue + Tailwind SSR dashboard, run on Bun.
 - [BRANDING.md](BRANDING.md): the design system (Material 3 Expressive colours, type, shape,
   motion, components) and Plana's voice. Read it before changing anything on the dashboard.
 
+## Strings go in the locale file
+
+Any text the bot sends to Discord (replies, embeds, buttons, modal labels, slash-command
+names, descriptions and choices, fallback names, audit-log reasons) belongs in
+`src/server/locales/en.json`, never inline in the code. Read it with `tl(key, locale, …)` using
+the interaction's locale, or `t(key)` where there is none; lists use `tlList`, and plurals use
+`_one`/`_other` keys.
+
+- Slash-command definitions are built on demand (`data` is a function), because the text
+  comes from the locale files loaded by `initI18n()` at startup. Don't build one at module
+  scope with `t()`. `deploy-commands.ts` calls `initI18n()` itself for the same reason.
+- Not covered: logs, startup errors, SQL, and the dashboard's own text (the Vue app and the
+  HTTP API's error messages have no i18n layer).
+
 ## Adding an icon (easy to forget)
 
 The dashboard's icon font, Material Symbols Rounded, is subset to the icons in use. A name

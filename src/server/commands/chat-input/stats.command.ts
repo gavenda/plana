@@ -1,33 +1,37 @@
 import { InteractionContextType, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
 import { renderStats } from '../../discord/stats'
-import { tl } from '../../i18n'
+import { t, tl } from '../../i18n'
 import type { AppChatInputCommand } from './chat-input-command'
 
 /** Matches the dashboard's default period on a member's page. */
 const DEFAULT_DAYS = 30
 
 /** 0 stands for all time, since a choice can't be null. */
-const PERIODS = [
-  { name: 'Last 7 days', value: 7 },
-  { name: 'Last 30 days', value: 30 },
-  { name: 'Last 90 days', value: 90 },
-  { name: 'All time', value: 0 },
+const periods = () => [
+  { name: t('command.stats.period_7'), value: 7 },
+  { name: t('command.stats.period_30'), value: 30 },
+  { name: t('command.stats.period_90'), value: 90 },
+  { name: t('command.stats.period_all'), value: 0 },
 ]
 
 export const statsCommand: AppChatInputCommand = {
-  data: new SlashCommandBuilder()
-    .setName('stats')
-    .setDescription('Show time in voice, games and music for a member')
-    .setContexts(InteractionContextType.Guild)
-    .addUserOption((option) => option.setName('member').setDescription('Defaults to you'))
-    .addIntegerOption((option) =>
-      option
-        .setName('period')
-        .setDescription('How far back to count. Defaults to the last 30 days.')
-        .addChoices(PERIODS),
-    )
-    .toJSON(),
+  name: 'stats',
+  data: () =>
+    new SlashCommandBuilder()
+      .setName('stats')
+      .setDescription(t('command.stats.description'))
+      .setContexts(InteractionContextType.Guild)
+      .addUserOption((option) =>
+        option.setName('member').setDescription(t('command.stats.member_description')),
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName('period')
+          .setDescription(t('command.stats.period_description'))
+          .addChoices(periods()),
+      )
+      .toJSON(),
 
   execute: async (_context, interaction) => {
     const user = interaction.options.getUser('member') ?? interaction.user

@@ -14,7 +14,7 @@ export const chatInputCommandInteractionEvent: AppEvent<Events.InteractionCreate
     if (interaction.applicationId !== context.applicationId) return
     if (!interaction.isChatInputCommand()) return
 
-    const command = chatInputCommands.find((entry) => entry.data.name === interaction.commandName)
+    const command = chatInputCommands.find((entry) => entry.name === interaction.commandName)
 
     if (!command) {
       log.warning`no command registered for /${interaction.commandName}`

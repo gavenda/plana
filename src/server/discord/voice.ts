@@ -13,6 +13,7 @@ import { describe, group, periodStart, sum, type ActivityMember } from './activi
 import { client, getGuild } from './client'
 import { ok, primeMemberCache, type Result } from './service'
 import { logger } from '../logging'
+import { t } from '../i18n'
 
 const log = logger('voice')
 
@@ -145,7 +146,7 @@ function channelRef(guild: Guild, id: string, recorded: string): VoiceChannelRef
 }
 
 function liveChannel(guild: Guild, row: LiveVoice): VoiceChannelRef {
-  return channelRef(guild, row.channelId, 'Unknown channel')
+  return channelRef(guild, row.channelId, t('fallback.unknown_channel'))
 }
 
 /** Who spent longest in voice, and where, over the last `days` (null: all time). */

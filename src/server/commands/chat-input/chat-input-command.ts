@@ -6,6 +6,8 @@ import type {
 import type { AppContext } from '../../context'
 
 export interface AppChatInputCommand {
-  data: RESTPostAPIChatInputApplicationCommandsJSONBody
+  name: string
+  /** Built on demand, because the text comes from the locale files loaded at startup. */
+  data: () => RESTPostAPIChatInputApplicationCommandsJSONBody
   execute: (context: AppContext, interaction: ChatInputCommandInteraction) => Promise<void>
 }

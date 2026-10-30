@@ -65,7 +65,29 @@
     "command": {
       "broadcast": {
         "modal_title": "Broadcast to #{{channel}}",
-        "modal_input_label": "Message"
+        "modal_input_label": "Message",
+        "description": "Post a message to a channel as the bot",
+        "channel_description": "Channel to post in",
+        "message_description": "Message text. Omit this to open a multi-line composer instead."
+      },
+      "birthday": {
+        "description": "Share your birthday so the server can celebrate it",
+        "set_description": "Set or change your birthday. Only the month and day are stored.",
+        "month_description": "Birth month",
+        "day_description": "Day of the month",
+        "remove_description": "Forget your birthday",
+        "show_description": "Show a member's birthday",
+        "member_description": "Defaults to you",
+        "upcoming_description": "List the next birthdays in the server"
+      },
+      "stats": {
+        "description": "Show time in voice, games and music for a member",
+        "member_description": "Defaults to you",
+        "period_description": "How far back to count. Defaults to the last 30 days.",
+        "period_7": "Last 7 days",
+        "period_30": "Last 30 days",
+        "period_90": "Last 90 days",
+        "period_all": "All time"
       }
     },
     "triage": {
@@ -77,7 +99,8 @@
     },
     "birthday": {
       "announcement_one": "-# Birthday Announcement\n🎉 Happy birthday, {{mentions}}! 🎂",
-      "announcement_other": "-# Birthday Announcement\n🎉 Happy birthday to {{mentions}}! 🎂"
+      "announcement_other": "-# Birthday Announcement\n🎉 Happy birthday to {{mentions}}! 🎂",
+      "role_reason": "Plana — birthday role"
     },
     "recap": {
       "title": "-# Weekly Retrospective — {{date}}",
@@ -167,6 +190,24 @@
       "tab_games": "Games",
       "tab_music": "Music",
       "tab_voice": "Voice"
+    },
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "fallback": {
+      "former_member": "Former member",
+      "unknown_channel": "Unknown channel"
     }
   }
 }

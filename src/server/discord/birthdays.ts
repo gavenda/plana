@@ -359,7 +359,7 @@ async function runBirthdayRoleSync(previousRoleId?: string | null): Promise<void
     await primeMemberCache()
     const guild = await getGuild()
     const due = new Set(listBirthdaysOn(today()).map((birthday) => birthday.memberId))
-    const why = 'Plana — birthday role'
+    const why = t('birthday.role_reason')
 
     if (previousRoleId && previousRoleId !== birthdayRoleId) {
       const previous = guild.roles.cache.get(previousRoleId)

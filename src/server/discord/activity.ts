@@ -19,6 +19,7 @@ import { isConfiguredGuild } from '../utils/is-configured-guild'
 import { hasSubscribers, publish } from '../live'
 import { ok, primeMemberCache, type Result } from './service'
 import { logger } from '../logging'
+import { t } from '../i18n'
 
 const log = logger('activity')
 
@@ -233,7 +234,7 @@ export function describe(members: Map<string, GuildMember>, id: string): Activit
   return {
     id,
     username: user?.tag ?? id,
-    displayName: user?.displayName ?? 'Former member',
+    displayName: user?.displayName ?? t('fallback.former_member'),
     avatarUrl:
       user?.displayAvatarURL({ size: 64, extension: 'png' }) ??
       'https://cdn.discordapp.com/embed/avatars/0.png',

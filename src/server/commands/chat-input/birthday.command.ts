@@ -10,62 +10,55 @@ import {
   today,
 } from '../../discord/birthdays'
 import { getSettings } from '../../db/settings'
-import { tl } from '../../i18n'
+import { DEFAULT_LOCALE, t, tl, tlList } from '../../i18n'
 import type { AppChatInputCommand } from './chat-input-command'
 
 const UPCOMING_LIMIT = 10
 
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
+const months = (locale = DEFAULT_LOCALE) => tlList('months', locale)
 
 export const birthdayCommand: AppChatInputCommand = {
-  data: new SlashCommandBuilder()
-    .setName('birthday')
-    .setDescription('Share your birthday so the server can celebrate it')
-    .setContexts(InteractionContextType.Guild)
-    .addSubcommand((sub) =>
-      sub
-        .setName('set')
-        .setDescription('Set or change your birthday. Only the month and day are stored.')
-        .addIntegerOption((option) =>
-          option
-            .setName('month')
-            .setDescription('Birth month')
-            .setRequired(true)
-            .addChoices(MONTHS.map((name, index) => ({ name, value: index + 1 }))),
-        )
-        .addIntegerOption((option) =>
-          option
-            .setName('day')
-            .setDescription('Day of the month')
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(31),
-        ),
-    )
-    .addSubcommand((sub) => sub.setName('remove').setDescription('Forget your birthday'))
-    .addSubcommand((sub) =>
-      sub
-        .setName('show')
-        .setDescription("Show a member's birthday")
-        .addUserOption((option) => option.setName('member').setDescription('Defaults to you')),
-    )
-    .addSubcommand((sub) =>
-      sub.setName('upcoming').setDescription('List the next birthdays in the server'),
-    )
-    .toJSON(),
+  name: 'birthday',
+  data: () =>
+    new SlashCommandBuilder()
+      .setName('birthday')
+      .setDescription(t('command.birthday.description'))
+      .setContexts(InteractionContextType.Guild)
+      .addSubcommand((sub) =>
+        sub
+          .setName('set')
+          .setDescription(t('command.birthday.set_description'))
+          .addIntegerOption((option) =>
+            option
+              .setName('month')
+              .setDescription(t('command.birthday.month_description'))
+              .setRequired(true)
+              .addChoices(months().map((name, index) => ({ name, value: index + 1 }))),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName('day')
+              .setDescription(t('command.birthday.day_description'))
+              .setRequired(true)
+              .setMinValue(1)
+              .setMaxValue(31),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub.setName('remove').setDescription(t('command.birthday.remove_description')),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName('show')
+          .setDescription(t('command.birthday.show_description'))
+          .addUserOption((option) =>
+            option.setName('member').setDescription(t('command.birthday.member_description')),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub.setName('upcoming').setDescription(t('command.birthday.upcoming_description')),
+      )
+      .toJSON(),
 
   execute: async (_context, interaction) => {
     const locale = interaction.locale
@@ -80,7 +73,7 @@ export const birthdayCommand: AppChatInputCommand = {
         if (!isValidBirthday(month, day)) {
           await reply(
             tl('reply.birthday_invalid', locale, {
-              month: MONTHS[month - 1] ?? month,
+              month: months(locale)[month - 1] ?? month,
               day,
             }),
           )
