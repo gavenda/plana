@@ -137,32 +137,6 @@ const vivyLoading = computed(() => !vivyData.value && !vivy.error.value)
 const vivyTracks = computed(() => vivyData.value?.tracks ?? [])
 const vivyRequesters = computed(() => vivyData.value?.requesters ?? [])
 
-/** A date as YYYY-MM-DD in a time zone, `back` days before today. */
-function zonedDate(timeZone: string, back = 0): string {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date())
-  const [year, month, day] = today.split('-').map(Number)
-  return new Date(Date.UTC(year!, month! - 1, day! - back)).toISOString().slice(0, 10)
-}
-
-/**
- * Vivy counts by day only since it was updated, so a period reaching further back is cut short.
- * Says so under the heading; all time is always complete.
- */
-const vivyCaption = computed(() => {
-  const music = vivyData.value
-  if (!music || music.days == null) return null
-  if (!music.dailySince) return 'Vivy hasn’t counted any days yet. All time has everything.'
-  if (zonedDate(music.timeZone, music.days - 1) >= music.dailySince) return null
-  const [year, month, day] = music.dailySince.split('-').map(Number)
-  const since = new Date(Date.UTC(year!, month! - 1, day!)).toLocaleDateString('en', {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-  return `Counted by day since ${since}.`
-})
-
 /** Plain surface tiles, as on Overview. */
 const stats = computed(() => {
   const totals = data.value?.totals
@@ -618,9 +592,6 @@ const plural = (count: number, one: string, many: string) =>
             />
           </div>
         </div>
-        <p v-if="vivyCaption" class="-mt-1 mb-3 px-4 text-body-small text-on-surface-variant">
-          {{ vivyCaption }}
-        </p>
         <div :class="!vivyLoading && vivyTracks.length === 0 && 'card'">
           <StateBlock
             :loading="vivyLoading"
