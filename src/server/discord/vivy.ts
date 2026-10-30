@@ -11,8 +11,8 @@ import { primeMemberCache } from './service'
 /**
  * What Vivy, the server's music bot, has played, read from the Redis both bots share
  * (REDIS_URL, with VIVY_STATS on). Read only: nothing here writes to Vivy's data. Vivy keeps all-time counts per server, and since
- * v2.3 counts per day too, keyed by the date in its STATS_TIMEZONE, which should match
- * BIRTHDAY_TIMEZONE here. See `src/stats/track.ts` in Vivy for the keys.
+ * v2.3 counts per day too, keyed by the date in its TIMEZONE, which should match
+ * TIMEZONE here. See `src/stats/track.ts` in Vivy for the keys.
  */
 
 const log = logger('vivy')
@@ -134,7 +134,7 @@ export async function getVivyMusic(
   if (!redis.connected) await redis.connect()
 
   const guildKey = `stats:guild:${env.DISCORD_GUILD_ID}`
-  const timeZone = env.BIRTHDAY_TIMEZONE
+  const timeZone = env.TIMEZONE
   const dailySince = (await redis.get(`${guildKey}:day:first`)) ?? null
 
   const plays: Scores = new Map()

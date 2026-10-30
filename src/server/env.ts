@@ -46,13 +46,16 @@ const schema = z
 
     /**
      * Shows what Vivy, the music bot, played on Games & music, read from REDIS_URL, so both
-     * bots must share one Redis. Read only. Vivy's STATS_TIMEZONE should match
-     * BIRTHDAY_TIMEZONE, so both count the same days.
+     * bots must share one Redis. Read only. Vivy's TIMEZONE should match this one, so both
+     * count the same days.
      */
     VIVY_STATS: z.stringbool().default(false),
 
-    /** IANA time zone the bot's day starts in, e.g. `Europe/Dublin`. Birthdays post at its midnight. */
-    BIRTHDAY_TIMEZONE: z
+    /**
+     * IANA time zone the server's day runs on, e.g. `Europe/Dublin`: when birthdays post and
+     * the weekly recap goes out, and how days and hours are counted in the stats.
+     */
+    TIMEZONE: z
       .string()
       .default('UTC')
       .refine((timeZone) => {

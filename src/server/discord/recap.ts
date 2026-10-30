@@ -87,7 +87,7 @@ export type RecapWeek = {
 }
 
 /** The most recent scheduled recap at or before `now`, whether or not it has been posted. */
-export function latestRecapWeek(now = Date.now(), timeZone = env.BIRTHDAY_TIMEZONE): RecapWeek {
+export function latestRecapWeek(now = Date.now(), timeZone = env.TIMEZONE): RecapWeek {
   const date = today(timeZone, new Date(now))
   const weekday = new Date(Date.UTC(date.year, date.month - 1, date.day)).getUTCDay()
 

@@ -116,7 +116,7 @@ function buildGameNight(post: {
  */
 export function sessionPeriod(
   now: number,
-  timeZone: string = env.BIRTHDAY_TIMEZONE,
+  timeZone: string = env.TIMEZONE,
 ): 'morning' | 'afternoon' | 'night' {
   const hour =
     Number(

@@ -46,7 +46,7 @@ export function getHeatmap(kind: HeatmapKind, days: number | null): Result<Heatm
   if (kind === 'voice') checkpointVoice(now)
   else checkpointActivity(now)
 
-  const timeZone = env.BIRTHDAY_TIMEZONE
+  const timeZone = env.TIMEZONE
   const slot = makeSlotter(timeZone)
   const empty = () => Array.from({ length: WEEKDAYS }, () => Array<number>(24).fill(0))
   const source = SOURCES[kind]

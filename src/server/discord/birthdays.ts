@@ -25,7 +25,7 @@ const log = logger('birthdays')
 export type CalendarDate = { year: number; month: number; day: number }
 
 /** Today's date in the configured time zone, not the host's. */
-export function today(timeZone: string = env.BIRTHDAY_TIMEZONE, now = new Date()): CalendarDate {
+export function today(timeZone: string = env.TIMEZONE, now = new Date()): CalendarDate {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
@@ -213,7 +213,7 @@ export async function getBirthdayOverview(): Promise<
     .map(toBirthdayMember)
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
 
-  return ok({ birthdays, members, timeZone: env.BIRTHDAY_TIMEZONE })
+  return ok({ birthdays, members, timeZone: env.TIMEZONE })
 }
 
 /**
@@ -229,7 +229,7 @@ export async function getUpcomingBirthdays(
   return ok({
     birthdays: entries.filter((entry) => entry.daysUntil < days).slice(0, limit),
     thisMonth: entries.filter((entry) => entry.month === month).length,
-    timeZone: env.BIRTHDAY_TIMEZONE,
+    timeZone: env.TIMEZONE,
   })
 }
 

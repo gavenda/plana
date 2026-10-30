@@ -51,7 +51,7 @@ export function getDailyTrends(now = Date.now()): Result<DailyTrends> {
   checkpointVoice(now)
   checkpointActivity(now)
 
-  const timeZone = env.BIRTHDAY_TIMEZONE
+  const timeZone = env.TIMEZONE
   const slot = makeSlotter(timeZone)
 
   const today = slot(now).date
@@ -119,7 +119,7 @@ export function getMemberActivity(memberId: string, now = Date.now()): Result<Me
   checkpointVoice(now)
   checkpointActivity(now)
 
-  const timeZone = env.BIRTHDAY_TIMEZONE
+  const timeZone = env.TIMEZONE
   const slot = makeSlotter(timeZone)
   const here = slot(now)
 
