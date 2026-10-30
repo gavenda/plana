@@ -171,6 +171,53 @@ const migrations: string[] = [
     icon_url TEXT NOT NULL
   );
   `,
+  // Track totals, and a track's listeners, filter on when a play started. Without these they
+  // read every play ever recorded, however short the window.
+  `
+  CREATE INDEX spotify_plays_started_at ON spotify_plays (started_at);
+  CREATE INDEX spotify_plays_track      ON spotify_plays (track_id, started_at);
+  `,
+  // All-time plays and time per track and member, so all-time views don't read every play.
+  // The trigger keeps it current as plays run on. 30000 is MIN_TRACK_PLAY_MS in
+  // db/activity.ts: a play counts once it reaches it. Deleting plays leaves the totals alone.
+  `
+  CREATE TABLE spotify_track_totals (
+    track_id  TEXT NOT NULL,
+    member_id TEXT NOT NULL,
+    title     TEXT NOT NULL,
+    artist    TEXT,
+    album     TEXT,
+    art_url   TEXT,
+    plays     INTEGER NOT NULL,
+    ms        INTEGER NOT NULL,
+    PRIMARY KEY (track_id, member_id)
+  ) WITHOUT ROWID;
+  CREATE INDEX spotify_track_totals_member ON spotify_track_totals (member_id);
+
+  INSERT INTO spotify_track_totals (track_id, member_id, title, artist, album, art_url, plays, ms)
+  SELECT track_id, member_id, MAX(title), MAX(artist), MAX(album), MAX(art_url),
+    COUNT(*), SUM(ended_at - started_at)
+  FROM spotify_plays
+  WHERE ended_at - started_at >= 30000
+  GROUP BY track_id, member_id;
+
+  CREATE TRIGGER spotify_plays_totals AFTER UPDATE OF ended_at ON spotify_plays
+  WHEN NEW.ended_at - NEW.started_at >= 30000
+  BEGIN
+    INSERT INTO spotify_track_totals (track_id, member_id, title, artist, album, art_url, plays, ms)
+    VALUES (NEW.track_id, NEW.member_id, NEW.title, NEW.artist, NEW.album, NEW.art_url,
+      1, NEW.ended_at - NEW.started_at)
+    ON CONFLICT (track_id, member_id) DO UPDATE SET
+      title   = excluded.title,
+      artist  = excluded.artist,
+      album   = excluded.album,
+      art_url = excluded.art_url,
+      plays   = plays + (OLD.ended_at - OLD.started_at < 30000),
+      ms      = ms + (NEW.ended_at - NEW.started_at)
+                   - (CASE WHEN OLD.ended_at - OLD.started_at >= 30000
+                           THEN OLD.ended_at - OLD.started_at ELSE 0 END);
+  END;
+  `,
 ]
 
 function migrate(database: Database): void {

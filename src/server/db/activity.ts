@@ -10,7 +10,7 @@ const RESUME_WINDOW_MS = 5 * 60_000
 /** Shorter game sessions are left out of the totals: launchers and quick looks, not play. */
 export const MIN_GAME_SESSION_MS = 60_000
 
-/** Spotify's own rule for what counts as a play. */
+/** Spotify's own rule for what counts as a play. The spotify_track_totals trigger repeats it. */
 export const MIN_TRACK_PLAY_MS = 30_000
 
 export type OpenRow = { id: number; startedAt: number }
@@ -169,6 +169,8 @@ export function listGamePlayerTotals(
 
 export type TrackTotal = Track & { memberId: string; plays: number; ms: number }
 
+// Pinned to the started_at index: left to itself, SQLite walks spotify_plays_track for the
+// GROUP BY and reads every play ever recorded, however short the window.
 const selectTrackTotals = db.query<
   {
     track_id: string
@@ -186,13 +188,35 @@ const selectTrackTotals = db.query<
      MAX(title) AS title, MAX(artist) AS artist, MAX(album) AS album, MAX(art_url) AS art_url,
      COUNT(*) AS plays,
      SUM(ended_at - MAX(started_at, :since)) AS ms
-   FROM spotify_plays
+   FROM spotify_plays INDEXED BY spotify_plays_started_at
    WHERE started_at >= :since AND ended_at - started_at >= :min
    GROUP BY track_id, member_id`,
 )
 
+const selectAllTimeTrackTotals = db.query<
+  {
+    track_id: string
+    member_id: string
+    title: string
+    artist: string | null
+    album: string | null
+    art_url: string | null
+    plays: number
+    ms: number
+  },
+  []
+>(
+  `SELECT track_id, member_id, title, artist, album, art_url, plays, ms
+   FROM spotify_track_totals`,
+)
+
+/** Plays and time per track and member since a moment; 0 is all time, read from the totals. */
 export function listTrackTotals(since: number): TrackTotal[] {
-  return selectTrackTotals.all({ since, min: MIN_TRACK_PLAY_MS }).map((row) => ({
+  const rows =
+    since <= 0
+      ? selectAllTimeTrackTotals.all()
+      : selectTrackTotals.all({ since, min: MIN_TRACK_PLAY_MS })
+  return rows.map((row) => ({
     id: row.track_id,
     memberId: row.member_id,
     title: row.title,
@@ -226,25 +250,45 @@ const selectTrackListenerTotals = db.query<
    ORDER BY plays DESC, ms DESC`,
 )
 
-/** Plays per member of one track since a moment, most first. */
+const selectAllTimeTrackListenerTotals = db.query<
+  {
+    member_id: string
+    title: string
+    artist: string | null
+    album: string | null
+    art_url: string | null
+    plays: number
+    ms: number
+  },
+  { track_id: string }
+>(
+  `SELECT member_id, title, artist, album, art_url, plays, ms
+   FROM spotify_track_totals
+   WHERE track_id = :track_id
+   ORDER BY plays DESC, ms DESC`,
+)
+
+/** Plays per member of one track since a moment (0: all time), most first. */
 export function listTrackListenerTotals(
   trackId: string,
   since: number,
 ): { memberId: string; plays: number; ms: number; track: Track }[] {
-  return selectTrackListenerTotals
-    .all({ track_id: trackId, since, min: MIN_TRACK_PLAY_MS })
-    .map((row) => ({
-      memberId: row.member_id,
-      plays: row.plays,
-      ms: row.ms,
-      track: {
-        id: trackId,
-        title: row.title,
-        artist: row.artist,
-        album: row.album,
-        artUrl: row.art_url,
-      },
-    }))
+  const rows =
+    since <= 0
+      ? selectAllTimeTrackListenerTotals.all({ track_id: trackId })
+      : selectTrackListenerTotals.all({ track_id: trackId, since, min: MIN_TRACK_PLAY_MS })
+  return rows.map((row) => ({
+    memberId: row.member_id,
+    plays: row.plays,
+    ms: row.ms,
+    track: {
+      id: trackId,
+      title: row.title,
+      artist: row.artist,
+      album: row.album,
+      artUrl: row.art_url,
+    },
+  }))
 }
 
 // ---------------------------------------------------------------------------
@@ -292,24 +336,44 @@ const selectMemberTrackTotals = db.query<
    ORDER BY plays DESC, ms DESC`,
 )
 
-/** Plays per track for one member since a moment, most first. */
+const selectAllTimeMemberTrackTotals = db.query<
+  {
+    track_id: string
+    title: string
+    artist: string | null
+    album: string | null
+    art_url: string | null
+    plays: number
+    ms: number
+  },
+  { member_id: string }
+>(
+  `SELECT track_id, title, artist, album, art_url, plays, ms
+   FROM spotify_track_totals
+   WHERE member_id = :member_id
+   ORDER BY plays DESC, ms DESC`,
+)
+
+/** Plays per track for one member since a moment (0: all time), most first. */
 export function listMemberTrackTotals(
   memberId: string,
   since: number,
 ): { track: Track; plays: number; ms: number }[] {
-  return selectMemberTrackTotals
-    .all({ member_id: memberId, since, min: MIN_TRACK_PLAY_MS })
-    .map((row) => ({
-      track: {
-        id: row.track_id,
-        title: row.title,
-        artist: row.artist,
-        album: row.album,
-        artUrl: row.art_url,
-      },
-      plays: row.plays,
-      ms: row.ms,
-    }))
+  const rows =
+    since <= 0
+      ? selectAllTimeMemberTrackTotals.all({ member_id: memberId })
+      : selectMemberTrackTotals.all({ member_id: memberId, since, min: MIN_TRACK_PLAY_MS })
+  return rows.map((row) => ({
+    track: {
+      id: row.track_id,
+      title: row.title,
+      artist: row.artist,
+      album: row.album,
+      artUrl: row.art_url,
+    },
+    plays: row.plays,
+    ms: row.ms,
+  }))
 }
 
 // ---------------------------------------------------------------------------
