@@ -12,6 +12,8 @@ export type GuildSettings = {
   announceChannelId: string | null
   /** Optional. Birthday announcements are off while it is unset. */
   birthdayChannelId: string | null
+  /** Optional. Leave messages are off while it is unset. */
+  leaveChannelId: string | null
   /** Optional. The weekly recap is off while it is unset. */
   recapChannelId: string | null
   /** Days in triage before staff are reminded. Reminders are off while it is unset. */
@@ -43,6 +45,7 @@ export const SETTING_KEYS = [
   'boardersRoleId',
   'announceChannelId',
   'birthdayChannelId',
+  'leaveChannelId',
   'recapChannelId',
   'triageReminderDays',
   'birthdayRoleId',
@@ -67,6 +70,7 @@ const EMPTY: GuildSettings = {
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  leaveChannelId: null,
   recapChannelId: null,
   triageReminderDays: null,
   birthdayRoleId: null,

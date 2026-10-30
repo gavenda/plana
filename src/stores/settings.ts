@@ -9,6 +9,8 @@ export type GuildSettings = {
   boardersRoleId: string | null
   announceChannelId: string | null
   birthdayChannelId: string | null
+  /** Where leave messages are posted; null is off. */
+  leaveChannelId: string | null
   /** Where the weekly recap is posted; null is off. */
   recapChannelId: string | null
   /** Days in triage before staff are reminded; null is off. */
@@ -35,6 +37,7 @@ const EMPTY: GuildSettings = {
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  leaveChannelId: null,
   recapChannelId: null,
   triageReminderDays: null,
   birthdayRoleId: null,

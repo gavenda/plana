@@ -91,6 +91,7 @@ const settingsSchema = z
     boardersRoleId: snowflake.nullable(),
     announceChannelId: snowflake.nullable(),
     birthdayChannelId: snowflake.nullable(),
+    leaveChannelId: snowflake.nullable(),
     recapChannelId: snowflake.nullable(),
     triageReminderDays: z.number().int().min(1).max(30).nullable(),
     birthdayRoleId: snowflake.nullable(),

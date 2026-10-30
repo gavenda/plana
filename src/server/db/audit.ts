@@ -3,6 +3,8 @@ import { db } from './index'
 
 export type AuditAction =
   | 'member.join'
+  | 'server.join'
+  | 'server.leave'
   | 'role.assign'
   | 'broadcast.send'
   | 'settings.update'
@@ -83,6 +85,7 @@ const insert = db.query<{ id: number }, Omit<AuditRow, 'id'>>(
  */
 export const AUDIT_CATEGORY_ACTIONS = {
   triage: ['member.join', 'role.assign', 'triage.remind'],
+  members: ['server.%'],
   moderation: ['moderation.%'],
   messages: ['message.%'],
   birthdays: ['birthday.%'],

@@ -21,6 +21,7 @@ const draft = reactive<GuildSettings>({
   boardersRoleId: null,
   announceChannelId: null,
   birthdayChannelId: null,
+  leaveChannelId: null,
   recapChannelId: null,
   triageReminderDays: null,
   birthdayRoleId: null,
@@ -42,7 +43,11 @@ type RoleKey =
   | 'statsRoleId'
   | 'birthdayRoleId'
 type ChannelKey =
-  'announceChannelId' | 'birthdayChannelId' | 'recapChannelId' | 'gameNightChannelId'
+  | 'announceChannelId'
+  | 'birthdayChannelId'
+  | 'leaveChannelId'
+  | 'recapChannelId'
+  | 'gameNightChannelId'
 
 type Field = { label: string; hint: string } & (
   | {
@@ -119,6 +124,19 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         key: 'birthdayRoleId',
         label: 'Role',
         hint: 'Given on a member’s birthday and taken back the next day. Use a role made just for this: it is removed from everyone else.',
+        empty: 'Off',
+      },
+    ],
+  },
+  {
+    id: 'settings-leave',
+    title: 'Leave messages',
+    fields: [
+      {
+        kind: 'channel',
+        key: 'leaveChannelId',
+        label: 'Channel',
+        hint: 'Where a short note is posted when a member leaves the server. Names them without pinging. Optional.',
         empty: 'Off',
       },
     ],

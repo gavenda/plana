@@ -2,6 +2,8 @@ import { absoluteTime } from './format'
 
 export type AuditAction =
   | 'member.join'
+  | 'server.join'
+  | 'server.leave'
   | 'role.assign'
   | 'broadcast.send'
   | 'settings.update'
@@ -50,6 +52,7 @@ export type AuditEntry = {
 /** The audit log's filter groups, in chip order. The server maps each onto its actions. */
 export const AUDIT_CATEGORIES = [
   { id: 'triage', label: 'Triage' },
+  { id: 'members', label: 'Joins & leaves' },
   { id: 'moderation', label: 'Moderation' },
   { id: 'messages', label: 'Messages' },
   { id: 'birthdays', label: 'Birthdays' },
@@ -139,6 +142,7 @@ const SETTING_NAMES: Record<string, { label: string; kind: 'role' | 'channel' }>
   announceChannelId: { label: 'the announcement channel', kind: 'channel' },
   birthdayChannelId: { label: 'the birthday channel', kind: 'channel' },
   birthdayRoleId: { label: 'the birthday role', kind: 'role' },
+  leaveChannelId: { label: 'the leave channel', kind: 'channel' },
   recapChannelId: { label: 'the recap channel', kind: 'channel' },
   gameNightChannelId: { label: 'the game night channel', kind: 'channel' },
   moderatorRoleId: { label: 'the moderator role', kind: 'role' },
@@ -273,6 +277,17 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
     // the member reaching triage, which is when the card is posted.
     case 'member.join':
       return describe('Triage', 'accent', target, ' entered triage')
+
+    case 'server.join':
+      return describe('Joined', 'success', target, ' joined the server')
+
+    case 'server.leave':
+      return describe(
+        'Left',
+        'neutral',
+        target,
+        entry.detail?.inTriage ? ' left the server while waiting in triage' : ' left the server',
+      )
 
     case 'role.assign':
       return describe('Role assigned', 'success', actor, ' gave ', target, ' ', {
@@ -491,15 +506,14 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
         channel: text(entry.detail?.channelName, '').replace(/^#/, '') || null,
         channelId: id(entry.detail?.channelId),
       }
+      // Older entries, and ones logged without audit log access, don't say who deleted it.
+      const parts: SummaryPart[] = self
+        ? [target, ' deleted their message in ', channel]
+        : entry.actorName
+          ? [actor, ' deleted a message by ', target, ' in ', channel]
+          : ['A message by ', target, ' was deleted in ', channel]
       return {
-        ...describe(
-          'Message deleted',
-          'warn',
-          'A message by ',
-          target,
-          ' was deleted in ',
-          channel,
-        ),
+        ...describe('Message deleted', 'warn', ...parts),
         quotes: [
           { label: 'Message', text: messageText(entry.detail?.content, entry.detail?.attachments) },
         ],
@@ -536,7 +550,9 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
         ...describe(
           'Messages deleted',
           'warn',
-          `${count} ${count === 1 ? 'message was' : 'messages were'} deleted at once in `,
+          ...(entry.actorName
+            ? [actor, ` deleted ${count} ${count === 1 ? 'message' : 'messages'} at once in `]
+            : [`${count} ${count === 1 ? 'message was' : 'messages were'} deleted at once in `]),
           targetChannel,
         ),
         quotes: transcript
@@ -591,6 +607,10 @@ export function auditIcon(action: AuditAction): string {
   switch (action) {
     case 'member.join':
       return 'how_to_reg'
+    case 'server.join':
+      return 'person_add'
+    case 'server.leave':
+      return 'person_remove'
     case 'role.assign':
       return 'badge'
     case 'broadcast.send':

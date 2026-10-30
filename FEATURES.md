@@ -7,12 +7,17 @@ Plana is a Discord bot with a web dashboard for running one server.
 ### Triage for new members
 - When a member gets the triage role, Plana posts a card for them in the announcement channel, with a greeting and a warning if their account is new.
 - Buttons on the card assign the trusted or allowed role. Once someone is assigned, the card updates to show it's resolved.
+- Giving one of those roles by hand in Discord counts the same as pressing the button: the triage role is taken, and the card shows who assigned it. Needs the View Audit Log permission.
 - Members who stay in triage longer than a set number of days get named in a reminder post (once per stay).
+- If a member leaves while still waiting in triage, their card is deleted.
 
 ### Birthdays
 - `/birthday set`, `remove`, `show [member]` and `upcoming`. Only the month and day are stored.
 - Birthdays are announced in the birthday channel, using the configured time zone.
 - An optional birthday role is given for the day and taken back afterwards.
+
+### Leave messages
+- When a member leaves, Plana posts a short note naming them (without a ping) in the leave channel, if one is set.
 
 ### Game nights
 - When enough people (3 by default) play the same game together in a voice channel for a while, Plana announces a game night.
@@ -51,7 +56,7 @@ Members sign in with Discord. **Administrators** can use everything. **Moderator
 | **Games & music** | Who's playing or listening right now, weekday-by-hour heatmaps of when people play and when they listen, most-played games, and most-played tracks; with Vivy connected, a Vivy plays tile, Vivy's most-played tracks and its top requesters (periods only reach back to when Vivy began counting by day) |
 | **Game nights** | Opened from Games & music: every game played, each with the role its game nights ping |
 | **Voice** | Who's in voice now, a weekday-by-hour heatmap of when people are in voice, members with the most voice time, and the busiest channels with each one's share of the time |
-| **Audit log** | Searchable, filterable log covering triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |
+| **Audit log** | Searchable, filterable log covering joins and leaves, triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |
 | **Settings** | Roles and channels grouped by feature, triage reminder days, game night minimum players, backups, live server logs, and an About pane |
 
 ## Operations

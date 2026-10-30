@@ -1,5 +1,6 @@
 import {
   AuditLogEvent,
+  PermissionFlagsBits,
   type ClientEvents,
   type Guild,
   type GuildAuditLogsEntry,
@@ -44,16 +45,116 @@ function channelName(message: Message<true>): string {
   return `#${message.channel.name}`
 }
 
+// ---------------------------------------------------------------------------
+// Who deleted it
+// ---------------------------------------------------------------------------
+
+/** Discord writes its audit entry a moment after the delete event, so wait before looking. */
+const DELETER_LOOKUP_DELAY_MS = 1500
+
+/** An unseen audit entry younger than this is taken to be the deletion just observed. */
+const FRESH_ENTRY_MS = 10_000
+
+/** Audit entries whose deletions are already matched to a message, kept to this many. */
+const MAX_SEEN_ENTRIES = 200
+
 /**
- * Discord does not say who deleted a message, so the entry names only its author. Whoever
- * deleted it is the author themselves or a moderator.
+ * How many of each audit entry's deletions have been matched. Discord folds repeated
+ * deletions by one moderator of one author's messages in one channel into a single entry and
+ * only raises its count, so a count above what was matched means a new deletion.
  */
-export function logMessageDelete(message: AnyMessage): void {
+const seenCounts = new Map<string, number>()
+
+let lookups: Promise<unknown> = Promise.resolve()
+
+type Deleter = { id: string; name: string | null }
+
+/**
+ * Finds who deleted a message (or, for a bulk delete, a channel's messages) from Discord's
+ * audit log. Returns `null` when there is no entry, which means the author deleted their own
+ * message, and `undefined` when the bot can't tell (no View Audit Log permission, or the
+ * lookup failed). Lookups run one at a time, so two deletions never claim the same entry.
+ */
+function findDeleter(
+  guild: Guild,
+  query:
+    | { type: AuditLogEvent.MessageDelete; authorId: string; channelId: string }
+    | { type: AuditLogEvent.MessageBulkDelete; channelId: string },
+): Promise<Deleter | null | undefined> {
+  const lookup = lookups.then(() => lookUpDeleter(guild, query))
+  lookups = lookup.catch(() => null)
+  return lookup
+}
+
+async function lookUpDeleter(
+  guild: Guild,
+  query:
+    | { type: AuditLogEvent.MessageDelete; authorId: string; channelId: string }
+    | { type: AuditLogEvent.MessageBulkDelete; channelId: string },
+): Promise<Deleter | null | undefined> {
+  const me = guild.members.me ?? (await guild.members.fetchMe().catch(() => null))
+  if (!me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) return undefined
+
+  await Bun.sleep(DELETER_LOOKUP_DELAY_MS)
+
+  const logs = await guild.fetchAuditLogs({ type: query.type, limit: 10 }).catch(() => null)
+  if (!logs) return undefined
+
+  for (const entry of logs.entries.values()) {
+    const extra = entry.extra as { channel?: { id: string }; count?: number } | null
+    const count = extra?.count ?? 1
+
+    if (query.type === AuditLogEvent.MessageDelete) {
+      if (entry.targetId !== query.authorId || extra?.channel?.id !== query.channelId) continue
+    } else if (entry.targetId !== query.channelId) {
+      continue
+    }
+
+    const seen = seenCounts.get(entry.id)
+    if (seen === undefined) {
+      seenCounts.set(entry.id, count)
+      // An old entry seen for the first time (say, after a restart) can't say whether its
+      // count just went up, so it is only the baseline for next time.
+      if (Date.now() - entry.createdTimestamp > FRESH_ENTRY_MS) continue
+    } else if (seen < count) {
+      seenCounts.set(entry.id, seen + 1)
+    } else {
+      continue
+    }
+
+    if (seenCounts.size > MAX_SEEN_ENTRIES) {
+      seenCounts.delete(seenCounts.keys().next().value!)
+    }
+    return { id: entry.executorId!, name: await nameOf(guild, entry.executorId) }
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Message logging
+// ---------------------------------------------------------------------------
+
+/**
+ * Logs a deleted message with whoever deleted it: the author, a moderator, or nobody named
+ * when the bot can't read Discord's audit log.
+ */
+export async function logMessageDelete(message: AnyMessage): Promise<void> {
   if (!loggable(message)) return
+
+  const found = await findDeleter(message.guild, {
+    type: AuditLogEvent.MessageDelete,
+    authorId: message.author.id,
+    channelId: message.channelId,
+  })
+  // No audit entry means nobody else deleted it, so it was the author.
+  const deleter =
+    found === null ? { id: message.author.id, name: authorName(message) } : (found ?? null)
 
   recordAudit({
     action: 'message.delete',
     source: 'discord',
+    actorId: deleter?.id ?? null,
+    actorName: deleter?.name ?? null,
     targetId: message.author.id,
     targetName: authorName(message),
     detail: {
@@ -90,8 +191,15 @@ export function logMessageEdit(before: AnyMessage, after: AnyMessage): void {
   })
 }
 
-export function logBulkDelete(...[messages, channel]: ClientEvents['messageDeleteBulk']): void {
+export async function logBulkDelete(
+  ...[messages, channel]: ClientEvents['messageDeleteBulk']
+): Promise<void> {
   if (!isConfiguredGuild(channel.guildId)) return
+
+  const deleter = await findDeleter(channel.guild, {
+    type: AuditLogEvent.MessageBulkDelete,
+    channelId: channel.id,
+  })
 
   const known = [...messages.values()]
     .filter(loggable)
@@ -100,6 +208,8 @@ export function logBulkDelete(...[messages, channel]: ClientEvents['messageDelet
   recordAudit({
     action: 'message.bulk_delete',
     source: 'discord',
+    actorId: deleter?.id ?? null,
+    actorName: deleter?.name ?? null,
     targetId: channel.id,
     targetName: `#${channel.name}`,
     detail: {

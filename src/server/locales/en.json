@@ -39,7 +39,7 @@
       "invalid_birthday": "That is not a real date."
     },
     "announcement": {
-      "welcome": "## Welcome, {{member}}",
+      "welcome": "-# Welcome Announcement\n### Welcome, {{member}}",
       "greetings": [
         "New arrival confirmed. Please make them feel welcome.",
         "Arrival logged. Someone new has joined us.",
@@ -101,6 +101,9 @@
       "announcement_one": "-# Birthday Announcement\n🎉 Happy birthday, {{mentions}}! 🎂",
       "announcement_other": "-# Birthday Announcement\n🎉 Happy birthday to {{mentions}}! 🎂",
       "role_reason": "Plana — birthday role"
+    },
+    "leave": {
+      "announcement": "-# Leave Announcement\n👋 **{{name}}** has left the server."
     },
     "recap": {
       "title": "-# Weekly Retrospective — {{date}}",

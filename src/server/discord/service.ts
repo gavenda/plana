@@ -4,6 +4,7 @@ import {
   PermissionFlagsBits,
   type APIMessageTopLevelComponent,
   type GuildMember,
+  type PartialGuildMember,
   type Role,
 } from 'discord.js'
 
@@ -211,6 +212,35 @@ async function markAnnouncementResolved(options: {
   }
 }
 
+/**
+ * Deletes the card of a member who left while still waiting in triage, so the channel
+ * doesn't keep welcoming someone who is gone. Members admitted by hand in Discord (no
+ * triage role, but the card was never closed) keep theirs. Best effort.
+ *
+ * Returns whether they were still waiting in triage.
+ */
+export async function removeOpenAnnouncement(
+  member: GuildMember | PartialGuildMember,
+): Promise<boolean> {
+  const record = getAnnouncement(member.id)
+  if (!record || record.resolvedAt != null) return false
+
+  // A partial member's roles are unknown; an open card is then the best evidence.
+  const { triageRoleId } = getSettings()
+  if (!member.partial && triageRoleId && !member.roles.cache.has(triageRoleId)) return false
+
+  try {
+    const channel =
+      member.guild.channels.cache.get(record.channelId) ??
+      (await member.guild.channels.fetch(record.channelId))
+    if (channel?.isTextBased()) await channel.messages.delete(record.messageId)
+    joinLog.info`removed the card of ${member.user.tag}, who left while in triage`
+  } catch (error) {
+    joinLog.warning`could not remove the card of ${member.id}: ${error}`
+  }
+  return true
+}
+
 // ---------------------------------------------------------------------------
 // Role assignment
 // ---------------------------------------------------------------------------
@@ -281,6 +311,55 @@ export async function assignRole(input: {
     roleId: role.id,
     roleName: role.name,
   })
+}
+
+/**
+ * Someone gave a waiting member the trusted or allowed role in Discord itself rather than
+ * with the card's buttons. Finishes the job the way a button would: takes the triage role,
+ * logs the assignment, and marks the card assigned by them. Members without an open card
+ * are left alone, so this never touches anyone outside triage.
+ */
+export async function adoptManualAssignment(input: {
+  memberId: string
+  addedRoleIds: string[]
+  actor: Actor
+}): Promise<void> {
+  const { memberId, addedRoleIds, actor } = input
+  const settings = getSettings()
+
+  const roleId = [settings.unitOwnerRoleId, settings.boardersRoleId].find(
+    (id) => id != null && addedRoleIds.includes(id),
+  )
+  if (!roleId) return
+
+  const card = getAnnouncement(memberId)
+  if (!card || card.resolvedAt != null) return
+
+  const guild = await getGuild()
+  const member = await guild.members.fetch(memberId).catch(() => null)
+  const role = guild.roles.cache.get(roleId)
+  if (!member || !role) return
+
+  if (settings.triageRoleId && member.roles.cache.has(settings.triageRoleId)) {
+    await member.roles
+      .remove(settings.triageRoleId, reason(actor, 'discord'))
+      .catch((error: unknown) => {
+        assignLog.warning`could not take triage from ${member.id}: ${error}`
+      })
+  }
+
+  recordAudit({
+    action: 'role.assign',
+    source: 'discord',
+    actorId: actor.id,
+    actorName: actor.name,
+    targetId: member.id,
+    targetName: member.user.tag,
+    detail: { roleId: role.id, roleName: role.name },
+  })
+
+  await markAnnouncementResolved({ member, roleName: role.name, actor, source: 'discord' })
+  await invalidate(CacheKey.pendingMembers)
 }
 
 // ---------------------------------------------------------------------------
