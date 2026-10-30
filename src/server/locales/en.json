@@ -2,11 +2,12 @@
   "translation": {
     "reply": {
       "not_administrator_assign": "Only administrators and moderators can assign roles from this message.",
-      "not_administrator_broadcast": "Only administrators can broadcast.",
       "role_assigned": "Assigned **{{role}}** to **{{member}}**.",
       "broadcast_posted": "Posted to <#{{channelId}}> — {{url}}",
       "error_interaction_execution": "I'm confused... Something went wrong handling that. Please try again.",
       "birthday_set": "🎂 Confirmed. I've saved your birthday as **{{date}}**.",
+      "birthday_set_other": "🎂 Confirmed. I've saved {{member}}'s birthday as **{{date}}**.",
+      "birthday_bot": "Bots don't have birthdays.",
       "birthday_disabled": "Birthday announcements are not switched on in this server yet, but your date is saved for when they are.",
       "birthday_invalid": "{{month}} doesn't have a day {{day}}.",
       "birthday_removed": "Understood. I've forgotten your birthday.",
@@ -15,7 +16,7 @@
       "birthday_show_one": "🎂 {{member}}'s birthday is **{{date}}** — tomorrow.",
       "birthday_show_other": "🎂 {{member}}'s birthday is **{{date}}** — in {{count}} days.",
       "birthday_show_today": "🎉 {{member}}'s birthday is **today**!",
-      "birthday_upcoming_title": "## Upcoming birthdays",
+      "birthday_upcoming_title": "-# Upcoming Birthdays",
       "birthday_upcoming_line_one": "- **{{date}}** — {{member}} (tomorrow)",
       "birthday_upcoming_line_other": "- **{{date}}** — {{member}} (in {{count}} days)",
       "birthday_upcoming_line_today": "- **{{date}}** — {{member}} 🎉 today",
@@ -82,6 +83,18 @@
         "show_description": "Show a member's birthday",
         "member_description": "Defaults to you",
         "upcoming_description": "List the next birthdays in the server"
+      },
+      "show_birthday": {
+        "name": "Show birthday"
+      },
+      "view_stats": {
+        "name": "View stats"
+      },
+      "set_birthday": {
+        "name": "Set birthday",
+        "modal_title": "Birthday for {{member}}",
+        "month_label": "Month",
+        "day_label": "Day"
       },
       "stats": {
         "description": "Show time in voice, games and music for a member",

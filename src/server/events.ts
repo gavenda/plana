@@ -20,6 +20,7 @@ import { messageBulkDeleteEvent } from './events/message-bulk-delete.event'
 import { messageDeleteEvent } from './events/message-delete.event'
 import { messageUpdateEvent } from './events/message-update.event'
 import { modalSubmitInteractionEvent } from './events/modal-submit-interaction.event'
+import { userCommandInteractionEvent } from './events/user-command-interaction.event'
 import { presenceUpdateEvent } from './events/presence-update.event'
 import { voiceStateUpdateEvent } from './events/voice-state-update.event'
 import { logger } from './logging'
@@ -50,6 +51,7 @@ export const events: AnyAppEvent[] = [
   presenceUpdateEvent,
 
   chatInputCommandInteractionEvent,
+  userCommandInteractionEvent,
   buttonInteractionEvent,
   modalSubmitInteractionEvent,
 ]

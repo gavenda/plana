@@ -23,9 +23,10 @@ the interaction's locale, or `t(key)` where there is none; lists use `tlList`, a
 - Not covered: logs, startup errors, SQL, and the dashboard's own text (the Vue app and the
   HTTP API's error messages have no i18n layer).
 - Messages the bot posts to a channel on its own (welcome, leave, birthday, recap, game
-  night, triage reminder, `/stats` card) open with a `-#` subtext heading naming the message,
-  such as `-# Leave Announcement\n…`. Give any new one the same. Ephemeral replies and
-  `/broadcast` (the admin's own text) don't need one.
+  night, triage reminder) open with a `-#` subtext heading naming the message, such as
+  `-# Leave Announcement\n…`. Give any new one the same. Private replies that are a card
+  or a list (`/stats`, `/birthday upcoming`) get one too; one-line confirmations and
+  errors don't, and neither does `/broadcast` (the admin's own text).
 
 ## Slash commands, buttons and modals
 
@@ -34,12 +35,23 @@ the interaction's locale, or `t(key)` where there is none; lists use `tlList`, a
   `SlashCommandBuilder` and ends in `.toJSON()`, and an `execute(context, interaction)`.
   Add it to the list in `commands/chat-input/index.ts`; that list is both registered with
   Discord and used to route interactions by `name`.
+- Commands in a member's Apps menu (right-click) work the same way, in
+  `src/server/commands/user/` as `AppUserCommand`s built with `ContextMenuCommandBuilder`.
+  They're routed by their display name, so `name()` reads the same locale key as `data()`.
+  Both lists are registered together through `getCommandData()` in `commands/index.ts`.
 - Its text goes under `command.<name>` in the locale file (description, option descriptions,
   choices). The text of its replies goes under a key of its own, such as `about.*` or
   `stats.*`.
+- Limit who can use a command with `setDefaultMemberPermissions` (usually
+  `Administrator`), and don't re-check in `execute` or in its modal: servers widen it
+  under Integrations on purpose. Buttons on public messages do check, with `isStaff` or
+  `isAdministrator`.
 - Reply with the interaction's locale (`tl(…, interaction.locale)`). Make replies
   `MessageFlags.Ephemeral` unless the command exists to post publicly (`/broadcast`).
   `deferReply` first if the work could take more than 3 seconds.
+- Don't use deprecated discord.js APIs; their typings mark them `@deprecated`. For example,
+  modals take `LabelBuilder`s through `addLabelComponents`, not action rows through
+  `addComponents`, and inputs get their label from the `LabelBuilder`, not `setLabel`.
 - Rich replies use Components v2 (`MessageFlags.IsComponentsV2`) with top-level sections,
   text displays and separators, no container. See `about.command.ts` and `discord/stats.ts`.
 - Buttons and modals live in `src/server/handlers/buttons` and `handlers/modals`, as

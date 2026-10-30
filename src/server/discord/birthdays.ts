@@ -16,7 +16,7 @@ import {
 } from '../db/birthdays'
 import { getSettings } from '../db/settings'
 import { env } from '../env'
-import { DEFAULT_LOCALE, t } from '../i18n'
+import { DEFAULT_LOCALE, t, tl } from '../i18n'
 import { err, ok, primeMemberCache, type ActionSource, type Actor, type Result } from './service'
 import { logger } from '../logging'
 
@@ -62,6 +62,25 @@ export function daysUntil(birthday: Pick<Birthday, 'month' | 'day'>, from: Calen
 }
 
 /** Stored birthdays of members still in the server, soonest first. */
+/** The reply to "whose birthday is it", shared by /birthday show and Show birthday. */
+export function describeBirthday(memberId: string, askedBy: string, locale: string): string {
+  const member = `<@${memberId}>`
+  const birthday = getBirthday(memberId)
+
+  if (!birthday) {
+    return memberId === askedBy
+      ? tl('reply.birthday_none', locale)
+      : tl('reply.birthday_none_other', locale, { member })
+  }
+
+  const days = daysUntil(birthday, today())
+  return tl(days === 0 ? 'reply.birthday_show_today' : 'reply.birthday_show', locale, {
+    member,
+    date: formatBirthday(birthday, locale),
+    count: days,
+  })
+}
+
 export async function listUpcomingBirthdays(
   limit: number,
 ): Promise<{ member: GuildMember; birthday: Birthday; days: number }[]> {

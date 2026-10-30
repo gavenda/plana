@@ -63,6 +63,22 @@ export function decodeStatsId(customId: string): StatsCustomId | null {
   return { memberId, days: count === 0 ? null : count, tab }
 }
 
+export const BIRTHDAY_PREFIX = 'birthday'
+
+/** The birthday form carries the member it is for. */
+export function encodeBirthdayId(memberId: string): string {
+  return `${BIRTHDAY_PREFIX}:${memberId}`
+}
+
+export function decodeBirthdayId(customId: string): { memberId: string } | null {
+  const [prefix, memberId] = customId.split(':')
+  if (prefix !== BIRTHDAY_PREFIX || !memberId) return null
+  return { memberId }
+}
+
+export const BIRTHDAY_MONTH_ID = 'month'
+export const BIRTHDAY_DAY_ID = 'day'
+
 /** The dispatcher matches handlers on this, so ids must keep the prefix first. */
 export function customIdPrefix(customId: string): string {
   return customId.split(':')[0] ?? ''

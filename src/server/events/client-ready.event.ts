@@ -1,6 +1,6 @@
 import { Events } from 'discord.js'
 
-import { getChatInputCommandData } from '../commands/chat-input'
+import { getCommandData } from '../commands'
 import { startActivityTracking } from '../discord/activity'
 import { announceBirthdays, syncBirthdayRole } from '../discord/birthdays'
 import { postWeeklyRecap } from '../discord/recap'
@@ -23,7 +23,7 @@ export const clientReadyEvent: AppEvent<Events.ClientReady> = {
 
     try {
       const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID)
-      const commandData = getChatInputCommandData()
+      const commandData = getCommandData()
       await guild.commands.set(commandData)
       discordLog.info`registered ${commandData.length} command(s) in ${guild.name}`
     } catch (error) {

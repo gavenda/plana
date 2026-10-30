@@ -13,6 +13,8 @@ Plana is a Discord bot with a web dashboard for running one server.
 
 ### Birthdays
 - `/birthday set`, `remove`, `show [member]` and `upcoming`. Only the month and day are stored.
+- **Show birthday** in a member's Apps menu (right-click) does the same as `/birthday show` for them.
+- **Set birthday** in a member's Apps menu (right-click) opens a form to set their birthday for them, prefilled with the saved date. Admins only by default; a server can open it to other roles under Server Settings → Integrations.
 - Birthdays are announced in the birthday channel, using the configured time zone.
 - An optional birthday role is given for the day and taken back afterwards.
 
@@ -29,10 +31,11 @@ Plana is a Discord bot with a web dashboard for running one server.
 - If the bot was down at that time, the recap still goes out once it's back, as long as that's soon enough.
 
 ### Broadcasts
-- `/broadcast channel [message]` posts as the bot. Leave out the message to open a multi-line composer. Admins only.
+- `/broadcast channel [message]` posts as the bot. Leave out the message to open a multi-line composer. Admins only by default; a server can open it to other roles under Server Settings → Integrations.
 
 ### Stats
 - `/stats [member] [period]` shows a member's dashboard profile as plain text: when they joined, what they're doing right now, and their totals. The period defaults to the last 30 days; 7 days, 90 days and all time are also offered.
+- **View stats** in a member's Apps menu (right-click) shows the same for them, over the last 30 days.
 - Games, Music and Voice buttons switch the list underneath, showing up to 10 rows each.
 - Only the person who ran it can see the reply.
 

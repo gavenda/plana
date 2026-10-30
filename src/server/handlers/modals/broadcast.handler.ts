@@ -3,7 +3,6 @@ import { MessageFlags } from 'discord.js'
 import { BROADCAST_INPUT_ID, BROADCAST_PREFIX, decodeBroadcastId } from '../../discord/ids'
 import { broadcast } from '../../discord/service'
 import { tl } from '../../i18n'
-import { isAdministrator } from '../../utils/is-administrator'
 import type { AppModalSubmitHandler } from './modal-handler'
 
 export const broadcastHandler: AppModalSubmitHandler = {
@@ -13,14 +12,6 @@ export const broadcastHandler: AppModalSubmitHandler = {
     if (!target) return
 
     const locale = interaction.locale
-
-    if (!isAdministrator(interaction)) {
-      await interaction.reply({
-        content: tl('reply.not_administrator_broadcast', locale),
-        flags: MessageFlags.Ephemeral,
-      })
-      return
-    }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 

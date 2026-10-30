@@ -1,13 +1,12 @@
 import { InteractionContextType, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
-import { getBirthday, isValidBirthday } from '../../db/birthdays'
+import { isValidBirthday } from '../../db/birthdays'
 import {
-  daysUntil,
   deleteBirthday,
+  describeBirthday,
   formatBirthday,
   listUpcomingBirthdays,
   saveBirthday,
-  today,
 } from '../../discord/birthdays'
 import { getSettings } from '../../db/settings'
 import { DEFAULT_LOCALE, t, tl, tlList } from '../../i18n'
@@ -118,26 +117,7 @@ export const birthdayCommand: AppChatInputCommand = {
 
       case 'show': {
         const user = interaction.options.getUser('member') ?? interaction.user
-        const self = user.id === interaction.user.id
-        const birthday = getBirthday(user.id)
-
-        if (!birthday) {
-          await reply(
-            self
-              ? tl('reply.birthday_none', locale)
-              : tl('reply.birthday_none_other', locale, { member: user.toString() }),
-          )
-          return
-        }
-
-        const days = daysUntil(birthday, today())
-        await reply(
-          tl(days === 0 ? 'reply.birthday_show_today' : 'reply.birthday_show', locale, {
-            member: user.toString(),
-            date: formatBirthday(birthday, locale),
-            count: days,
-          }),
-        )
+        await reply(describeBirthday(user.id, interaction.user.id, locale))
         return
       }
 

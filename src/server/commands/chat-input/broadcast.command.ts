@@ -1,7 +1,7 @@
 import {
-  ActionRowBuilder,
   ChannelType,
   InteractionContextType,
+  LabelBuilder,
   MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
@@ -14,20 +14,19 @@ import { MAX_MESSAGE_LENGTH } from '../../constants'
 import { BROADCAST_INPUT_ID, encodeBroadcastId } from '../../discord/ids'
 import { broadcast } from '../../discord/service'
 import { t, tl } from '../../i18n'
-import { isAdministrator } from '../../utils/is-administrator'
 import type { AppChatInputCommand } from './chat-input-command'
 
 /** Discord truncates modal titles at 45 characters. */
 const MODAL_TITLE_LIMIT = 45
 
 export const broadcastCommand: AppChatInputCommand = {
-  // `setDefaultMemberPermissions` hides the command from everyone else in the client;
-  // `execute` re-checks, because a server owner can override that.
   name: 'broadcast',
   data: () =>
     new SlashCommandBuilder()
       .setName('broadcast')
       .setDescription(t('command.broadcast.description'))
+      // Administrators only by default; a server can open it to other roles under
+      // Server Settings → Integrations, and Discord enforces that for the composer too.
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
       .setContexts(InteractionContextType.Guild)
       .addChannelOption((option) =>
@@ -48,14 +47,6 @@ export const broadcastCommand: AppChatInputCommand = {
   execute: async (_context, interaction) => {
     const locale = interaction.locale
 
-    if (!isAdministrator(interaction)) {
-      await interaction.reply({
-        content: tl('reply.not_administrator_broadcast', locale),
-        flags: MessageFlags.Ephemeral,
-      })
-      return
-    }
-
     const channel = interaction.options.getChannel('channel', true)
     const message = interaction.options.getString('message')
 
@@ -64,7 +55,6 @@ export const broadcastCommand: AppChatInputCommand = {
     if (!message) {
       const input = new TextInputBuilder()
         .setCustomId(BROADCAST_INPUT_ID)
-        .setLabel(tl('command.broadcast.modal_input_label', locale))
         .setStyle(TextInputStyle.Paragraph)
         .setMaxLength(MAX_MESSAGE_LENGTH)
         .setRequired(true)
@@ -78,7 +68,11 @@ export const broadcastCommand: AppChatInputCommand = {
               MODAL_TITLE_LIMIT,
             ),
           )
-          .addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input)),
+          .addLabelComponents(
+            new LabelBuilder()
+              .setLabel(tl('command.broadcast.modal_input_label', locale))
+              .setTextInputComponent(input),
+          ),
       )
       return
     }

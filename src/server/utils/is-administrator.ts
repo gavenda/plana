@@ -3,8 +3,9 @@ import { PermissionFlagsBits, type Interaction } from 'discord.js'
 import { getSettings } from '../db/settings'
 
 /**
- * Commands are hidden from non-administrators by `setDefaultMemberPermissions`, but a
- * server owner can override that per role, so every entry point re-checks.
+ * Commands don't need this: `setDefaultMemberPermissions` limits them, and a server can
+ * widen that under Integrations on purpose. Buttons on public messages have no such
+ * setting, so they check here.
  */
 export function isAdministrator(interaction: Interaction): boolean {
   return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false
