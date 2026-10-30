@@ -22,6 +22,33 @@ the interaction's locale, or `t(key)` where there is none; lists use `tlList`, a
   scope with `t()`. `deploy-commands.ts` calls `initI18n()` itself for the same reason.
 - Not covered: logs, startup errors, SQL, and the dashboard's own text (the Vue app and the
   HTTP API's error messages have no i18n layer).
+- Messages the bot posts to a channel on its own (welcome, leave, birthday, recap, game
+  night, triage reminder, `/stats` card) open with a `-#` subtext heading naming the message,
+  such as `-# Leave Announcement\n…`. Give any new one the same. Ephemeral replies and
+  `/broadcast` (the admin's own text) don't need one.
+
+## Slash commands, buttons and modals
+
+- A slash command is one file, `src/server/commands/chat-input/<name>.command.ts`, exporting
+  an `AppChatInputCommand` named `<name>Command`. It has a `name`, a `data()` that builds the
+  `SlashCommandBuilder` and ends in `.toJSON()`, and an `execute(context, interaction)`.
+  Add it to the list in `commands/chat-input/index.ts`; that list is both registered with
+  Discord and used to route interactions by `name`.
+- Its text goes under `command.<name>` in the locale file (description, option descriptions,
+  choices). The text of its replies goes under a key of its own, such as `about.*` or
+  `stats.*`.
+- Reply with the interaction's locale (`tl(…, interaction.locale)`). Make replies
+  `MessageFlags.Ephemeral` unless the command exists to post publicly (`/broadcast`).
+  `deferReply` first if the work could take more than 3 seconds.
+- Rich replies use Components v2 (`MessageFlags.IsComponentsV2`) with top-level sections,
+  text displays and separators, no container. See `about.command.ts` and `discord/stats.ts`.
+- Buttons and modals live in `src/server/handlers/buttons` and `handlers/modals`, as
+  `<name>.handler.ts` exporting an `AppButtonHandler` or `AppModalSubmitHandler`, listed in that
+  folder's `index.ts`. They're routed by the `custom_id` prefix before the first `:`. Build
+  and parse the `custom_id` with the `encode…`/`decode…` helpers in
+  `src/server/discord/ids.ts`, since the ID is the only state Discord sends back.
+- Add the command to [FEATURES.md](FEATURES.md). New commands reach Discord when the bot
+  restarts or on `bun run commands:deploy`.
 
 ## Adding an icon (easy to forget)
 

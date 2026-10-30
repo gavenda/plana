@@ -63,6 +63,9 @@
       "resolved_via_dashboard": "-# Assigned **{{role}}** by **{{actor}}** via the dashboard {{timestamp}}"
     },
     "command": {
+      "about": {
+        "description": "Who Plana is, and where she runs"
+      },
       "broadcast": {
         "modal_title": "Broadcast to #{{channel}}",
         "modal_input_label": "Message",
@@ -91,8 +94,8 @@
       }
     },
     "triage": {
-      "reminder_title_one": "⏳ **{{count}} member** has been waiting in triage for over {{days}} days:",
-      "reminder_title_other": "⏳ **{{count}} members** have been waiting in triage for over {{days}} days:",
+      "reminder_title_one": "-# Triage Reminder\n⏳ **{{count}} member** has been waiting in triage for over {{days}} days:",
+      "reminder_title_other": "-# Triage Reminder\n⏳ **{{count}} members** have been waiting in triage for over {{days}} days:",
       "reminder_line": "- {{member}} — since {{since}} · [card]({{url}})",
       "reminder_more_one": "- …and {{count}} more",
       "reminder_more_other": "- …and {{count}} more"
@@ -101,6 +104,16 @@
       "announcement_one": "-# Birthday Announcement\n🎉 Happy birthday, {{mentions}}! 🎂",
       "announcement_other": "-# Birthday Announcement\n🎉 Happy birthday to {{mentions}}! 🎂",
       "role_reason": "Plana — birthday role"
+    },
+    "about": {
+      "title": "Who is Plana?",
+      "description": "Administered by Plana, OS of the Shittim Chest. Character design by DoReMi, from Blue Archive.",
+      "field_version": "Version",
+      "field_language": "Language",
+      "field_host": "Host",
+      "field_created": "Date Created",
+      "footer": "Development continues on GitHub. Contributions are welcome.",
+      "source": "GitHub"
     },
     "leave": {
       "announcement": "-# Leave Announcement\n👋 **{{name}}** has left the server."

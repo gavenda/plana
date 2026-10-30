@@ -36,6 +36,9 @@ Plana is a Discord bot with a web dashboard for running one server.
 - Games, Music and Voice buttons switch the list underneath, showing up to 10 rows each.
 - Only the person who ran it can see the reply.
 
+### About
+- `/about` shows Plana's version, language, host and creation date, with a link to the source on GitHub. Only the person who ran it can see the reply.
+
 ### Tracking
 - Game playtime and Spotify listening, from member presence.
 - What Vivy, the server's music bot, played and who asked for it, read from the Redis both bots share when `VIVY_STATS` is on. Read only; Plana never writes Vivy's data.
