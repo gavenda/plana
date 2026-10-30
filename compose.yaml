@@ -1,5 +1,5 @@
 # A stack of its own, with a cache-only Redis. To share Vivy's Redis and show its stats
-# (VIVY_STATS) through the host's Valkey, use the quadlets in deploy/quadlet.
+# (VIVY_STATS), point REDIS_URL at the Redis Vivy uses instead.
 services:
   redis:
     image: docker.io/redis:8-alpine

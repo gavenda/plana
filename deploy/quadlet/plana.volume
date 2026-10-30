@@ -1,5 +1,0 @@
-[Unit]
-Description=Plana persistent data (SQLite database)
-
-[Volume]
-VolumeName=plana-data
