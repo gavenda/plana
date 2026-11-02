@@ -183,7 +183,9 @@
       "declined": "**Declined:** {{names}}",
       "more_one": "{{count}} more",
       "more_other": "{{count}} more",
-      "unknown": "I no longer have a record of this game night."
+      "unknown": "I no longer have a record of this game night.",
+      "ended": "-# Session ended <t:{{at}}:t>.",
+      "ended_reply": "This game night has already ended."
     },
     "stats": {
       "title": "-# Member Stats — {{period}}",

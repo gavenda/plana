@@ -218,6 +218,13 @@ const migrations: string[] = [
                            THEN OLD.ended_at - OLD.started_at ELSE 0 END);
   END;
   `,
+  // A game night ends once its players leave voice. Posts from before this was tracked are
+  // closed unless recent, so the first check doesn't edit days-old announcements.
+  `
+  ALTER TABLE game_night_posts ADD COLUMN ended_at INTEGER;
+  UPDATE game_night_posts SET ended_at = posted_at
+  WHERE posted_at < unixepoch('now', '-12 hours') * 1000;
+  `,
 ]
 
 function migrate(database: Database): void {

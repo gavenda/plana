@@ -55,6 +55,8 @@ export type GameNightPost = {
   /** The announcement as first posted; responses are added below it on each edit. */
   content: string
   postedAt: number
+  /** When its players left voice, or null while it's still going. */
+  endedAt: number | null
 }
 
 type PostRow = {
@@ -64,15 +66,23 @@ type PostRow = {
   game: string
   content: string
   posted_at: number
+  ended_at: number | null
 }
 
-const insertPost = db.query<void, PostRow>(
+const insertPost = db.query<void, Omit<PostRow, 'ended_at'>>(
   `INSERT INTO game_night_posts (message_id, channel_id, voice_channel_id, game, content, posted_at)
    VALUES (:message_id, :channel_id, :voice_channel_id, :game, :content, :posted_at)`,
 )
 const selectPost = db.query<PostRow, { message_id: string }>(
   'SELECT * FROM game_night_posts WHERE message_id = :message_id',
 )
+const selectOpenPosts = db.query<PostRow, []>(
+  'SELECT * FROM game_night_posts WHERE ended_at IS NULL',
+)
+const updateEnded = db.query<void, { message_id: string; ended_at: number }>(
+  'UPDATE game_night_posts SET ended_at = :ended_at WHERE message_id = :message_id',
+)
+
 const selectResponses = db.query<
   { member_id: string; display_name: string; response: GameNightResponse },
   { message_id: string }
@@ -101,7 +111,7 @@ const deleteResponse = db.query<void, { message_id: string; member_id: string }>
   'DELETE FROM game_night_responses WHERE message_id = :message_id AND member_id = :member_id',
 )
 
-export function saveGameNightPost(post: GameNightPost): void {
+export function saveGameNightPost(post: Omit<GameNightPost, 'endedAt'>): void {
   insertPost.run({
     message_id: post.messageId,
     channel_id: post.channelId,
@@ -114,16 +124,28 @@ export function saveGameNightPost(post: GameNightPost): void {
 
 export function getGameNightPost(messageId: string): GameNightPost | null {
   const row = selectPost.get({ message_id: messageId })
-  return row
-    ? {
-        messageId: row.message_id,
-        channelId: row.channel_id,
-        voiceChannelId: row.voice_channel_id,
-        game: row.game,
-        content: row.content,
-        postedAt: row.posted_at,
-      }
-    : null
+  return row ? toPost(row) : null
+}
+
+function toPost(row: PostRow): GameNightPost {
+  return {
+    messageId: row.message_id,
+    channelId: row.channel_id,
+    voiceChannelId: row.voice_channel_id,
+    game: row.game,
+    content: row.content,
+    postedAt: row.posted_at,
+    endedAt: row.ended_at,
+  }
+}
+
+/** Game nights that haven't ended yet. */
+export function listOpenGameNightPosts(): GameNightPost[] {
+  return selectOpenPosts.all().map(toPost)
+}
+
+export function endGameNightPost(messageId: string, at: number): void {
+  updateEnded.run({ message_id: messageId, ended_at: at })
 }
 
 export function listGameNightResponses(

@@ -25,6 +25,7 @@ Plana is a Discord bot with a web dashboard for running one server.
 - When enough people (3 by default) play the same game together in a voice channel for a while, Plana announces a game night.
 - The announcement has "I'm in" and "Can't make it" buttons, and its title depends on the time of day.
 - Each game can have its own ping role, and posts show the game's icon as an emoji.
+- A game night ends once nobody in its voice channel has been playing the game for 5 minutes: the buttons come off and the post says when it ended.
 
 ### Weekly recap
 - Posted every Sunday at 18:00 to the recap channel, covering the past 7 days: top games, music, voice time and new members.

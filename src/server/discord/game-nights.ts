@@ -10,13 +10,16 @@ import {
 
 import { recordAudit } from '../db/audit'
 import {
+  endGameNightPost,
   getGameNightPost,
   getGameRole,
   lastGameNight,
   listGameNightResponses,
+  listOpenGameNightPosts,
   markGameNight,
   saveGameNightPost,
   toggleGameNightResponse,
+  type GameNightPost,
   type GameNightResponse,
 } from '../db/game-nights'
 import { getSettings } from '../db/settings'
@@ -44,8 +47,14 @@ const HOLD_MS = 5 * 60_000
 /** A game is announced at most this often per voice channel, so a dropped connection doesn't repeat it. */
 const COOLDOWN_MS = 4 * 60 * 60_000
 
+/** How long nobody may be playing before a game night ends, so a dropped connection or a game restart doesn't end it. */
+const END_GRACE_MS = 5 * 60_000
+
 /** Since when each group (voice channel and game) has had enough players, keyed `channel\ngame`. */
 const forming = new Map<string, number>()
+
+/** Since when nobody has been playing each open game night, by its message ID. */
+const emptySince = new Map<string, number>()
 
 let running = false
 
@@ -93,18 +102,33 @@ function responseText(messageId: string): string {
 
 /**
  * The announcement as a Components V2 message: what started it, then the answers so far and
- * the buttons. Rebuilt whole on every answer.
+ * the buttons. Rebuilt whole on every answer. Once it has ended the buttons are gone and a
+ * line says when.
  */
 function buildGameNight(post: {
   messageId: string | null
   content: string
+  endedAt?: number | null
 }): AnnouncementComponents {
+  const lng = DEFAULT_LOCALE
+  const intro = new TextDisplayBuilder().setContent(post.content)
+
+  if (post.endedAt != null) {
+    const ended = t('game_night.ended', { lng, at: Math.floor(post.endedAt / 1000) })
+    // Keep who answered; drop the nudge to answer.
+    const answered = post.messageId != null && listGameNightResponses(post.messageId).length > 0
+    return [
+      intro,
+      new TextDisplayBuilder().setContent(
+        answered ? `${responseText(post.messageId!)}\n${ended}` : ended,
+      ),
+    ]
+  }
+
   return [
-    new TextDisplayBuilder().setContent(post.content),
+    intro,
     new TextDisplayBuilder().setContent(
-      post.messageId
-        ? responseText(post.messageId)
-        : t('game_night.prompt', { lng: DEFAULT_LOCALE }),
+      post.messageId ? responseText(post.messageId) : t('game_night.prompt', { lng }),
     ),
     buttons(),
   ]
@@ -149,15 +173,80 @@ function currentGroups(
   return groups
 }
 
+/** Voice channel and game pairs someone is playing in right now, keyed `channel\ngame`. */
+function playingNow(): Set<string> {
+  const playing = new Set<string>()
+  for (const [channelId, memberIds] of membersInVoice()) {
+    for (const memberId of memberIds) {
+      for (const game of memberActivityNow(memberId).games.keys()) {
+        playing.add(keyOf(channelId, game))
+      }
+    }
+  }
+  return playing
+}
+
+/**
+ * Ends each open game night once nobody in its voice channel has been playing its game for a
+ * few minutes: the buttons come off and the post says when it ended.
+ */
+async function endGameNights(now: number): Promise<void> {
+  const open = listOpenGameNightPosts()
+  const openIds = new Set(open.map((post) => post.messageId))
+  for (const id of emptySince.keys()) if (!openIds.has(id)) emptySince.delete(id)
+  if (open.length === 0) return
+
+  const playing = playingNow()
+  for (const post of open) {
+    if (playing.has(keyOf(post.voiceChannelId, post.game))) {
+      emptySince.delete(post.messageId)
+      continue
+    }
+    const since = emptySince.get(post.messageId)
+    if (since == null) {
+      emptySince.set(post.messageId, now)
+      continue
+    }
+    if (now - since < END_GRACE_MS) continue
+
+    emptySince.delete(post.messageId)
+    // Mark first: a failed edit leaves the buttons up rather than retrying every 30 seconds.
+    endGameNightPost(post.messageId, since)
+    await editEnded({ ...post, endedAt: since })
+  }
+}
+
+async function editEnded(post: GameNightPost): Promise<void> {
+  try {
+    const guild = await getGuild()
+    const channel =
+      guild.channels.cache.get(post.channelId) ??
+      (await guild.channels.fetch(post.channelId).catch(() => null))
+    if (!channel?.isTextBased()) return
+
+    await channel.messages.edit(post.messageId, {
+      components: buildGameNight(post),
+      allowedMentions: { parse: [] },
+    })
+    const voice = guild.channels.cache.get(post.voiceChannelId)
+    log.info`ended ${post.game} night in #${voice?.name ?? post.voiceChannelId}`
+  } catch (error) {
+    log.warning`could not mark the ${post.game} night as ended: ${error}`
+  }
+}
+
 /**
  * Announces a game night once enough people in one voice channel have been playing the same
- * game together for a few minutes. Safe to call as often as you like.
+ * game together for a few minutes, and ends it once they've gone. Safe to call as often as
+ * you like.
  */
 export async function checkGameNights(now = Date.now()): Promise<void> {
   if (running || !isReady()) return
   running = true
 
   try {
+    await endGameNights(now)
+
     const { gameNightChannelId: channelId, gameNightMinPlayers } = getSettings()
     if (!channelId) {
       forming.clear()
@@ -288,6 +377,15 @@ export async function respondToGameNight(
   if (!post) {
     await interaction.reply({
       content: t('game_night.unknown', { lng: interaction.locale }),
+      flags: MessageFlags.Ephemeral,
+    })
+    return
+  }
+
+  if (post.endedAt != null) {
+    await interaction.update({ components: buildGameNight(post), allowedMentions: { parse: [] } })
+    await interaction.followUp({
+      content: t('game_night.ended_reply', { lng: interaction.locale }),
       flags: MessageFlags.Ephemeral,
     })
     return
