@@ -12,6 +12,7 @@ import { announceBirthdays, syncBirthdayRole } from './discord/birthdays'
 import { client } from './discord/client'
 import { checkGameNights, GAME_NIGHT_CHECK_INTERVAL_MS } from './discord/game-nights'
 import { postWeeklyRecap } from './discord/recap'
+import { REMINDER_CHECK_INTERVAL_MS, sendDueReminders } from './discord/reminders'
 import { primeMemberCache } from './discord/service'
 import { remindStaleTriage } from './discord/triage-reminders'
 import { checkpointVoice } from './discord/voice'
@@ -22,6 +23,9 @@ import { createHttpApp } from './http/app'
 import { liveSocketHandler, startLiveSockets, stopLiveSockets } from './http/live-socket'
 import { createRenderer } from './http/ssr'
 import { attachLiveServer } from './live'
+import { recordAudit } from './db/audit'
+import { restoredFrom } from './db'
+import { setRestartHandler } from './restart'
 
 const discordLog = logger('discord')
 const httpLog = logger('http')
@@ -46,6 +50,17 @@ const TRIAGE_REMINDER_INTERVAL_MS = 60 * 60 * 1000
 const RECAP_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 seedSettingsFromEnv()
+
+// Logged in the restored database: the one it was written to before is the one replaced.
+if (restoredFrom) {
+  recordAudit({
+    action: 'backup.restore',
+    source: 'dashboard',
+    actorId: restoredFrom.actorId,
+    actorName: restoredFrom.actorName,
+    detail: { key: restoredFrom.key, safetyKey: restoredFrom.safetyKey },
+  })
+}
 
 await initI18n()
 await connectCache()
@@ -138,8 +153,9 @@ const birthdayTimer = setInterval(() => {
 const triageReminderTimer = setInterval(() => void remindStaleTriage(), TRIAGE_REMINDER_INTERVAL_MS)
 const recapTimer = setInterval(() => void postWeeklyRecap(), RECAP_CHECK_INTERVAL_MS)
 const gameNightTimer = setInterval(() => void checkGameNights(), GAME_NIGHT_CHECK_INTERVAL_MS)
+const reminderTimer = setInterval(() => void sendDueReminders(), REMINDER_CHECK_INTERVAL_MS)
 
-async function shutdown(signal: string): Promise<void> {
+async function shutdown(signal: string, code = 0): Promise<void> {
   logger('shutdown').info`received ${signal}`
   clearInterval(pruneTimer)
   clearInterval(memberRefreshTimer)
@@ -147,6 +163,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(triageReminderTimer)
   clearInterval(recapTimer)
   clearInterval(gameNightTimer)
+  clearInterval(reminderTimer)
   clearInterval(activityTimer)
   stopBackups()
   checkpointActivity()
@@ -157,8 +174,11 @@ async function shutdown(signal: string): Promise<void> {
   await client.destroy()
   closeCache()
   closeVivy()
-  process.exit(0)
+  process.exit(code)
 }
+
+// A non-zero code, so a service set to restart only on failure still brings the bot back.
+setRestartHandler(() => void shutdown('restart', 75))
 
 process.on('SIGINT', () => void shutdown('SIGINT'))
 process.on('SIGTERM', () => void shutdown('SIGTERM'))

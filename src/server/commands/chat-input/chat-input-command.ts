@@ -1,4 +1,5 @@
 import type {
+  AutocompleteInteraction,
   ChatInputCommandInteraction,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from 'discord.js'
@@ -10,4 +11,6 @@ export interface AppChatInputCommand {
   /** Built on demand, because the text comes from the locale files loaded at startup. */
   data: () => RESTPostAPIChatInputApplicationCommandsJSONBody
   execute: (context: AppContext, interaction: ChatInputCommandInteraction) => Promise<void>
+  /** Suggestions for options built with `setAutocomplete(true)`. */
+  autocomplete?: (context: AppContext, interaction: AutocompleteInteraction) => Promise<void>
 }

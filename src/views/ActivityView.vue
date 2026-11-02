@@ -320,7 +320,11 @@ const plural = (count: number, one: string, many: string) =>
           @update:model-value="days = period.days"
         />
       </div>
-      <RouterLink v-if="session.isAdmin" to="/activity/game-nights" class="btn btn-tonal btn-wide">
+      <RouterLink
+        v-if="!session.isViewer"
+        to="/activity/game-nights"
+        class="btn btn-tonal btn-wide"
+      >
         <span class="icon [--icon-size:18px]" aria-hidden="true">celebration</span>
         Game nights
       </RouterLink>

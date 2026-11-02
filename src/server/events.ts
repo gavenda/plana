@@ -1,3 +1,4 @@
+import { autocompleteInteractionEvent } from './events/autocomplete-interaction.event'
 import { buttonInteractionEvent } from './events/button-interaction.event'
 import { channelCreateEvent } from './events/channel-create.event'
 import { channelDeleteEvent } from './events/channel-delete.event'
@@ -51,6 +52,7 @@ export const events: AnyAppEvent[] = [
   presenceUpdateEvent,
 
   chatInputCommandInteractionEvent,
+  autocompleteInteractionEvent,
   userCommandInteractionEvent,
   buttonInteractionEvent,
   modalSubmitInteractionEvent,

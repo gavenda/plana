@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { z } from 'zod'
 
-import { getBackupOverview, runBackup } from '../backup'
+import { getBackupOverview, restoreBackup, runBackup } from '../backup'
 import { CacheKey, cached, invalidate } from '../cache'
 import { AUDIT_CATEGORY_ACTIONS, listAudit, recordAudit, type AuditCategory } from '../db/audit'
 import {
@@ -29,6 +29,7 @@ import {
 } from '../discord/activity'
 import { getGuild } from '../discord/client'
 import { getGameRole, setGameRole } from '../db/game-nights'
+import { getGameNightHistory } from '../discord/game-nights'
 import { getMemberProfile, listMembers } from '../discord/members'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { getHeatmap } from '../discord/heatmaps'
@@ -62,6 +63,8 @@ const STATUS_BY_CODE: Record<ErrorCode, ContentfulStatusCode> = {
   channel_not_sendable: 403,
   missing_permissions: 403,
   invalid_birthday: 400,
+  invalid_input: 400,
+  limit_reached: 409,
   discord_error: 502,
 }
 
@@ -191,6 +194,22 @@ api.post('/backup', requireAdmin, async (c) => {
     detail: { key: result.key },
   })
   return c.json(await getBackupOverview())
+})
+
+const restoreSchema = z.object({ key: z.string().min(1).max(200) })
+
+/**
+ * "Restore" on a backup in Settings. Answers once the backup is staged; the bot then restarts
+ * to swap it in, and records the restore in the audit log as it comes back.
+ */
+api.post('/backup/restore', requireAdmin, async (c) => {
+  const parsed = restoreSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A backup key is required.' }, 400)
+
+  const user = c.get('user')
+  const result = await restoreBackup(parsed.data.key, { id: user.id, name: user.username })
+  if (!result.ok) return c.json({ error: result.error }, result.status)
+  return c.json({ ok: true })
 })
 
 api.get('/members/pending', async (c) => respond(c, await listPendingMembers()))
@@ -367,6 +386,18 @@ api.get('/activity/game', async (c) => {
   const parsed = gamePlayersQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'A game name and a valid period are required.' }, 400)
   return respond(c, await getGamePlayers(parsed.data.name, parsed.data.days))
+})
+
+const gameNightHistorySchema = z.object({
+  before: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+})
+
+/** Game nights newest first, a page at a time: `before` is the last one's `postedAt`. */
+api.get('/game-nights', async (c) => {
+  const parsed = gameNightHistorySchema.safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'Invalid game night query.' }, 400)
+  return respond(c, await getGameNightHistory(parsed.data.before ?? null, parsed.data.limit))
 })
 
 const gameRoleSchema = z.object({

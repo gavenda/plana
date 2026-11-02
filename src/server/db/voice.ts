@@ -178,3 +178,20 @@ export function listMemberVoiceSpans(
     .all({ member_id: memberId, since, min: MIN_VOICE_SESSION_MS })
     .map((row) => ({ start: row.start, end: row.ended_at }))
 }
+
+const selectChannelMembers = db.query<
+  { member_id: string },
+  { channel_id: string; start: number; end: number; min: number }
+>(
+  `SELECT member_id FROM voice_sessions
+   WHERE channel_id = :channel_id AND ended_at > :start AND started_at < :end
+   GROUP BY member_id
+   HAVING SUM(MIN(ended_at, :end) - MAX(started_at, :start)) >= :min`,
+)
+
+/** Who spent at least a minute in a voice channel between two moments. */
+export function listChannelMembersBetween(channelId: string, start: number, end: number): string[] {
+  return selectChannelMembers
+    .all({ channel_id: channelId, start, end, min: MIN_VOICE_SESSION_MS })
+    .map((row) => row.member_id)
+}

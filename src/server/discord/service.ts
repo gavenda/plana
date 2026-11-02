@@ -37,6 +37,8 @@ export type ErrorCode =
   | 'channel_not_sendable'
   | 'missing_permissions'
   | 'invalid_birthday'
+  | 'invalid_input'
+  | 'limit_reached'
   | 'discord_error'
 
 export type Failure = {

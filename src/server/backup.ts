@@ -1,9 +1,12 @@
 import { S3Client } from 'bun'
+import { Database } from 'bun:sqlite'
+import { rmSync, writeFileSync } from 'node:fs'
 
-import { db } from './db'
+import { db, migrate, restorePaths, SCHEMA_VERSION, type RestoreNote } from './db'
 import { env } from './env'
 import { notify } from './live'
 import { logger } from './logging'
+import { restart } from './restart'
 
 const log = logger('backup')
 
@@ -254,5 +257,115 @@ export async function getBackupOverview(): Promise<BackupOverview> {
     backups: backups.slice(-LISTED_BACKUPS).reverse(),
     total: backups.length,
     listError,
+  }
+}
+
+export type RestoreRun = { ok: true } | { ok: false; status: 400 | 404 | 409 | 502; error: string }
+
+let restoring = false
+
+/**
+ * Replaces the database with a backup. The current database is backed up first, so a restore
+ * can be undone by restoring that one. The backup is downloaded, checked and brought up to this
+ * version's schema, then staged beside the database; the bot restarts and swaps it in as it
+ * starts (see `swapInRestore` in db/index.ts). Sign-ins are carried over, so nobody is signed out.
+ */
+export async function restoreBackup(
+  key: string,
+  actor: { id: string; name: string },
+): Promise<RestoreRun> {
+  const s3 = getClient()
+  if (!s3) return { ok: false, status: 409, error: 'Backups are not configured.' }
+  if (env.DATABASE_PATH === ':memory:') {
+    return { ok: false, status: 409, error: 'The database is in memory, so it cannot be replaced.' }
+  }
+  if (restoring) return { ok: false, status: 409, error: 'A restore is already under way.' }
+
+  restoring = true
+  const { staged, note } = restorePaths(env.DATABASE_PATH)
+  try {
+    const backups = await listBackups(s3)
+    if (!backups.some((backup) => backup.key === key)) {
+      return { ok: false, status: 404, error: 'That backup is no longer in the bucket.' }
+    }
+
+    const compressed = new Uint8Array(await s3.file(key).arrayBuffer())
+    const bytes = await Bun.zstdDecompress(compressed)
+    rmSync(staged, { force: true })
+    writeFileSync(staged, bytes)
+
+    const problem = prepare(staged)
+    if (problem) {
+      rmSync(staged, { force: true })
+      return { ok: false, status: 400, error: problem }
+    }
+
+    // Only once the backup is known to be good, so a bad one doesn't cost a backup.
+    const safety = await runBackup()
+    if (!safety.ok) {
+      rmSync(staged, { force: true })
+      return {
+        ok: false,
+        status: safety.busy ? 409 : 502,
+        error: `Could not back up the current database first: ${safety.error}`,
+      }
+    }
+
+    // Sign-ins from now, so whoever pressed Restore stays signed in.
+    db.run('ATTACH DATABASE ? AS restored', [staged])
+    try {
+      db.transaction(() => {
+        db.run('DELETE FROM restored.sessions')
+        db.run('INSERT INTO restored.sessions SELECT * FROM main.sessions')
+      })()
+    } finally {
+      db.run('DETACH DATABASE restored')
+    }
+
+    const restoreNote: RestoreNote = {
+      key,
+      safetyKey: safety.key,
+      actorId: actor.id,
+      actorName: actor.name,
+    }
+    writeFileSync(note, JSON.stringify(restoreNote))
+    log.warning`restoring ${key} for ${actor.name}; restarting`
+
+    // A moment for the answer to reach the dashboard first.
+    setTimeout(restart, 1000)
+    return { ok: true }
+  } catch (error) {
+    rmSync(staged, { force: true })
+    rmSync(note, { force: true })
+    log.error`restore of ${key} failed: ${message(error)}`
+    return { ok: false, status: 502, error: message(error) }
+  } finally {
+    restoring = false
+  }
+}
+
+/** Checks a downloaded backup and migrates it. Returns what's wrong with it, or null. */
+function prepare(path: string): string | null {
+  let staged: Database | null = null
+  try {
+    staged = new Database(path)
+    const check = staged.query<{ quick_check: string }, []>('PRAGMA quick_check').get()
+    if (check?.quick_check !== 'ok') return 'The backup is damaged.'
+
+    const version = staged.query<{ user_version: number }, []>('PRAGMA user_version').get()
+    if ((version?.user_version ?? 0) > SCHEMA_VERSION) {
+      return 'The backup is from a newer version of Plana. Update Plana first.'
+    }
+    const tables = staged
+      .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE name = 'settings'")
+      .all()
+    if (tables.length === 0) return "The file isn't a Plana database."
+
+    migrate(staged)
+    return null
+  } catch (error) {
+    return `The backup could not be read: ${message(error)}`
+  } finally {
+    staged?.close()
   }
 }

@@ -50,13 +50,22 @@ export type GameNightResponse = 'in' | 'out'
 export type GameNightPost = {
   messageId: string
   channelId: string
-  voiceChannelId: string
+  /** Where it's being played; null for a planned night until people gather for it. */
+  voiceChannelId: string | null
   game: string
   /** The announcement as first posted; responses are added below it on each edit. */
   content: string
   postedAt: number
-  /** When its players left voice, or null while it's still going. */
+  /** When its players left voice (or it was cancelled), or null while it's still going. */
   endedAt: number | null
+  /** When a night planned with /gamenight plan starts; null for one Plana noticed. */
+  scheduledFor: number | null
+  /** Who planned it. */
+  hostId: string | null
+  /** When the "starting soon" ping went out. */
+  remindedAt: number | null
+  /** Who cancelled it, if someone did. */
+  cancelledBy: string | null
 }
 
 type PostRow = {
@@ -67,11 +76,31 @@ type PostRow = {
   content: string
   posted_at: number
   ended_at: number | null
+  scheduled_for: number | null
+  host_id: string | null
+  reminded_at: number | null
+  cancelled_by: string | null
 }
 
-const insertPost = db.query<void, Omit<PostRow, 'ended_at'>>(
-  `INSERT INTO game_night_posts (message_id, channel_id, voice_channel_id, game, content, posted_at)
-   VALUES (:message_id, :channel_id, :voice_channel_id, :game, :content, :posted_at)`,
+const insertPost = db.query<
+  void,
+  Pick<
+    PostRow,
+    | 'message_id'
+    | 'channel_id'
+    | 'voice_channel_id'
+    | 'game'
+    | 'content'
+    | 'posted_at'
+    | 'scheduled_for'
+    | 'host_id'
+    | 'reminded_at'
+  >
+>(
+  `INSERT INTO game_night_posts
+     (message_id, channel_id, voice_channel_id, game, content, posted_at, scheduled_for, host_id, reminded_at)
+   VALUES
+     (:message_id, :channel_id, :voice_channel_id, :game, :content, :posted_at, :scheduled_for, :host_id, :reminded_at)`,
 )
 const selectPost = db.query<PostRow, { message_id: string }>(
   'SELECT * FROM game_night_posts WHERE message_id = :message_id',
@@ -81,6 +110,44 @@ const selectOpenPosts = db.query<PostRow, []>(
 )
 const updateEnded = db.query<void, { message_id: string; ended_at: number }>(
   'UPDATE game_night_posts SET ended_at = :ended_at WHERE message_id = :message_id',
+)
+const updateCancelled = db.query<void, { message_id: string; ended_at: number; by: string }>(
+  `UPDATE game_night_posts SET ended_at = :ended_at, cancelled_by = :by
+   WHERE message_id = :message_id AND ended_at IS NULL`,
+)
+const updateVoiceChannel = db.query<void, { message_id: string; voice_channel_id: string }>(
+  'UPDATE game_night_posts SET voice_channel_id = :voice_channel_id WHERE message_id = :message_id',
+)
+const updateReminded = db.query<void, { message_id: string; at: number }>(
+  'UPDATE game_night_posts SET reminded_at = :at WHERE message_id = :message_id',
+)
+const selectHistory = db.query<PostRow, { before: number; limit: number }>(
+  `SELECT * FROM game_night_posts WHERE posted_at < :before
+   ORDER BY posted_at DESC LIMIT :limit`,
+)
+const insertAttendee = db.query<void, { message_id: string; member_id: string }>(
+  `INSERT OR IGNORE INTO game_night_attendees (message_id, member_id)
+   VALUES (:message_id, :member_id)`,
+)
+const selectAttendees = db.query<{ member_id: string }, { message_id: string }>(
+  'SELECT member_id FROM game_night_attendees WHERE message_id = :message_id',
+)
+const selectMemberStats = db.query<
+  { attended: number; said_in: number; showed_up: number },
+  { member_id: string; since: number }
+>(
+  `SELECT
+     (SELECT COUNT(*) FROM game_night_attendees a
+        JOIN game_night_posts p ON p.message_id = a.message_id
+        WHERE a.member_id = :member_id AND p.posted_at >= :since) AS attended,
+     (SELECT COUNT(*) FROM game_night_responses r
+        JOIN game_night_posts p ON p.message_id = r.message_id
+        WHERE r.member_id = :member_id AND r.response = 'in' AND p.ended_at IS NOT NULL
+          AND p.cancelled_by IS NULL AND p.posted_at >= :since) AS said_in,
+     (SELECT COUNT(*) FROM game_night_responses r
+        JOIN game_night_posts p ON p.message_id = r.message_id
+        JOIN game_night_attendees a ON a.message_id = r.message_id AND a.member_id = r.member_id
+        WHERE r.member_id = :member_id AND r.response = 'in' AND p.posted_at >= :since) AS showed_up`,
 )
 
 const selectResponses = db.query<
@@ -111,14 +178,44 @@ const deleteResponse = db.query<void, { message_id: string; member_id: string }>
   'DELETE FROM game_night_responses WHERE message_id = :message_id AND member_id = :member_id',
 )
 
-export function saveGameNightPost(post: Omit<GameNightPost, 'endedAt'>): void {
+/** Planned nights carry '' for "no voice channel yet"; the column predates them and can't be null. */
+function toPost(row: PostRow): GameNightPost {
+  return {
+    messageId: row.message_id,
+    channelId: row.channel_id,
+    voiceChannelId: row.voice_channel_id || null,
+    game: row.game,
+    content: row.content,
+    postedAt: row.posted_at,
+    endedAt: row.ended_at,
+    scheduledFor: row.scheduled_for,
+    hostId: row.host_id,
+    remindedAt: row.reminded_at,
+    cancelledBy: row.cancelled_by,
+  }
+}
+
+export function saveGameNightPost(post: {
+  messageId: string
+  channelId: string
+  voiceChannelId: string | null
+  game: string
+  content: string
+  postedAt: number
+  scheduledFor?: number | null
+  hostId?: string | null
+  remindedAt?: number | null
+}): void {
   insertPost.run({
     message_id: post.messageId,
     channel_id: post.channelId,
-    voice_channel_id: post.voiceChannelId,
+    voice_channel_id: post.voiceChannelId ?? '',
     game: post.game,
     content: post.content,
     posted_at: post.postedAt,
+    scheduled_for: post.scheduledFor ?? null,
+    host_id: post.hostId ?? null,
+    reminded_at: post.remindedAt ?? null,
   })
 }
 
@@ -127,25 +224,59 @@ export function getGameNightPost(messageId: string): GameNightPost | null {
   return row ? toPost(row) : null
 }
 
-function toPost(row: PostRow): GameNightPost {
-  return {
-    messageId: row.message_id,
-    channelId: row.channel_id,
-    voiceChannelId: row.voice_channel_id,
-    game: row.game,
-    content: row.content,
-    postedAt: row.posted_at,
-    endedAt: row.ended_at,
-  }
-}
-
-/** Game nights that haven't ended yet. */
+/** Game nights that haven't ended yet, planned ones included. */
 export function listOpenGameNightPosts(): GameNightPost[] {
   return selectOpenPosts.all().map(toPost)
 }
 
-export function endGameNightPost(messageId: string, at: number): void {
-  updateEnded.run({ message_id: messageId, ended_at: at })
+/** Ends a game night and records who came: everyone in its voice channel while it ran. */
+export function endGameNightPost(messageId: string, at: number, attendees: string[] = []): void {
+  db.transaction(() => {
+    updateEnded.run({ message_id: messageId, ended_at: at })
+    for (const memberId of attendees)
+      insertAttendee.run({ message_id: messageId, member_id: memberId })
+  })()
+}
+
+/** False if it had already ended. */
+export function cancelGameNightPost(messageId: string, by: string, at: number): boolean {
+  return updateCancelled.run({ message_id: messageId, ended_at: at, by }).changes > 0
+}
+
+export function setGameNightVoiceChannel(messageId: string, voiceChannelId: string): void {
+  updateVoiceChannel.run({ message_id: messageId, voice_channel_id: voiceChannelId })
+}
+
+export function markGameNightReminded(messageId: string, at: number): void {
+  updateReminded.run({ message_id: messageId, at })
+}
+
+export function listGameNightAttendees(messageId: string): string[] {
+  return selectAttendees.all({ message_id: messageId }).map((row) => row.member_id)
+}
+
+/** Game nights newest first, posted before a moment, for the dashboard's history. */
+export function listGameNightHistory(before: number, limit: number): GameNightPost[] {
+  return selectHistory.all({ before, limit }).map(toPost)
+}
+
+export type MemberGameNights = {
+  /** Game nights they were in voice for. */
+  attended: number
+  /** Finished ones they answered "I'm in" to. */
+  saidIn: number
+  /** Of those, how many they came to. */
+  showedUp: number
+}
+
+/** A member's game nights posted since a moment. */
+export function getMemberGameNights(memberId: string, since: number): MemberGameNights {
+  const row = selectMemberStats.get({ member_id: memberId, since })
+  return {
+    attended: row?.attended ?? 0,
+    saidIn: row?.said_in ?? 0,
+    showedUp: row?.showed_up ?? 0,
+  }
 }
 
 export function listGameNightResponses(

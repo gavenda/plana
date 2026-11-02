@@ -6,21 +6,26 @@ import AppSearchBar from '@/components/AppSearchBar.vue'
 import AppSelect from '@/components/AppSelect.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
+import SegmentedButtons from '@/components/SegmentedButtons.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import type { GameNightRole } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { roleColor } from '@/lib/discord'
-import { formatDuration } from '@/lib/format'
+import { absoluteTime, clockTime, dayLabel, formatDuration } from '@/lib/format'
+import type { GameNightEntry, GameNightHistory } from '@/lib/game-nights'
+import { useLive } from '@/lib/live'
 import type { SelectOption } from '@/lib/select'
 import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
 import { useGuildStore } from '@/stores/guild'
+import { useSessionStore } from '@/stores/session'
 import { useSettingsStore } from '@/stores/settings'
 
 /**
- * Which role each game's game nights ping. Each game has one setting, so every row carries its
- * own picker rather than opening a detail pane.
+ * Game nights: every one so far, newest first, and (for administrators) which role each game's
+ * nights ping. Each game has one setting, so every row carries its own picker rather than
+ * opening a detail pane.
  */
 
 /** A long history is drawn a page at a time; the search reaches every game. */
@@ -31,16 +36,104 @@ const route = useRoute()
 const router = useRouter()
 const guild = useGuildStore()
 const settings = useSettingsStore()
+const session = useSessionStore()
 const snackbar = useSnackbar()
+
+type Tab = 'history' | 'roles'
+const TABS: { value: Tab; label: string; icon: string }[] = [
+  { value: 'history', label: 'History', icon: 'history' },
+  { value: 'roles', label: 'Ping roles', icon: 'notifications' },
+]
+/** Ping roles are for administrators; everyone else sees the history alone. */
+const tab = ref<Tab>(session.isAdmin && route.query.tab === 'roles' ? 'roles' : 'history')
+watch(tab, (value) => {
+  void router.replace({ query: { ...route.query, tab: value === 'roles' ? 'roles' : undefined } })
+  if (value === 'roles' && !games.data.value) void games.run()
+})
 
 const games = useAsync(() => apiFetch<GameNightRole[]>('/api/activity/game/roles'))
 const loading = computed(() => !games.data.value && !games.error.value)
 
 onMounted(() => {
-  void games.run()
+  void history.run()
+  if (tab.value === 'roles') void games.run()
   void guild.load()
   void settings.load()
 })
+
+// ---------------------------------------------------------------------------
+// History
+// ---------------------------------------------------------------------------
+
+const HISTORY_PAGE = 20
+/** The most the server sends at once, so a reload keeps at most this many rows. */
+const HISTORY_MAX = 50
+
+/** How many of the newest a reload fetches, replacing what's shown; "Show more" appends. */
+const historyLimit = ref(HISTORY_PAGE)
+const history = useAsync(() =>
+  apiFetch<GameNightHistory>(`/api/game-nights?limit=${historyLimit.value}`),
+)
+const loadingMore = ref(false)
+
+async function showMoreNights() {
+  const list = history.data.value
+  const last = list?.entries.at(-1)
+  if (!list || !last) return
+  loadingMore.value = true
+  try {
+    const next = await apiFetch<GameNightHistory>(
+      `/api/game-nights?limit=${HISTORY_PAGE}&before=${last.postedAt}`,
+    )
+    history.data.value = { entries: [...list.entries, ...next.entries], hasMore: next.hasMore }
+  } catch (cause) {
+    snackbar.showError(cause, 'Could not load more game nights.')
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+// An answer, a new post or one ending anywhere reloads what's shown.
+useLive('gamenights', () => {
+  const shownCount = history.data.value?.entries.length ?? HISTORY_PAGE
+  historyLimit.value = Math.min(Math.max(shownCount, HISTORY_PAGE), HISTORY_MAX)
+  void history.run()
+})
+
+const STATUS: Record<GameNightEntry['status'], { label: string; tone: string }> = {
+  planned: { label: 'Planned', tone: 'bg-secondary-container text-on-secondary-container' },
+  live: { label: 'Going on', tone: 'bg-tertiary-container text-on-tertiary-container' },
+  ended: { label: 'Ended', tone: 'bg-surface-container-highest text-on-surface-variant' },
+  cancelled: { label: 'Cancelled', tone: 'bg-error-container text-on-error-container' },
+}
+
+/** "Today, 21:00 · 2.5 h · #Lounge" */
+function nightWhen(night: GameNightEntry): string {
+  const parts = [`${dayLabel(night.startsAt)}, ${clockTime(night.startsAt)}`]
+  if (night.status === 'ended' && night.came.length > 0 && night.endedAt != null) {
+    parts.push(formatDuration(Math.max(0, night.endedAt - night.startsAt)))
+  }
+  if (night.voiceChannel) parts.push(`#${night.voiceChannel.name}`)
+  return parts.join(' · ')
+}
+
+const names = (members: { displayName: string }[]) =>
+  new Intl.ListFormat('en', { type: 'conjunction' }).format(
+    members.map((member) => member.displayName),
+  )
+
+/** Who answered, and once it's over how many of those who said yes came. */
+function nightAnswers(night: GameNightEntry): string | null {
+  const said = night.joining.length
+  if (said === 0) return night.declined.length > 0 ? `${night.declined.length} can't make it` : null
+  if (night.showedUp != null) return `${night.showedUp} of ${said} who said they were in came`
+  const declined = night.declined.length > 0 ? ` · ${night.declined.length} can't make it` : ''
+  return `${said} ${said === 1 ? 'is' : 'are'} in${declined}`
+}
+
+// ---------------------------------------------------------------------------
+// Ping roles
+// ---------------------------------------------------------------------------
 
 const search = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const pingingOnly = ref(route.query.pinging === '1')
@@ -132,117 +225,224 @@ const plural = (count: number, one: string, many: string) =>
       <div class="min-w-0 flex-1">
         <h2 class="truncate text-headline-small">Game nights</h2>
         <p class="text-body-medium text-on-surface-variant">
-          The role pinged when a game night of each game is announced.
+          {{
+            tab === 'roles'
+              ? 'The role pinged when a game night of each game is announced.'
+              : 'Every game night so far, and who came.'
+          }}
         </p>
       </div>
       <RichTooltip
+        v-if="tab === 'roles'"
         title="Pings"
         text="Discord only pings a role if it allows anyone to mention it, or the bot can mention all roles."
       />
+      <RichTooltip
+        v-else
+        title="Who came"
+        text="Everyone who spent a minute or more in the game night's voice channel while it ran. Members plan their own with /gamenight plan."
+      />
     </header>
 
-    <!-- How game nights are set up, so a role picked here isn't a mystery when nothing happens. -->
-    <div
-      v-if="settings.loaded"
-      class="card flex flex-wrap items-center gap-x-4 gap-y-2 py-3 pr-3 pl-6"
-      :class="!channelName && 'card-warn'"
-    >
-      <span v-if="channelName" class="shrink-0 icon" aria-hidden="true">campaign</span>
-      <p class="min-w-0 flex-1 text-body-medium">
-        <template v-if="channelName">
-          Announced in <span class="font-medium">#{{ channelName }}</span> once
-          {{ minPlayers }} people in one voice channel play the same game.
-        </template>
-        <template v-else>
-          Game nights are off until a channel is chosen in Settings. Roles picked here wait until
-          then.
-        </template>
-      </p>
-      <RouterLink
-        to="/settings"
-        class="btn btn-text"
-        :class="!channelName && 'text-on-warning-container'"
-        >{{ channelName ? 'Settings' : 'Choose a channel' }}</RouterLink
-      >
-    </div>
+    <SegmentedButtons v-if="session.isAdmin" v-model="tab" label="View" :options="TABS" />
 
-    <div class="flex flex-col gap-3 medium:flex-row medium:items-center">
-      <AppSearchBar
-        v-model="search"
-        class="min-w-0 flex-1"
-        placeholder="Search games"
-        label="Search games"
-      >
-        <template v-if="search.trim() && games.data.value" #trailing>{{
-          plural(matches.length, 'game', 'games')
-        }}</template>
-      </AppSearchBar>
-      <div class="flex gap-2">
-        <FilterChip
-          v-model="pingingOnly"
-          :label="`Configured${pingingCount ? ` (${pingingCount})` : ''}`"
-        />
-      </div>
-    </div>
-
-    <div :class="!loading && matches.length === 0 && 'card'">
-      <StateBlock
-        :loading="loading"
-        :error="games.error.value"
-        :retry="games.run"
-        :empty="matches.length === 0"
-        :empty-text="
-          search.trim() || pingingOnly
-            ? 'No games match.'
-            : 'No games played yet. They show up here once someone plays one.'
-        "
-        compact
-      >
-        <template #skeleton><SkeletonList :rows="6" leading="art" two-line /></template>
-        <ul class="segmented-list">
-          <li
-            v-for="game in visible"
-            :key="game.name"
-            class="segmented-item grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 py-3 medium:grid-cols-[auto_1fr_16rem]"
-          >
-            <img
-              v-if="game.iconUrl"
-              class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-              :src="game.iconUrl"
-              alt=""
-              width="40"
-              height="40"
-            />
-            <span
-              v-else
-              class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-              aria-hidden="true"
-              ><span class="icon [--icon-size:20px]">sports_esports</span></span
+    <template v-if="tab === 'history'">
+      <div :class="history.data.value?.entries.length === 0 && 'card'">
+        <StateBlock
+          :loading="!history.data.value && !history.error.value"
+          :error="history.data.value ? null : history.error.value"
+          :retry="history.run"
+          :empty="history.data.value?.entries.length === 0"
+          empty-text="No game nights yet. They show up here once Plana announces one, or someone plans one with /gamenight plan."
+          compact
+        >
+          <template #skeleton><SkeletonList :rows="5" leading="art" two-line /></template>
+          <ul v-if="history.data.value" class="segmented-list">
+            <li
+              v-for="night in history.data.value.entries"
+              :key="night.messageId"
+              class="segmented-item items-start py-3"
             >
-            <div class="min-w-0">
-              <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-              <p class="truncate text-body-small text-on-surface-variant">
-                <template v-if="game.players > 0"
-                  >{{ formatDuration(game.ms) }} ·
-                  {{ plural(game.players, 'player', 'players') }}</template
+              <img
+                v-if="night.iconUrl"
+                class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                :src="night.iconUrl"
+                alt=""
+                width="40"
+                height="40"
+              />
+              <span
+                v-else
+                class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                aria-hidden="true"
+                ><span class="icon [--icon-size:20px]">sports_esports</span></span
+              >
+              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <p class="flex min-w-0 items-center gap-2">
+                  <span class="truncate text-body-large" :title="night.game">{{ night.game }}</span>
+                  <span
+                    class="shrink-0 rounded-sm px-2 py-0.5 text-label-medium"
+                    :class="STATUS[night.status].tone"
+                    >{{ STATUS[night.status].label }}</span
+                  >
+                </p>
+                <p
+                  class="truncate text-body-small text-on-surface-variant"
+                  :title="absoluteTime(night.startsAt)"
                 >
-                <template v-else>No play recorded</template>
-              </p>
-            </div>
-            <AppSelect
-              class="col-span-2 medium:col-span-1"
-              :model-value="game.roleId"
-              label="Ping"
-              :options="roleOptions"
-              :disabled="saving.has(game.name) || guild.roles.length === 0"
-              @update:model-value="(roleId) => saveRole(game, roleId)"
-            />
-          </li>
-        </ul>
-        <div v-if="matches.length > visible.length" class="flex justify-center pt-3">
-          <button class="btn btn-tonal" type="button" @click="shown += PAGE_SIZE">Show more</button>
+                  {{ nightWhen(night) }}
+                </p>
+                <p v-if="night.host" class="truncate text-body-medium">
+                  Planned by {{ night.host.displayName }}
+                </p>
+                <p v-if="night.came.length > 0" class="text-body-medium">
+                  <span class="text-on-surface-variant">Came:</span> {{ names(night.came) }}
+                </p>
+                <p
+                  v-else-if="night.status === 'ended' && night.planned"
+                  class="text-body-medium text-on-surface-variant"
+                >
+                  Nobody gathered for it.
+                </p>
+                <p
+                  v-if="nightAnswers(night)"
+                  class="text-body-small text-on-surface-variant"
+                  :title="night.joining.length ? `In: ${names(night.joining)}` : undefined"
+                >
+                  {{ nightAnswers(night) }}
+                </p>
+              </div>
+              <a
+                class="icon-btn shrink-0 text-on-surface-variant"
+                :href="night.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open the post in Discord"
+                title="Open in Discord"
+                ><span class="icon" aria-hidden="true">open_in_new</span></a
+              >
+            </li>
+          </ul>
+          <div v-if="history.data.value?.hasMore" class="flex justify-center pt-3">
+            <button
+              class="btn btn-tonal"
+              type="button"
+              :disabled="loadingMore"
+              @click="showMoreNights"
+            >
+              {{ loadingMore ? 'Loading…' : 'Show more' }}
+            </button>
+          </div>
+        </StateBlock>
+      </div>
+    </template>
+
+    <template v-else>
+      <!-- How game nights are set up, so a role picked here isn't a mystery when nothing happens. -->
+      <div
+        v-if="settings.loaded"
+        class="card flex flex-wrap items-center gap-x-4 gap-y-2 py-3 pr-3 pl-6"
+        :class="!channelName && 'card-warn'"
+      >
+        <span v-if="channelName" class="shrink-0 icon" aria-hidden="true">campaign</span>
+        <p class="min-w-0 flex-1 text-body-medium">
+          <template v-if="channelName">
+            Announced in <span class="font-medium">#{{ channelName }}</span> once
+            {{ minPlayers }} people in one voice channel play the same game.
+          </template>
+          <template v-else>
+            Game nights are off until a channel is chosen in Settings. Roles picked here wait until
+            then.
+          </template>
+        </p>
+        <RouterLink
+          to="/settings"
+          class="btn btn-text"
+          :class="!channelName && 'text-on-warning-container'"
+          >{{ channelName ? 'Settings' : 'Choose a channel' }}</RouterLink
+        >
+      </div>
+
+      <div class="flex flex-col gap-3 medium:flex-row medium:items-center">
+        <AppSearchBar
+          v-model="search"
+          class="min-w-0 flex-1"
+          placeholder="Search games"
+          label="Search games"
+        >
+          <template v-if="search.trim() && games.data.value" #trailing>{{
+            plural(matches.length, 'game', 'games')
+          }}</template>
+        </AppSearchBar>
+        <div class="flex gap-2">
+          <FilterChip
+            v-model="pingingOnly"
+            :label="`Configured${pingingCount ? ` (${pingingCount})` : ''}`"
+          />
         </div>
-      </StateBlock>
-    </div>
+      </div>
+
+      <div :class="!loading && matches.length === 0 && 'card'">
+        <StateBlock
+          :loading="loading"
+          :error="games.error.value"
+          :retry="games.run"
+          :empty="matches.length === 0"
+          :empty-text="
+            search.trim() || pingingOnly
+              ? 'No games match.'
+              : 'No games played yet. They show up here once someone plays one.'
+          "
+          compact
+        >
+          <template #skeleton><SkeletonList :rows="6" leading="art" two-line /></template>
+          <ul class="segmented-list">
+            <li
+              v-for="game in visible"
+              :key="game.name"
+              class="segmented-item grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 py-3 medium:grid-cols-[auto_1fr_16rem]"
+            >
+              <img
+                v-if="game.iconUrl"
+                class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                :src="game.iconUrl"
+                alt=""
+                width="40"
+                height="40"
+              />
+              <span
+                v-else
+                class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                aria-hidden="true"
+                ><span class="icon [--icon-size:20px]">sports_esports</span></span
+              >
+              <div class="min-w-0">
+                <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
+                <p class="truncate text-body-small text-on-surface-variant">
+                  <template v-if="game.players > 0"
+                    >{{ formatDuration(game.ms) }} ·
+                    {{ plural(game.players, 'player', 'players') }}</template
+                  >
+                  <template v-else>No play recorded</template>
+                </p>
+              </div>
+              <AppSelect
+                class="col-span-2 medium:col-span-1"
+                :model-value="game.roleId"
+                label="Ping"
+                :options="roleOptions"
+                :disabled="saving.has(game.name) || guild.roles.length === 0"
+                @update:model-value="(roleId) => saveRole(game, roleId)"
+              />
+            </li>
+          </ul>
+          <div v-if="matches.length > visible.length" class="flex justify-center pt-3">
+            <button class="btn btn-tonal" type="button" @click="shown += PAGE_SIZE">
+              Show more
+            </button>
+          </div>
+        </StateBlock>
+      </div>
+    </template>
   </div>
 </template>

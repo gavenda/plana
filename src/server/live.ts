@@ -12,6 +12,7 @@ export const LIVE_TOPICS = [
   'voice',
   'guild',
   'birthdays',
+  'gamenights',
   'settings',
   'backup',
   'logs',

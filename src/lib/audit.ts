@@ -8,6 +8,7 @@ export type AuditAction =
   | 'broadcast.send'
   | 'settings.update'
   | 'backup.create'
+  | 'backup.restore'
   | 'birthday.announce'
   | 'birthday.set'
   | 'birthday.remove'
@@ -16,6 +17,8 @@ export type AuditAction =
   | 'recap.post'
   | 'gamenight.announce'
   | 'gamenight.role'
+  | 'gamenight.plan'
+  | 'gamenight.cancel'
   | 'moderation.ban'
   | 'moderation.unban'
   | 'moderation.kick'
@@ -322,6 +325,14 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
     case 'backup.create':
       return describe('Backup', 'neutral', actor, ' backed up the database')
 
+    case 'backup.restore':
+      return describe(
+        'Backup',
+        'warn',
+        actor,
+        ` restored the database from ${text(entry.detail?.key, 'a backup')}`,
+      )
+
     case 'birthday.announce': {
       const names = Array.isArray(entry.detail?.memberNames)
         ? entry.detail.memberNames.filter((name): name is string => typeof name === 'string')
@@ -371,6 +382,28 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
         voiceChannel(entry.detail?.voiceChannelName, entry.detail?.voiceChannelId),
       )
     }
+
+    case 'gamenight.plan': {
+      const at = typeof entry.detail?.scheduledFor === 'number' ? entry.detail.scheduledFor : null
+      return describe(
+        'Game night',
+        'accent',
+        actor,
+        ` planned a ${text(entry.detail?.game, 'game')} night`,
+        ...(at ? [` for ${absoluteTime(at)}`] : []),
+        ' in ',
+        targetChannel,
+      )
+    }
+
+    case 'gamenight.cancel':
+      return describe(
+        'Game night',
+        'neutral',
+        actor,
+        ` cancelled the ${text(entry.detail?.game, 'game')} night planned in `,
+        targetChannel,
+      )
 
     case 'gamenight.role': {
       const game = text(entry.detail?.game, 'a game')
@@ -619,6 +652,8 @@ export function auditIcon(action: AuditAction): string {
       return 'settings'
     case 'backup.create':
       return 'backup'
+    case 'backup.restore':
+      return 'settings_backup_restore'
     case 'birthday.announce':
     case 'birthday.set':
     case 'birthday.remove':
@@ -631,6 +666,8 @@ export function auditIcon(action: AuditAction): string {
       return 'summarize'
     case 'gamenight.announce':
     case 'gamenight.role':
+    case 'gamenight.plan':
+    case 'gamenight.cancel':
       return 'sports_esports'
     case 'moderation.ban':
     case 'moderation.unban':

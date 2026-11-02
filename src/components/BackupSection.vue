@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import AppDialog from '@/components/AppDialog.vue'
+import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
@@ -178,6 +180,58 @@ async function copyEnv() {
   }
 }
 
+type StoredBackup = BackupOverview['backups'][number]
+
+/** The backup the restore dialog is asking about. */
+const restoring = ref<StoredBackup | null>(null)
+const restoreOpen = ref(false)
+/** Set once the server has the backup staged and is restarting to swap it in. */
+const restarting = ref<'waiting' | 'slow' | null>(null)
+const restoreBusy = ref(false)
+
+function askRestore(backup: StoredBackup) {
+  restoring.value = backup
+  restoreOpen.value = true
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Waits for the restarted bot to answer, then reloads the page on the restored database. */
+async function waitForRestart() {
+  restarting.value = 'waiting'
+  // The old process takes a moment to stop; asking at once would reach it.
+  await sleep(4000)
+  const started = Date.now()
+  for (;;) {
+    try {
+      const response = await fetch('/healthz', { cache: 'no-store' })
+      if (response.ok) {
+        window.location.reload()
+        return
+      }
+    } catch {
+      // Still down.
+    }
+    if (Date.now() - started > 90_000) restarting.value = 'slow'
+    await sleep(2000)
+  }
+}
+
+async function restore() {
+  const backup = restoring.value
+  if (!backup) return
+  restoreBusy.value = true
+  try {
+    await apiFetch('/api/backup/restore', { method: 'POST', body: { key: backup.key } })
+    restoreOpen.value = false
+    void waitForRestart()
+  } catch (cause) {
+    snackbar.showError(cause, 'The restore failed. Nothing was changed.')
+  } finally {
+    restoreBusy.value = false
+  }
+}
+
 async function backUpNow() {
   starting.value = true
   try {
@@ -199,7 +253,7 @@ async function backUpNow() {
         <h2 id="settings-backups" class="text-title-medium">Backups</h2>
         <RichTooltip
           title="Backups"
-          text="Copies of Plana's database in a Cloudflare R2 bucket: settings, birthdays, the audit log and activity history. Restoring one is done by hand, with Plana stopped."
+          text="Copies of Plana's database in a Cloudflare R2 bucket: settings, birthdays, the audit log and activity history. Restoring one backs up the database as it is first, then restarts Plana on the backup."
         />
       </div>
       <span v-if="!data && !error" class="skeleton mr-4 h-3.5 w-24" aria-hidden="true" />
@@ -311,12 +365,41 @@ async function backUpNow() {
                   <span class="text-label-large text-on-surface-variant">{{
                     size(backup.size)
                   }}</span>
+                  <RichTooltip
+                    action
+                    title="Restore"
+                    icon="settings_backup_restore"
+                    narrow
+                    :disabled="running || restarting !== null"
+                    @click="askRestore(backup)"
+                  />
                 </li>
               </ul>
               <p v-if="data.total > data.backups.length" class="supporting-text px-0 pt-2">
                 And {{ data.total - data.backups.length }} older in the bucket.
               </p>
             </div>
+
+            <p
+              v-if="restarting"
+              class="card px-4 py-3 text-body-medium"
+              :class="
+                restarting === 'slow'
+                  ? 'card-warn'
+                  : 'bg-primary-container text-on-primary-container'
+              "
+              role="status"
+            >
+              <template v-if="restarting === 'waiting'"
+                >Restoring. Plana is restarting on the backup; this page reloads once she's
+                back.</template
+              >
+              <template v-else
+                >Plana hasn't come back yet. If she runs without a restart policy (Compose's
+                <code>restart: unless-stopped</code>, or <code>Restart=</code> in Quadlet), start
+                her again by hand; the backup is swapped in as she starts.</template
+              >
+            </p>
 
             <div class="flex justify-end">
               <button
@@ -333,5 +416,21 @@ async function backUpNow() {
         </template>
       </StateBlock>
     </div>
+
+    <AppDialog v-model:open="restoreOpen" headline="Restore this backup?">
+      <template #hero><PlanaPortrait mood="attentive" /></template>
+      <template v-if="restoring">
+        Plana's database goes back to {{ dayLabel(restoring.time) }},
+        {{ clockTime(restoring.time) }}. Everything recorded since is lost: activity, answers, audit
+        entries and settings. She backs up the database as it is first, so this can be undone, then
+        restarts for about half a minute. Nobody is signed out.
+      </template>
+      <template #actions>
+        <button class="btn btn-text" type="button" @click="restoreOpen = false">Cancel</button>
+        <button class="btn btn-text" type="button" :disabled="restoreBusy" @click="restore">
+          {{ restoreBusy ? 'Restoring…' : 'Restore' }}
+        </button>
+      </template>
+    </AppDialog>
   </section>
 </template>

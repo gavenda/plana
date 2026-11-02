@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { dirname } from 'node:path'
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs'
 
 import { env } from '../env'
 import { logger } from '../logging'
@@ -225,9 +225,41 @@ const migrations: string[] = [
   UPDATE game_night_posts SET ended_at = posted_at
   WHERE posted_at < unixepoch('now', '-12 hours') * 1000;
   `,
+  // Game nights planned ahead with /gamenight plan, who came to each, and /remind. A planned
+  // night's voice channel is '' until people gather for it.
+  `
+  ALTER TABLE game_night_posts ADD COLUMN scheduled_for INTEGER;
+  ALTER TABLE game_night_posts ADD COLUMN host_id TEXT;
+  ALTER TABLE game_night_posts ADD COLUMN reminded_at INTEGER;
+  ALTER TABLE game_night_posts ADD COLUMN cancelled_by TEXT;
+  CREATE INDEX game_night_posts_posted_at ON game_night_posts (posted_at DESC);
+  CREATE INDEX game_night_responses_member ON game_night_responses (member_id);
+
+  CREATE TABLE game_night_attendees (
+    message_id TEXT NOT NULL REFERENCES game_night_posts (message_id) ON DELETE CASCADE,
+    member_id  TEXT NOT NULL,
+    PRIMARY KEY (message_id, member_id)
+  ) WITHOUT ROWID;
+  CREATE INDEX game_night_attendees_member ON game_night_attendees (member_id);
+
+  CREATE TABLE reminders (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id  TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    text       TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    due_at     INTEGER NOT NULL
+  );
+  CREATE INDEX reminders_due_at ON reminders (due_at);
+  CREATE INDEX reminders_member ON reminders (member_id, due_at);
+  `,
 ]
 
-function migrate(database: Database): void {
+/** The schema this version of Plana expects; a backup from a newer one can't be restored. */
+export const SCHEMA_VERSION = migrations.length
+
+/** Brings a database up to this version's schema; also run on a backup before it's restored. */
+export function migrate(database: Database): void {
   const current = (database.query('PRAGMA user_version').get() as { user_version: number })
     .user_version
 
@@ -241,9 +273,52 @@ function migrate(database: Database): void {
   }
 }
 
+/** A backup staged by the dashboard's Restore, swapped in when the bot next starts. */
+export const restorePaths = (path: string) => ({
+  staged: `${path}.restore`,
+  note: `${path}.restore.json`,
+  previous: `${path}.pre-restore`,
+})
+
+export type RestoreNote = {
+  key: string
+  /** The backup of the database as it was, taken just before. */
+  safetyKey: string
+  actorId: string
+  actorName: string
+}
+
+/** What was restored as this process started, for the audit log; null on a normal start. */
+export let restoredFrom: RestoreNote | null = null
+
+/**
+ * Puts a staged backup in place of the database before it opens. The old file is kept beside
+ * it as `.pre-restore`. Its `-wal` and `-shm` go too: left behind, SQLite would apply the old
+ * database's log to the restored one.
+ */
+function swapInRestore(path: string): void {
+  const { staged, note, previous } = restorePaths(path)
+  if (!existsSync(staged)) return
+
+  for (const suffix of ['', '-wal', '-shm']) {
+    rmSync(`${previous}${suffix}`, { force: true })
+    if (existsSync(`${path}${suffix}`)) renameSync(`${path}${suffix}`, `${previous}${suffix}`)
+  }
+  renameSync(staged, path)
+
+  try {
+    restoredFrom = JSON.parse(readFileSync(note, 'utf8')) as RestoreNote
+  } catch {
+    restoredFrom = null
+  }
+  rmSync(note, { force: true })
+  log.warning`restored the database from ${restoredFrom?.key ?? 'a staged backup'}; the old one is at ${previous}`
+}
+
 function open(): Database {
   if (env.DATABASE_PATH !== ':memory:') {
     mkdirSync(dirname(env.DATABASE_PATH), { recursive: true })
+    swapInRestore(env.DATABASE_PATH)
   }
   const database = new Database(env.DATABASE_PATH, { create: true, strict: true })
   database.run('PRAGMA journal_mode = WAL')

@@ -233,6 +233,15 @@ const stats = computed(() => {
       label: data?.music.plays === 1 ? 'Track played' : 'Tracks played',
       value: data?.music.plays.toLocaleString() ?? '—',
     },
+    {
+      label: data?.gameNights.attended === 1 ? 'Game night' : 'Game nights',
+      value: data?.gameNights.attended.toLocaleString() ?? '—',
+      // How often they came when they said they would.
+      note:
+        data && data.gameNights.saidIn > 0
+          ? `Came to ${data.gameNights.showedUp} of ${data.gameNights.saidIn} they said yes to`
+          : undefined,
+    },
   ]
 })
 
@@ -534,6 +543,9 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                 >
                   <span class="text-display-small font-medium">{{ stat.value }}</span>
                   <span class="text-label-large opacity-80">{{ stat.label }}</span>
+                  <span v-if="stat.note" class="text-body-small text-on-surface-variant">{{
+                    stat.note
+                  }}</span>
                 </div>
               </div>
 

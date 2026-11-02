@@ -104,6 +104,25 @@
         "period_30": "Last 30 days",
         "period_90": "Last 90 days",
         "period_all": "All time"
+      },
+      "gamenight": {
+        "description": "Plan game nights",
+        "plan_description": "Plan a game night for later. The game's role is pinged 15 minutes before.",
+        "game_description": "What you'll play",
+        "time_description": "When it starts, in the server's time zone, such as 21:00 or 9pm",
+        "day_description": "Which day. Defaults to the next time the clock reads that time.",
+        "day_today": "Today",
+        "day_tomorrow": "Tomorrow",
+        "weekdays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+      },
+      "remind": {
+        "description": "Set yourself reminders",
+        "me_description": "Remind you about something later",
+        "in_description": "How long from now, such as 2h, 30m or 1d 6h",
+        "about_description": "What to remind you about",
+        "list_description": "Show your reminders",
+        "cancel_description": "Cancel one of your reminders",
+        "reminder_description": "The reminder to cancel"
       }
     },
     "triage": {
@@ -185,7 +204,26 @@
       "more_other": "{{count}} more",
       "unknown": "I no longer have a record of this game night.",
       "ended": "-# Session ended <t:{{at}}:t>.",
-      "ended_reply": "This game night has already ended."
+      "ended_reply": "This game night has already ended.",
+      "button_cancel": "Cancel",
+      "came": "**Came:** {{names}}",
+      "showed_up": "{{showed}} of {{total}} who said they were in came.",
+      "no_show": "-# Nobody gathered for it, so I've closed it.",
+      "cancelled": "-# Cancelled by {{by}}.",
+      "cancel_not_allowed": "Only {{host}} or staff can cancel this game night.",
+      "planned_intro": "{{host}} is planning a session.",
+      "planned_when": "-# **{{game}}** starts <t:{{at}}:F> (<t:{{at}}:R>).",
+      "soon_title": "-# Starting Soon",
+      "soon": "**{{game}}** starts <t:{{at}}:R>. Head to voice when you're ready.",
+      "plan_off": "Game nights are off in this server: no channel is set for them.",
+      "plan_no_access": "I can't post in {{channel}}.",
+      "plan_bad_time": "I couldn't read “{{time}}” as a time. Try 21:00 or 9pm.",
+      "plan_past": "That time has already passed.",
+      "plan_too_far_one": "Game nights can be planned up to {{count}} day ahead.",
+      "plan_too_far_other": "Game nights can be planned up to {{count}} days ahead.",
+      "plan_too_many_one": "You already have {{count}} game night planned. Cancel it first.",
+      "plan_too_many_other": "You already have {{count}} game nights planned. Cancel one first.",
+      "plan_done": "Planned. It's posted here: {{url}}"
     },
     "stats": {
       "title": "-# Member Stats — {{period}}",
@@ -238,7 +276,24 @@
     ],
     "fallback": {
       "former_member": "Former member",
-      "unknown_channel": "Unknown channel"
+      "unknown_channel": "Unknown channel",
+      "deleted_channel": "Deleted channel"
+    },
+    "remind": {
+      "set": "Got it. I'll remind you <t:{{at}}:R>, at <t:{{at}}:f>.",
+      "bad_duration": "I couldn't read “{{value}}” as a length of time. Try 2h, 30m or 1d 6h.",
+      "too_soon": "Give it at least a minute.",
+      "too_far_one": "Reminders can be set up to {{count}} day ahead.",
+      "too_far_other": "Reminders can be set up to {{count}} days ahead.",
+      "too_many_one": "You already have {{count}} reminder waiting. Cancel it first.",
+      "too_many_other": "You already have {{count}} reminders waiting. Cancel one first.",
+      "list_title": "-# Your Reminders",
+      "list_line": "- <t:{{at}}:R> — {{text}}",
+      "list_empty": "You have no reminders waiting.",
+      "cancelled": "Cancelled the reminder for <t:{{at}}:f>.",
+      "not_found": "I couldn't find that reminder. It may have gone off already.",
+      "delivery": "-# Reminder\n{{text}}\n-# You asked <t:{{createdAt}}:R> in {{channel}}.",
+      "delivery_channel": "-# Reminder\n{{member}} {{text}}\n-# You asked <t:{{createdAt}}:R>. I couldn't message you directly."
     }
   }
 }

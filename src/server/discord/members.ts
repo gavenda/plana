@@ -1,6 +1,7 @@
 import { listMemberAudit, type AuditEntry } from '../db/audit'
 import { listMemberGameTotals, listMemberTrackTotals, type Track } from '../db/activity'
 import { getBirthday, listBirthdays } from '../db/birthdays'
+import { getMemberGameNights, type MemberGameNights } from '../db/game-nights'
 import {
   checkpointActivity,
   describe,
@@ -76,6 +77,8 @@ export type MemberProfile = {
     top: { track: Track; plays: number; ms: number }[]
     listening: { track: Track; since: number } | null
   }
+  /** Game nights in the period: how many they came to, and how often they came when they said so. */
+  gameNights: MemberGameNights
   audit: { entries: AuditEntry[]; total: number }
 }
 
@@ -136,6 +139,7 @@ export async function getMemberProfile(
       top: trackRows.slice(0, TOP_ITEMS),
       listening: activityNow.track,
     },
+    gameNights: getMemberGameNights(memberId, since),
     audit: listMemberAudit(memberId, AUDIT_ITEMS),
   })
 }

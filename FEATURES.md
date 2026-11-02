@@ -25,7 +25,12 @@ Plana is a Discord bot with a web dashboard for running one server.
 - When enough people (3 by default) play the same game together in a voice channel for a while, Plana announces a game night.
 - The announcement has "I'm in" and "Can't make it" buttons, and its title depends on the time of day.
 - Each game can have its own ping role, and posts show the game's icon as an emoji.
-- A game night ends once nobody in its voice channel has been playing the game for 5 minutes: the buttons come off and the post says when it ended.
+- A game night ends once nobody in its voice channel has been playing the game for 5 minutes: the buttons come off, and the post says when it ended, who came (everyone in its voice channel for a minute or more) and how many who said "I'm in" did.
+- `/gamenight plan game time [day]` plans one ahead, up to 14 days, in the server's time zone. The post gets a "Cancel" button for whoever planned it and staff. 15 minutes before, Plana replies to it pinging the game's role and everyone who said "I'm in". Once it starts, it follows the voice channel where people gather to play it; if nobody has within an hour, it's closed. A member can have 3 planned at once.
+
+### Reminders
+- `/remind me in about` sets a reminder: `in` reads lengths like `2h`, `30m` or `1d 6h`, up to a year. `/remind list` shows yours, and `/remind cancel` takes one off.
+- Reminders arrive by DM, or in the channel they were set in, with a ping, if DMs are closed. Up to 25 waiting per member.
 
 ### Weekly recap
 - Posted every Sunday at 18:00 to the recap channel, covering the past 7 days: top games, music, voice time and new members.
@@ -58,16 +63,17 @@ Members sign in with Discord. **Administrators** can use everything. **Moderator
 | **Overview** | Charts of daily hours in voice, played and listened over the last 4 weeks (each with the last 7 days against the 7 before), recent activity, who's waiting in triage, and this week's top games and their players |
 | **Triage queue** | Members waiting in triage |
 | **Broadcast** | Builder for Components V2 messages (sections, galleries, button rows) with a live preview, or pasted JSON |
-| **Members** | Searchable member list. Each profile has facts, birthday, a 6-month strip of their days in voice or games, voice channels, games, tracks and audit history |
+| **Members** | Searchable member list. Each profile has facts, birthday, game nights they came to (and how often they came when they said yes), a 6-month strip of their days in voice or games, voice channels, games, tracks and audit history |
 | **Birthdays** | Upcoming birthdays; add, edit or remove them |
 | **Games & music** | Who's playing or listening right now, weekday-by-hour heatmaps of when people play and when they listen, most-played games, and most-played tracks; with Vivy connected, a Vivy plays tile, Vivy's most-played tracks and its top requesters (periods only reach back to when Vivy began counting by day) |
-| **Game nights** | Opened from Games & music: every game played, each with the role its game nights ping |
+| **Game nights** | Opened from Games & music: every game night so far, planned, going on or ended, with who said they're in and who came; for administrators, every game played, each with the role its game nights ping |
 | **Voice** | Who's in voice now, a weekday-by-hour heatmap of when people are in voice, members with the most voice time, and the busiest channels with each one's share of the time |
 | **Audit log** | Searchable, filterable log covering joins and leaves, triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |
 | **Settings** | Roles and channels grouped by feature, triage reminder days, game night minimum players, backups, live server logs, and an About pane |
 
 ## Operations
 - SQLite database with off-site backups to Cloudflare R2: scheduled, run on demand, zstd-compressed, with optional retention. Can also be run with `bun run backup`.
+- Any listed backup can be restored from Settings. Plana checks it, backs up the current database first, then restarts on the backup (keeping everyone signed in). The replaced file is kept beside the database as `.pre-restore`. Needs a restart policy, which the Compose file sets.
 - Optional Redis cache for dashboard queries.
 - Logging through LogTape, with a live log viewer in Settings.
 - Sign-ins are audited, and session IDs are stored hashed.

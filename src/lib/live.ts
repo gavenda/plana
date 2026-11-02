@@ -16,6 +16,7 @@ export type LiveMessages = {
   voice: object
   guild: object
   birthdays: object
+  gamenights: object
   settings: object
   backup: object
   logs: { entry: LogEntry }

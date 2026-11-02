@@ -38,5 +38,7 @@ export type MemberProfile = {
     top: { track: Track; plays: number; ms: number }[]
     listening: { track: Track; since: number } | null
   }
+  /** Game nights in the period: how many they came to, and how often they came when they said so. */
+  gameNights: { attended: number; saidIn: number; showedUp: number }
   audit: { entries: AuditEntry[]; total: number }
 }

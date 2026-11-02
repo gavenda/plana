@@ -467,3 +467,20 @@ export function listPlayingSpans(since: number): Span[] {
   }
   return [...byMember.values()].flatMap(union)
 }
+
+const selectGameSuggestions = db.query<
+  { game: string },
+  { since: number; pattern: string; limit: number }
+>(
+  `SELECT game FROM game_sessions
+   WHERE ended_at > :since AND game LIKE :pattern ESCAPE '\\'
+   GROUP BY game
+   ORDER BY SUM(ended_at - started_at) DESC
+   LIMIT :limit`,
+)
+
+/** Games played since a moment whose names contain `text`, most played first. */
+export function suggestGames(text: string, since: number, limit: number): string[] {
+  const pattern = `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`
+  return selectGameSuggestions.all({ since, pattern, limit }).map((row) => row.game)
+}
