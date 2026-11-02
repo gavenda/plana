@@ -558,6 +558,7 @@ Vue components, where M3 needs behaviour CSS can't give:
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | [`OutlinedField`](src/components/OutlinedField.vue) | Outlined text field container: notched outline, floating label, supporting text, counter                                              |
 | [`AppSelect`](src/components/AppSelect.vue)         | Exposed dropdown menu (outlined field + menu)                                                                                         |
+| [`ButtonGroup`](src/components/ButtonGroup.vue)     | Connected button group, single-select: tonal buttons 2dp apart, the chosen one fully round in `secondary`. For tabs and a choice of 2 to 4; arrow keys move the choice |
 | [`AppTextArea`](src/components/AppTextArea.vue)     | Outlined text field, multi-line, with character counter                                                                               |
 | `AppDialog`                                         | Basic dialog, with an optional hero (see [Dialogs](#dialogs))                                                                         |
 | `AppSnackbar`                                       | Snackbar, the one reply to an action (see [Snackbar](#snackbar))                                                                      |

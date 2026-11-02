@@ -2,12 +2,12 @@
 import { computed } from 'vue'
 
 import AppTextArea from '@/components/AppTextArea.vue'
+import ButtonGroup from '@/components/ButtonGroup.vue'
 import ButtonRowEditor from '@/components/ButtonRowEditor.vue'
 import ComponentList from '@/components/ComponentList.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import GalleryEditor from '@/components/GalleryEditor.vue'
 import SectionEditor from '@/components/SectionEditor.vue'
-import SegmentedButtons from '@/components/SegmentedButtons.vue'
 import { colorToHex, hexToColor, isEditable, type AnyBlock } from '@/lib/components-builder'
 import { ComponentKind, MAX_TEXT_LENGTH, type ContainerChild } from '@/lib/components-v2'
 
@@ -71,7 +71,7 @@ const children = computed({
         :model-value="separator.divider !== false"
         @update:model-value="separator.divider = $event"
       />
-      <SegmentedButtons
+      <ButtonGroup
         v-model="spacing"
         label="Spacing"
         :options="[

@@ -3,11 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 import AppSelect from '@/components/AppSelect.vue'
 import AppTextArea from '@/components/AppTextArea.vue'
+import ButtonGroup from '@/components/ButtonGroup.vue'
 import ComponentList from '@/components/ComponentList.vue'
 import ComponentsPreview from '@/components/ComponentsPreview.vue'
 import DiscordMention from '@/components/DiscordMention.vue'
 import DiscordMessage from '@/components/DiscordMessage.vue'
-import SegmentedButtons from '@/components/SegmentedButtons.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
 import { BLOCK_KINDS } from '@/lib/components-builder'
@@ -161,7 +161,7 @@ async function send() {
             <form class="flex flex-col gap-6" @submit.prevent="send">
               <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 
-              <SegmentedButtons
+              <ButtonGroup
                 v-model="mode"
                 label="Message type"
                 :options="[
@@ -180,7 +180,7 @@ async function send() {
 
               <template v-else>
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                  <SegmentedButtons
+                  <ButtonGroup
                     v-model="editor"
                     label="Edit with"
                     :options="[

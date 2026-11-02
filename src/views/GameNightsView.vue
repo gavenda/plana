@@ -4,9 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AppSelect from '@/components/AppSelect.vue'
+import ButtonGroup from '@/components/ButtonGroup.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
-import SegmentedButtons from '@/components/SegmentedButtons.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import type { GameNightRole } from '@/lib/activity'
@@ -266,7 +266,7 @@ const plural = (count: number, one: string, many: string) =>
       </div>
       <!-- Left of the info button; on narrow windows, a line of its own under the title. -->
       <div v-if="session.isAdmin" class="shrink-0 max-medium:order-last max-medium:basis-full">
-        <SegmentedButtons v-model="tab" label="View" :options="TABS" />
+        <ButtonGroup v-model="tab" label="View" :options="TABS" />
       </div>
       <RichTooltip
         v-if="tab === 'roles'"

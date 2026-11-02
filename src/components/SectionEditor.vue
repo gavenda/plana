@@ -3,8 +3,8 @@ import { computed } from 'vue'
 
 import AppTextArea from '@/components/AppTextArea.vue'
 import AppTextField from '@/components/AppTextField.vue'
+import ButtonGroup from '@/components/ButtonGroup.vue'
 import FilterChip from '@/components/FilterChip.vue'
-import SegmentedButtons from '@/components/SegmentedButtons.vue'
 import { newLinkButton, newThumbnail } from '@/lib/components-builder'
 import { ComponentKind, type LinkButton, type Section, type Thumbnail } from '@/lib/components-v2'
 
@@ -60,7 +60,7 @@ function setSpoiler(value: boolean) {
       Add text
     </button>
 
-    <SegmentedButtons
+    <ButtonGroup
       v-model="accessory"
       label="Beside the text"
       :options="[
