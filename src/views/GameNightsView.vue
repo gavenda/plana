@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AppSearchBar from '@/components/AppSearchBar.vue'
@@ -166,6 +166,38 @@ const roleOptions = computed<SelectOption<string | null>[]>(() => [
   })),
 ])
 
+/** The game whose picker is showing in place of its button; one at a time. */
+const picking = ref<string | null>(null)
+
+/** Swaps the button for the picker and opens its menu, so it takes one press, not two. */
+async function openPicker(name: string, event: MouseEvent) {
+  const row = (event.currentTarget as HTMLElement).parentElement
+  picking.value = name
+  await nextTick()
+  const input = row?.querySelector('input')
+  input?.focus()
+  input?.click()
+}
+
+/** Back to the button once focus leaves the picker without a choice. */
+function closePicker(event: FocusEvent, name: string) {
+  // Only the picker's field leaving counts, not the button as it's swapped out.
+  if (!(event.target instanceof HTMLInputElement)) return
+  const row = event.currentTarget as HTMLElement
+  if (row.contains(event.relatedTarget as Node | null)) return
+  if (picking.value === name) picking.value = null
+}
+
+function pickRole(game: GameNightRole, roleId: string | null) {
+  picking.value = null
+  void saveRole(game, roleId)
+}
+
+/** The role's colour for the dot on its button; null for a role without one. */
+function roleSwatch(roleId: string): string | null {
+  return roleColor(guild.roles.find((role) => role.id === roleId)?.color)
+}
+
 /** Games whose role is on its way to the server. */
 const saving = ref(new Set<string>())
 
@@ -214,7 +246,7 @@ const plural = (count: number, one: string, many: string) =>
 
 <template>
   <div class="flex flex-col gap-4">
-    <header class="flex min-h-14 items-center gap-4">
+    <header class="flex min-h-14 flex-wrap items-center gap-4">
       <RouterLink
         to="/activity"
         class="icon-btn shrink-0 text-on-surface"
@@ -232,6 +264,10 @@ const plural = (count: number, one: string, many: string) =>
           }}
         </p>
       </div>
+      <!-- Left of the info button; on narrow windows, a line of its own under the title. -->
+      <div v-if="session.isAdmin" class="shrink-0 max-medium:order-last max-medium:basis-full">
+        <SegmentedButtons v-model="tab" label="View" :options="TABS" />
+      </div>
       <RichTooltip
         v-if="tab === 'roles'"
         title="Pings"
@@ -243,8 +279,6 @@ const plural = (count: number, one: string, many: string) =>
         text="Everyone who spent a minute or more in the game night's voice channel while it ran. Members plan their own with /gamenight plan."
       />
     </header>
-
-    <SegmentedButtons v-if="session.isAdmin" v-model="tab" label="View" :options="TABS" />
 
     <template v-if="tab === 'history'">
       <div :class="history.data.value?.entries.length === 0 && 'card'">
@@ -426,14 +460,42 @@ const plural = (count: number, one: string, many: string) =>
                   <template v-else>No play recorded</template>
                 </p>
               </div>
-              <AppSelect
-                class="col-span-2 medium:col-span-1"
-                :model-value="game.roleId"
-                label="Ping"
-                :options="roleOptions"
-                :disabled="saving.has(game.name) || guild.roles.length === 0"
-                @update:model-value="(roleId) => saveRole(game, roleId)"
-              />
+              <!-- A button naming the role; pressing it brings up the picker, already open. -->
+              <div
+                class="col-span-2 flex items-center medium:col-span-1 medium:justify-end"
+                @focusout="closePicker($event, game.name)"
+              >
+                <AppSelect
+                  v-if="picking === game.name"
+                  class="w-full"
+                  :model-value="game.roleId"
+                  label="Ping"
+                  :options="roleOptions"
+                  :disabled="saving.has(game.name)"
+                  @update:model-value="(roleId) => pickRole(game, roleId)"
+                />
+                <button
+                  v-else
+                  type="button"
+                  class="btn btn-tonal btn-sm max-w-full"
+                  :disabled="saving.has(game.name) || guild.roles.length === 0"
+                  :aria-label="`Ping role for ${game.name}: ${game.roleId ? `@${guild.roleName(game.roleId) ?? 'role'}` : 'nobody'}. Change`"
+                  @click="openPicker(game.name, $event)"
+                >
+                  <span class="icon [--icon-size:18px]" aria-hidden="true">{{
+                    game.roleId ? 'edit' : 'add'
+                  }}</span>
+                  <span
+                    v-if="game.roleId && roleSwatch(game.roleId)"
+                    class="size-2.5 shrink-0 rounded-full"
+                    :style="{ background: roleSwatch(game.roleId) ?? undefined }"
+                    aria-hidden="true"
+                  />
+                  <span class="truncate">{{
+                    game.roleId ? (guild.roleName(game.roleId) ?? 'Unknown role') : 'Add ping'
+                  }}</span>
+                </button>
+              </div>
             </li>
           </ul>
           <div v-if="matches.length > visible.length" class="flex justify-center pt-3">
