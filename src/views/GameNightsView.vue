@@ -319,7 +319,7 @@ const plural = (count: number, one: string, many: string) =>
                 </span>
               </template>
               <span class="flex flex-col gap-0.5">
-                <span class="block items-center gap-2">
+                <span class="flex min-w-0 items-center gap-2">
                   <span class="truncate text-body-large" :title="night.game">{{ night.game }}</span>
                   <span
                     class="shrink-0 rounded-small px-2 py-0.5 text-label-medium"

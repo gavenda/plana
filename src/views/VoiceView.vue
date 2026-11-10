@@ -249,7 +249,7 @@ const plural = (count: number, one: string, many: string) =>
                 >
                   {{ entry.member.displayName }}
                 </span>
-                <span class="block items-center gap-1.5 text-body-medium text-on-surface-variant">
+                <span class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
                   <span class="shrink-0 icon [--icon-size:16px]" aria-hidden="true">volume_up</span>
                   <span class="truncate">{{ entry.channel.name }}</span>
                 </span>
@@ -415,7 +415,7 @@ const plural = (count: number, one: string, many: string) =>
                   <span :title="channel.name" class="block truncate text-body-large">{{
                     channel.name
                   }}</span>
-                  <span class="block items-center gap-2">
+                  <span class="flex items-center gap-2">
                     <span class="flex -space-x-1.5">
                       <img
                         v-for="member in channel.top"

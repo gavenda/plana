@@ -381,7 +381,7 @@ const plural = (count: number, one: string, many: string) =>
                 >
                   {{ entry.member.displayName }}
                 </span>
-                <span class="block items-center gap-1.5 text-body-medium text-on-surface-variant">
+                <span class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
                   <img
                     v-if="entry.image"
                     class="size-4 shrink-0 rounded-extra-small object-cover"
@@ -500,7 +500,7 @@ const plural = (count: number, one: string, many: string) =>
                   }}</span>
                   <!-- As tall as a line of body-small (16px), like a track's artist line, so
                                          both lists' rows match; the 20px avatars overhang it by 2px each way. -->
-                  <span class="block h-4 items-center gap-2">
+                  <span class="flex h-4 items-center gap-2">
                     <span class="flex -space-x-1.5">
                       <img
                         v-for="player in game.top"
