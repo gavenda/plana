@@ -271,7 +271,7 @@ const R2_DASHBOARD = 'https://dash.cloudflare.com/?to=/:account/r2'
       </span>
     </div>
 
-    <Card :padded="false" class="p-6">
+    <Card :padded="false" class="bg-surface-container! p-6">
       <StateBlock :loading="!data && loading" :error="data ? null : error" :retry="run">
         <template #skeleton>
           <div class="grid grid-cols-2 gap-6 expanded:grid-cols-3">
@@ -350,8 +350,12 @@ const R2_DASHBOARD = 'https://dash.cloudflare.com/?to=/:account/r2'
 
             <div v-if="data.backups.length > 0" class="flex flex-col">
               <h3 class="pt-3 pb-2 text-title-small text-on-surface-variant">Newest backups</h3>
-              <List segmented class="bg-surface-container">
-                <ListItem v-for="backup in data.backups" :key="backup.key">
+              <List segmented>
+                <ListItem
+                  v-for="backup in data.backups"
+                  :key="backup.key"
+                  class="bg-surface-container!"
+                >
                   <template #leading>
                     <span class="icon text-on-surface-variant" aria-hidden="true">backup</span>
                   </template>

@@ -144,7 +144,7 @@ async function send() {
 
       <!-- The form in its card; the preview beside it on the page, so it isn't a card in a card. -->
       <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
-        <Card :padded="false" class="p-6">
+        <Card :padded="false" class="bg-surface-container! p-6">
           <StateBlock
             :loading="!guild.directory && !guild.error"
             :error="guild.error"

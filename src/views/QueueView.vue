@@ -128,9 +128,7 @@ async function assign(member: PendingMember, roleId: string) {
       <!-- Loading, empty and error states sit in one card in place of the list. -->
       <div
         :class="
-          !loading &&
-          members.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          !loading && members.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -142,8 +140,8 @@ async function assign(member: PendingMember, roleId: string) {
           :retry="pending.run"
         >
           <template #skeleton><SkeletonList two-line trailing="actions" /></template>
-          <List segmented class="bg-surface-container">
-            <ListItem v-for="member in members" :key="member.id">
+          <List segmented>
+            <ListItem v-for="member in members" :key="member.id" class="bg-surface-container!">
               <template #leading>
                 <img
                   class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"

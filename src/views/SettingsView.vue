@@ -400,7 +400,7 @@ function reset(section: Section) {
            the buttons that save them all. A load failure shows in a card of its own. -->
       <div
         :class="{
-          'overflow-hidden rounded-medium bg-surface-container-highest p-6': store.error,
+          'overflow-hidden rounded-medium bg-surface-container p-6': store.error,
         }"
       >
         <StateBlock
@@ -410,7 +410,7 @@ function reset(section: Section) {
         >
           <!-- The form's cards, fields and buttons, as they will stand. -->
           <template #skeleton>
-            <div class="flex flex-col gap-0.5 overflow-hidden rounded-2xl bg-surface-container">
+            <div class="flex flex-col gap-0.5 overflow-hidden rounded-large">
               <template v-for="group in section.groups" :key="group.id">
                 <div
                   v-if="section.titled"
@@ -419,7 +419,7 @@ function reset(section: Section) {
                   <span class="skeleton h-3.5 w-20" />
                 </div>
                 <div
-                  class="grid grid-cols-1 items-start gap-6 rounded-[4px] bg-surface p-6 expanded:grid-cols-2"
+                  class="grid grid-cols-1 items-start gap-6 rounded-[4px] bg-surface-container p-6 expanded:grid-cols-2"
                 >
                   <div
                     v-for="(column, index) in group.columns"
@@ -434,14 +434,16 @@ function reset(section: Section) {
                   </div>
                 </div>
               </template>
-              <div class="flex items-center justify-end gap-2 rounded-[4px] bg-surface px-6 py-4">
+              <div
+                class="flex items-center justify-end gap-2 rounded-[4px] bg-surface-container px-6 py-4"
+              >
                 <span class="skeleton h-10 w-20" />
                 <span class="skeleton h-10 w-40" />
               </div>
             </div>
           </template>
           <form @submit.prevent="submit(section)">
-            <div class="flex flex-col gap-0.5 overflow-hidden rounded-2xl bg-surface-container">
+            <div class="flex flex-col gap-0.5 overflow-hidden rounded-large">
               <!-- Each feature: its name as a tonal item, then an item with its fields. Items
                    sit directly in the list so its corners land on the outer ones. -->
               <template v-for="group in section.groups" :key="group.id">
@@ -455,7 +457,7 @@ function reset(section: Section) {
                 <div
                   role="group"
                   :aria-labelledby="section.titled ? group.id : section.id"
-                  class="grid min-w-0 grid-cols-1 items-start gap-6 rounded-[4px] bg-surface p-6 expanded:grid-cols-2"
+                  class="grid min-w-0 grid-cols-1 items-start gap-6 rounded-[4px] bg-surface-container p-6 expanded:grid-cols-2"
                 >
                   <div
                     v-for="(column, index) in group.columns"
@@ -480,7 +482,9 @@ function reset(section: Section) {
                 </div>
               </template>
 
-              <div class="flex items-center justify-end gap-2 rounded-[4px] bg-surface px-6 py-4">
+              <div
+                class="flex items-center justify-end gap-2 rounded-[4px] bg-surface-container px-6 py-4"
+              >
                 <Button
                   variant="text"
                   :disabled="!dirtyIn(section) || saving"

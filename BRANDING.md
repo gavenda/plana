@@ -150,8 +150,8 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
 | Page background, rail                  | `surface` / `on-surface`                                             |
 | Open rail floating over the page       | `surface-container`, `shadow-elevation-2`, a 32% `scrim` behind           |
 | Server and account in the open rail    | `surface-container-highest` (a filled card)                          |
-| Cards                                  | `surface-container-highest` (the library's filled card)              |
-| Segmented lists                        | items on `surface`, 2dp apart on a `surface-container` group         |
+| Cards                                  | `surface-container`, a step below the library's filled card (`bg-surface-container!` on each `Card`) |
+| Segmented list items                   | `surface-container` (`bg-surface-container!` on each `ListItem`; `bg-secondary-container!` when selected) |
 | Avatar placeholders                    | `surface-container-highest`                                          |
 | Sign-in and 404 panels                 | `surface-container-low`, `shadow-elevation-1` (an elevated `Card`)   |
 | Dialogs                                | `surface-container-high`                                             |
@@ -542,12 +542,15 @@ hovered filled/tonal buttons, floating panels and dialogs.
 The M3 components are [tailwind-material3](https://github.com/gavenda/tailwind-material3),
 installed from GitHub and imported by name (`import { Button } from 'tailwind-material3'`).
 Its slots take Plana's Material Symbols spans as icons (`<span class="icon">add</span>`).
+Where Plana's tones differ from the library's defaults (cards, list rows), the colour is set
+with an important utility (`bg-surface-container!`), since two background utilities on one
+element have no reliable winner.
 
 | Library component                  | Used for                                                                                                                                                                                    |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Button`                           | Buttons: `filled` for a form's main action, `tonal`, `text` (dialog actions, "Clear all"); `size="xs"` for small ones in rows                                                               |
-| `IconButton`                       | Icon buttons: `standard`, or `tonal` and `width="narrow"` for row actions. One that deletes is `outlined` with an `error`-coloured icon                                                     |
-| `Card`                             | Filled cards; `variant="elevated"` for a panel on its own over a backdrop (sign-in, 404). Pass `:padded="false"` and pad with utilities                                                     |
+| `IconButton`                       | Icon buttons: `standard`, or `tonal` and `width="narrow"` for row actions. One that deletes is tonal in the error colours (`bg-error-container! text-on-error-container!`)                                                     |
+| `Card`                             | Filled cards, in `surface-container`; `variant="elevated"` for a panel on its own over a backdrop (sign-in, 404). Pass `:padded="false"` and pad with utilities                                                     |
 | `List segmented` + `ListItem`      | Rows of records, wherever they would otherwise be a table: the Audit log (one per day), Triage, Birthdays, Overview's lists, top plays. Art and ranks go in `#leading`, figures and actions in `#trailing`. No data tables |
 | `TextField variant="outlined"`     | Text fields, single and multi-line, with `counter` and `maxlength`                                                                                                                          |
 | `Chip type="filter"`               | Filter chips                                                                                                                                                                                |

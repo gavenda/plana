@@ -224,7 +224,7 @@ const recent = computed(() =>
         :to="stat.to ?? undefined"
         :interactive="!!stat.to"
         :padded="false"
-        class="flex flex-col gap-1 px-6 py-5"
+        class="flex flex-col gap-1 bg-surface-container! px-6 py-5"
       >
         <span class="text-display-small font-medium">
           <span
@@ -248,7 +248,7 @@ const recent = computed(() =>
         :padded="false"
         as="p"
         v-if="daily.error.value"
-        class="px-6 py-4 text-body-medium text-on-surface-variant"
+        class="bg-surface-container! px-6 py-4 text-body-medium text-on-surface-variant"
       >
         Couldn't load the last 4 weeks: {{ daily.error.value }}
       </Card>
@@ -277,7 +277,7 @@ const recent = computed(() =>
           :class="
             !activityLoading &&
             recent.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -288,8 +288,12 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList two-line trailing="text" /></template>
-            <List segmented class="bg-surface-container">
-              <ListItem v-for="{ entry, description } in recent" :key="entry.id">
+            <List segmented>
+              <ListItem
+                v-for="{ entry, description } in recent"
+                :key="entry.id"
+                class="bg-surface-container!"
+              >
                 <template #leading>
                   <span
                     class="grid size-10 shrink-0 place-items-center rounded-full"
@@ -333,7 +337,7 @@ const recent = computed(() =>
           :class="
             !pendingLoading &&
             (pending.data.value?.length ?? 0) === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -344,8 +348,12 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList trailing="text" /></template>
-            <List segmented class="bg-surface-container">
-              <ListItem v-for="member in pending.data.value?.slice(0, 5)" :key="member.id">
+            <List segmented>
+              <ListItem
+                v-for="member in pending.data.value?.slice(0, 5)"
+                :key="member.id"
+                class="bg-surface-container!"
+              >
                 <template #leading>
                   <img
                     class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
@@ -382,7 +390,7 @@ const recent = computed(() =>
           :class="
             !playLoading &&
             topGames.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -395,12 +403,13 @@ const recent = computed(() =>
             <template #skeleton>
               <SkeletonList leading="art" rank two-line trailing="text" />
             </template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <ListItem
                 v-for="(game, index) in topGames"
                 :key="game.name"
                 :as="RouterLink"
                 :to="{ path: '/activity', query: { game: game.name } }"
+                class="bg-surface-container!"
               >
                 <template #leading>
                   <span class="flex items-center gap-4">
@@ -456,7 +465,7 @@ const recent = computed(() =>
           :class="
             !playLoading &&
             topTracks.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -469,12 +478,13 @@ const recent = computed(() =>
             <template #skeleton>
               <SkeletonList leading="art" rank two-line trailing="text" />
             </template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <ListItem
                 v-for="(track, index) in topTracks"
                 :key="track.id"
                 :as="RouterLink"
                 :to="{ path: '/activity', query: { track: track.id } }"
+                class="bg-surface-container!"
               >
                 <template #leading>
                   <span class="flex items-center gap-4">
@@ -527,7 +537,7 @@ const recent = computed(() =>
           :class="
             !voiceLoading &&
             topVoice.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -538,12 +548,13 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList rank two-line trailing="stack" /></template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <ListItem
                 v-for="(member, index) in topVoice"
                 :key="member.id"
                 :as="RouterLink"
                 :to="{ path: '/voice', query: { member: member.id } }"
+                class="bg-surface-container!"
               >
                 <template #leading>
                   <span class="flex items-center gap-4">
@@ -604,7 +615,7 @@ const recent = computed(() =>
           :class="
             !voiceLoading &&
             topChannels.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -615,8 +626,12 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList rank two-line trailing="stack" /></template>
-            <List segmented class="bg-surface-container">
-              <ListItem v-for="(channel, index) in topChannels" :key="channel.id">
+            <List segmented>
+              <ListItem
+                v-for="(channel, index) in topChannels"
+                :key="channel.id"
+                class="bg-surface-container!"
+              >
                 <template #leading>
                   <span class="flex items-center gap-4">
                     <span
@@ -666,7 +681,7 @@ const recent = computed(() =>
           :class="
             !upcomingLoading &&
             birthdays.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -677,8 +692,8 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList two-line trailing="stack" /></template>
-            <List segmented class="bg-surface-container">
-              <ListItem v-for="entry in birthdays" :key="entry.id">
+            <List segmented>
+              <ListItem v-for="entry in birthdays" :key="entry.id" class="bg-surface-container!">
                 <template #leading>
                   <img
                     class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"

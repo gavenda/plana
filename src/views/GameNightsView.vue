@@ -282,7 +282,7 @@ const plural = (count: number, one: string, many: string) =>
       <div
         :class="
           history.data.value?.entries.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -294,11 +294,11 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="5" leading="art" two-line /></template>
-          <List segmented v-if="history.data.value" class="bg-surface-container">
+          <List segmented v-if="history.data.value">
             <ListItem
               v-for="night in history.data.value.entries"
               :key="night.messageId"
-              class="items-start"
+              class="items-start bg-surface-container!"
             >
               <template #leading>
                 <span class="flex items-center gap-4">
@@ -378,9 +378,7 @@ const plural = (count: number, one: string, many: string) =>
         v-if="settings.loaded"
         class="flex flex-wrap items-center gap-x-4 gap-y-2 overflow-hidden rounded-medium py-3 pr-3 pl-6"
         :class="
-          channelName
-            ? 'bg-surface-container-highest'
-            : 'bg-warning-container text-on-warning-container'
+          channelName ? 'bg-surface-container' : 'bg-warning-container text-on-warning-container'
         "
       >
         <span v-if="channelName" class="shrink-0 icon" aria-hidden="true">campaign</span>
@@ -419,9 +417,7 @@ const plural = (count: number, one: string, many: string) =>
 
       <div
         :class="
-          !loading &&
-          matches.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          !loading && matches.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -437,8 +433,8 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="6" leading="art" two-line /></template>
-          <List segmented class="bg-surface-container">
-            <ListItem v-for="game in visible" :key="game.name">
+          <List segmented>
+            <ListItem v-for="game in visible" :key="game.name" class="bg-surface-container!">
               <template #leading>
                 <img
                   v-if="game.iconUrl"

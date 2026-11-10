@@ -215,7 +215,7 @@ function step(event: KeyboardEvent) {
     :padded="false"
     as="section"
     :aria-labelledby="`${id}-label`"
-    class="flex flex-col gap-3 px-5 pt-4 pb-3"
+    class="flex flex-col gap-3 bg-surface-container! px-5 pt-4 pb-3"
   >
     <div class="flex items-center gap-2 text-on-surface-variant">
       <span class="icon [--icon-size:20px]" aria-hidden="true">{{ icon }}</span>

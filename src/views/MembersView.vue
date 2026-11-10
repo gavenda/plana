@@ -366,7 +366,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
         :class="
           !listLoading &&
           matches.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -377,12 +377,13 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
           :retry="list.run"
         >
           <template #skeleton><SkeletonList :rows="8" two-line /></template>
-          <List segmented class="bg-surface-container">
+          <List segmented>
             <ListItem
               v-for="member in visible"
               :key="member.id"
               as="button"
-              :class="member.id === chosen && 'bg-secondary-container text-on-secondary-container'"
+              :selected="member.id === chosen"
+              :class="member.id === chosen ? 'bg-secondary-container!' : 'bg-surface-container!'"
               :aria-current="member.id === chosen ? 'true' : undefined"
               @click="choose(member.id)"
             >
@@ -434,7 +435,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
       <Card
         :padded="false"
         v-if="!chosen"
-        class="grid h-full place-items-center bg-surface-container-low px-6 py-10"
+        class="grid h-full place-items-center bg-surface-container-low! px-6 py-10"
       >
         <PlanaSays mood="attentive" layout="column"
           >Choose a member. I'll bring up everything I have on file.</PlanaSays
@@ -490,7 +491,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
 
             <div v-if="detail" class="flex flex-col gap-4">
               <!-- Who they are. -->
-              <Card :padded="false" class="flex flex-col gap-4 px-6 py-5">
+              <Card :padded="false" class="flex flex-col gap-4 bg-surface-container! px-6 py-5">
                 <dl class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
                   <div v-for="fact in facts" :key="fact.label">
                     <dt class="text-label-medium text-on-surface-variant">{{ fact.label }}</dt>
@@ -517,7 +518,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   as="li"
                   v-for="item in rightNow"
                   :key="item.key"
-                  class="flex items-center gap-3 bg-primary-container px-4 py-3 text-body-medium text-on-primary-container"
+                  class="flex items-center gap-3 bg-primary-container! px-4 py-3 text-body-medium text-on-primary-container"
                 >
                   <span class="icon [--icon-size:20px]" aria-hidden="true">{{ item.icon }}</span>
                   <span class="min-w-0 flex-1 truncate"
@@ -547,7 +548,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   :padded="false"
                   v-for="stat in stats"
                   :key="stat.label"
-                  class="flex flex-col gap-1 px-6 py-5"
+                  class="flex flex-col gap-1 bg-surface-container! px-6 py-5"
                 >
                   <span class="text-display-small font-medium">{{ stat.value }}</span>
                   <span class="text-label-large opacity-80">{{ stat.label }}</span>
@@ -565,14 +566,22 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       plural(detail.voice.sessions, 'session', 'sessions')
                     }}</span>
                   </div>
-                  <Card :padded="false" v-if="detail.voice.channels.length === 0">
+                  <Card
+                    :padded="false"
+                    v-if="detail.voice.channels.length === 0"
+                    class="bg-surface-container!"
+                  >
                     <StateBlock
                       empty
                       :empty-text="`No time in voice in ${periodLabel?.toLowerCase()}.`"
                     />
                   </Card>
-                  <List segmented v-else class="bg-surface-container">
-                    <ListItem v-for="channel in detail.voice.channels" :key="channel.id">
+                  <List segmented v-else>
+                    <ListItem
+                      v-for="channel in detail.voice.channels"
+                      :key="channel.id"
+                      class="bg-surface-container!"
+                    >
                       <template #leading>
                         <span
                           class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
@@ -604,14 +613,22 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       plural(detail.games.count, 'game', 'games')
                     }}</span>
                   </div>
-                  <Card :padded="false" v-if="detail.games.top.length === 0">
+                  <Card
+                    :padded="false"
+                    v-if="detail.games.top.length === 0"
+                    class="bg-surface-container!"
+                  >
                     <StateBlock
                       empty
                       :empty-text="`No games played in ${periodLabel?.toLowerCase()}.`"
                     />
                   </Card>
-                  <List segmented v-else class="bg-surface-container">
-                    <ListItem v-for="game in detail.games.top" :key="game.name">
+                  <List segmented v-else>
+                    <ListItem
+                      v-for="game in detail.games.top"
+                      :key="game.name"
+                      class="bg-surface-container!"
+                    >
                       <template #leading>
                         <span class="flex items-center gap-4">
                           <img
@@ -662,14 +679,22 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       plural(detail.music.count, 'track', 'tracks')
                     }}</span>
                   </div>
-                  <Card :padded="false" v-if="detail.music.top.length === 0">
+                  <Card
+                    :padded="false"
+                    v-if="detail.music.top.length === 0"
+                    class="bg-surface-container!"
+                  >
                     <StateBlock
                       empty
                       :empty-text="`No tracks played in ${periodLabel?.toLowerCase()}.`"
                     />
                   </Card>
-                  <List segmented v-else class="bg-surface-container">
-                    <ListItem v-for="entry in detail.music.top" :key="entry.track.id">
+                  <List segmented v-else>
+                    <ListItem
+                      v-for="entry in detail.music.top"
+                      :key="entry.track.id"
+                      class="bg-surface-container!"
+                    >
                       <template #leading>
                         <span class="flex items-center gap-4">
                           <img
@@ -732,11 +757,15 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                     {{ detail.audit.total.toLocaleString() }}</span
                   >
                 </div>
-                <Card :padded="false" v-if="auditItems.length === 0">
+                <Card :padded="false" v-if="auditItems.length === 0" class="bg-surface-container!">
                   <StateBlock empty empty-text="Nothing recorded about this member." />
                 </Card>
-                <List segmented v-else class="bg-surface-container">
-                  <ListItem v-for="{ entry, description } in auditItems" :key="entry.id">
+                <List segmented v-else>
+                  <ListItem
+                    v-for="{ entry, description } in auditItems"
+                    :key="entry.id"
+                    class="bg-surface-container!"
+                  >
                     <template #leading>
                       <span
                         class="grid size-10 shrink-0 place-items-center rounded-full"

@@ -219,7 +219,7 @@ function step(event: KeyboardEvent) {
 </script>
 
 <template>
-  <Card :padded="false" class="flex flex-col gap-3 px-4 py-4">
+  <Card :padded="false" class="flex flex-col gap-3 bg-surface-container! px-4 py-4">
     <!-- Squares shrink to fit the column, down to MIN_CELL; past that it scrolls sideways. -->
     <div ref="box" class="overflow-x-auto">
       <div class="grid w-max grid-cols-[auto_auto] grid-rows-[auto_auto] gap-x-2 gap-y-1">

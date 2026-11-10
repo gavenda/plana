@@ -271,8 +271,12 @@ onMounted(() => {
           {{ group.label }}
         </h2>
 
-        <List segmented class="bg-surface-container">
-          <ListItem v-for="{ entry, description } in group.items" :key="entry.id">
+        <List segmented>
+          <ListItem
+            v-for="{ entry, description } in group.items"
+            :key="entry.id"
+            class="bg-surface-container!"
+          >
             <template #leading>
               <span
                 class="grid size-10 shrink-0 place-items-center rounded-full"

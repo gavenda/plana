@@ -199,7 +199,7 @@ async function remove() {
         :class="
           !loading &&
           birthdays.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -212,8 +212,8 @@ async function remove() {
         >
           <template #empty>Members add theirs with <code>/birthday set</code>.</template>
           <template #skeleton><SkeletonList :rows="4" two-line trailing="stack" /></template>
-          <List segmented class="bg-surface-container">
-            <ListItem v-for="entry in birthdays" :key="entry.id">
+          <List segmented>
+            <ListItem v-for="entry in birthdays" :key="entry.id" class="bg-surface-container!">
               <template #leading>
                 <img
                   class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
@@ -252,15 +252,14 @@ async function remove() {
                       <span class="icon [--icon-size:20px]" aria-hidden="true">edit</span>
                     </IconButton>
                     <IconButton
-                      variant="outlined"
+                      variant="tonal"
                       width="narrow"
+                      class="bg-error-container! text-on-error-container!"
                       :label="`Remove ${entry.displayName}'s birthday`"
                       :disabled="busy"
                       @click="confirmRemove(entry)"
                     >
-                      <span class="icon text-error [--icon-size:20px]" aria-hidden="true"
-                        >delete</span
-                      >
+                      <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
                     </IconButton>
                   </span>
                 </span>

@@ -164,7 +164,11 @@ function step(event: KeyboardEvent) {
 </script>
 
 <template>
-  <Card :padded="false" v-if="segments.length > 0" class="flex flex-col gap-3 px-4 py-4">
+  <Card
+    :padded="false"
+    v-if="segments.length > 0"
+    class="flex flex-col gap-3 bg-surface-container! px-4 py-4"
+  >
     <div
       class="relative h-7 rounded-small outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
       tabindex="0"

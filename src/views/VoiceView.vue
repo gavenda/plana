@@ -195,7 +195,7 @@ const plural = (count: number, one: string, many: string) =>
         :padded="false"
         v-for="stat in stats"
         :key="stat.label"
-        class="flex flex-col gap-1 px-6 py-5"
+        class="flex flex-col gap-1 bg-surface-container! px-6 py-5"
       >
         <span class="text-display-small font-medium">
           <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
@@ -214,9 +214,7 @@ const plural = (count: number, one: string, many: string) =>
       </div>
       <div
         :class="
-          !loading &&
-          inVoice.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          !loading && inVoice.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -227,12 +225,13 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
-          <List segmented class="bg-surface-container">
+          <List segmented>
             <ListItem
               v-for="entry in inVoice"
               :key="entry.member.id"
               as="button"
               @click="chooseMember(entry.member.id)"
+              class="bg-surface-container!"
             >
               <template #leading>
                 <img
@@ -304,7 +303,7 @@ const plural = (count: number, one: string, many: string) =>
           :class="
             !loading &&
             members.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -317,13 +316,14 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" rank two-line trailing="text" />
             </template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <ListItem
                 v-for="(member, index) in members"
                 :key="member.id"
                 as="button"
+                :selected="member.id === chosenMember"
                 :class="
-                  member.id === chosenMember && 'bg-secondary-container text-on-secondary-container'
+                  member.id === chosenMember ? 'bg-secondary-container!' : 'bg-surface-container!'
                 "
                 :aria-current="member.id === chosenMember ? 'true' : undefined"
                 @click="chooseMember(member.id)"
@@ -389,7 +389,7 @@ const plural = (count: number, one: string, many: string) =>
           :class="
             !loading &&
             channels.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -402,8 +402,8 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" two-line trailing="text" />
             </template>
-            <List segmented class="bg-surface-container">
-              <ListItem v-for="channel in channels" :key="channel.id">
+            <List segmented>
+              <ListItem v-for="channel in channels" :key="channel.id" class="bg-surface-container!">
                 <template #leading>
                   <span
                     class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
@@ -482,7 +482,7 @@ const plural = (count: number, one: string, many: string) =>
           :padded="false"
           as="p"
           v-if="detail?.now"
-          class="flex items-center gap-3 bg-tertiary-container px-4 py-3 text-body-medium text-on-tertiary-container"
+          class="flex items-center gap-3 bg-tertiary-container! px-4 py-3 text-body-medium text-on-tertiary-container"
         >
           <span class="icon [--icon-size:20px]" aria-hidden="true">volume_up</span>
           <span class="min-w-0 flex-1 truncate"
@@ -510,11 +510,11 @@ const plural = (count: number, one: string, many: string) =>
               item-class="bg-surface-container-high"
             />
           </template>
-          <List segmented class="bg-surface-container">
+          <List segmented>
             <ListItem
               v-for="channel in detail?.channels"
               :key="channel.id"
-              class="bg-surface-container-high"
+              class="bg-surface-container-high!"
             >
               <template #leading>
                 <span

@@ -125,7 +125,7 @@ async function copyShown() {
       </div>
     </div>
 
-    <Card :padded="false" class="flex flex-col gap-4 p-6">
+    <Card :padded="false" class="flex flex-col gap-4 bg-surface-container! p-6">
       <AppSearchBar v-model="query" placeholder="Search the log" label="Search the log">
         <template v-if="query" #trailing>
           <span class="text-body-small">{{ visible.length }}</span>

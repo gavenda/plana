@@ -333,7 +333,7 @@ const plural = (count: number, one: string, many: string) =>
         :padded="false"
         v-for="stat in stats"
         :key="stat.label"
-        class="flex flex-col gap-1 px-6 py-5"
+        class="flex flex-col gap-1 bg-surface-container! px-6 py-5"
       >
         <span class="text-display-small font-medium">
           <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
@@ -352,9 +352,7 @@ const plural = (count: number, one: string, many: string) =>
       </div>
       <div
         :class="
-          !loading &&
-          live.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container-highest'
+          !loading && live.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
@@ -365,8 +363,8 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
-          <List segmented class="bg-surface-container">
-            <ListItem v-for="entry in live" :key="entry.key">
+          <List segmented>
+            <ListItem v-for="entry in live" :key="entry.key" class="bg-surface-container!">
               <template #leading>
                 <img
                   class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
@@ -448,9 +446,7 @@ const plural = (count: number, one: string, many: string) =>
         </div>
         <div
           :class="
-            !loading &&
-            games.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            !loading && games.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -463,13 +459,14 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="text" />
             </template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <ListItem
                 v-for="(game, index) in games"
                 :key="game.name"
                 as="button"
+                :selected="game.name === chosenGame"
                 :class="
-                  game.name === chosenGame && 'bg-secondary-container text-on-secondary-container'
+                  game.name === chosenGame ? 'bg-secondary-container!' : 'bg-surface-container!'
                 "
                 :aria-current="game.name === chosenGame ? 'true' : undefined"
                 @click="chooseGame(game.name)"
@@ -538,9 +535,7 @@ const plural = (count: number, one: string, many: string) =>
         </div>
         <div
           :class="
-            !loading &&
-            tracks.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            !loading && tracks.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -553,12 +548,15 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
             </template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <!-- The row picks the track; the Spotify link beside it is its own control. -->
               <ListItem
                 v-for="(track, index) in tracks"
                 :key="track.id"
                 :selected="track.id === chosenTrack"
+                :class="
+                  track.id === chosenTrack ? 'bg-secondary-container!' : 'bg-surface-container!'
+                "
               >
                 <button
                   type="button"
@@ -632,7 +630,7 @@ const plural = (count: number, one: string, many: string) =>
           :class="
             !vivyLoading &&
             vivyTracks.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -645,11 +643,12 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
             </template>
-            <List segmented class="bg-surface-container">
+            <List segmented>
               <ListItem
                 v-for="(track, index) in vivyTracks"
                 :key="track.id"
                 :class="track.url && 'pr-2'"
+                class="bg-surface-container!"
               >
                 <template #leading>
                   <span class="flex items-center gap-4">
@@ -720,7 +719,7 @@ const plural = (count: number, one: string, many: string) =>
           :class="
             !vivyLoading &&
             vivyRequesters.length === 0 &&
-            'overflow-hidden rounded-medium bg-surface-container-highest'
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
           <StateBlock
@@ -731,8 +730,12 @@ const plural = (count: number, one: string, many: string) =>
             compact
           >
             <template #skeleton><SkeletonList :rows="5" rank two-line trailing="text" /></template>
-            <List segmented class="bg-surface-container">
-              <ListItem v-for="(requester, index) in vivyRequesters" :key="requester.id">
+            <List segmented>
+              <ListItem
+                v-for="(requester, index) in vivyRequesters"
+                :key="requester.id"
+                class="bg-surface-container!"
+              >
                 <template #leading>
                   <span class="flex items-center gap-4">
                     <span
@@ -776,7 +779,7 @@ const plural = (count: number, one: string, many: string) =>
       <template #leading>
         <img
           v-if="sheetIcon"
-          class="size-14 shrink-0 rounded-medium bg-surface-container-highest object-cover"
+          class="size-14 shrink-0 rounded-medium bg-surface-container object-cover"
           :src="sheetIcon"
           alt=""
           width="56"
@@ -784,7 +787,7 @@ const plural = (count: number, one: string, many: string) =>
         />
         <span
           v-else
-          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container-highest text-on-surface-variant"
+          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container text-on-surface-variant"
           aria-hidden="true"
           ><span class="icon">sports_esports</span></span
         >
@@ -809,11 +812,11 @@ const plural = (count: number, one: string, many: string) =>
             item-class="bg-surface-container-high"
           />
         </template>
-        <List segmented class="bg-surface-container">
+        <List segmented>
           <ListItem
             v-for="(player, index) in detail?.players"
             :key="player.id"
-            class="bg-surface-container-high"
+            class="bg-surface-container-high!"
           >
             <template #leading>
               <span class="flex items-center gap-4">
@@ -862,7 +865,7 @@ const plural = (count: number, one: string, many: string) =>
       <template #leading>
         <img
           v-if="sheetTrack?.artUrl"
-          class="size-14 shrink-0 rounded-medium bg-surface-container-highest object-cover"
+          class="size-14 shrink-0 rounded-medium bg-surface-container object-cover"
           :src="sheetTrack.artUrl"
           alt=""
           width="56"
@@ -870,7 +873,7 @@ const plural = (count: number, one: string, many: string) =>
         />
         <span
           v-else
-          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container-highest text-on-surface-variant"
+          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container text-on-surface-variant"
           aria-hidden="true"
           ><span class="icon">music_note</span></span
         >
@@ -895,11 +898,11 @@ const plural = (count: number, one: string, many: string) =>
             item-class="bg-surface-container-high"
           />
         </template>
-        <List segmented class="bg-surface-container">
+        <List segmented>
           <ListItem
             v-for="(listener, index) in trackDetail?.listeners"
             :key="listener.id"
-            class="bg-surface-container-high"
+            class="bg-surface-container-high!"
           >
             <template #leading>
               <span class="flex items-center gap-4">

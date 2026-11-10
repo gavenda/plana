@@ -27,8 +27,8 @@ const WIDTHS = ['60%', '42%', '72%', '50%', '65%', '38%']
 </script>
 
 <template>
-  <List segmented class="bg-surface-container" aria-hidden="true">
-    <ListItem v-for="row in rows" :key="row" :class="itemClass">
+  <List segmented aria-hidden="true">
+    <ListItem v-for="row in rows" :key="row" :class="itemClass" class="bg-surface-container!">
       <template #leading>
         <span class="flex items-center gap-4">
           <span v-if="rank" class="skeleton mx-1.5 h-3 w-4 shrink-0" />
