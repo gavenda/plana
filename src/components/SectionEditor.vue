@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Button, Chip, IconButton, TextField } from 'tailwind-material3'
 
-import AppTextArea from '@/components/AppTextArea.vue'
-import AppTextField from '@/components/AppTextField.vue'
-import ButtonGroup from '@/components/ButtonGroup.vue'
-import FilterChip from '@/components/FilterChip.vue'
-import { newLinkButton, newThumbnail } from '@/lib/components-builder'
+import ChoiceGroup from '@/components/ChoiceGroup.vue'
+import { newLinkButton, newThumbnail, URL_HINT } from '@/lib/components-builder'
 import { ComponentKind, type LinkButton, type Section, type Thumbnail } from '@/lib/components-v2'
 
 /** A section: up to three texts, with a thumbnail or a link button beside them. */
@@ -38,29 +36,36 @@ function setSpoiler(value: boolean) {
   <div class="flex flex-col gap-4">
     <div v-for="(item, index) in model.components" :key="index" class="flex items-start gap-2">
       <div class="min-w-0 flex-1">
-        <AppTextArea v-model="item.content" :label="`Text ${index + 1}`" />
+        <TextField
+          variant="outlined"
+          multiline
+          :rows="6"
+          v-model="item.content"
+          :label="`Text ${index + 1}`"
+          class="w-full"
+        />
       </div>
-      <button
+      <IconButton
+        variant="standard"
+        label="Remove text"
         v-if="model.components.length > 1"
-        type="button"
-        class="icon-btn mt-2"
-        aria-label="Remove text"
         @click="model.components.splice(index, 1)"
+        class="mt-2"
       >
         <span class="icon [--icon-size:20px]" aria-hidden="true">close</span>
-      </button>
+      </IconButton>
     </div>
-    <button
+    <Button
+      variant="text"
+      size="xs"
       v-if="model.components.length < 3"
-      type="button"
-      class="btn btn-text btn-sm self-start"
       @click="model.components.push({ type: ComponentKind.TextDisplay, content: '' })"
+      class="self-start"
+      ><template #icon><span class="icon [--icon-size:20px]" aria-hidden="true">add</span></template
+      >Add text</Button
     >
-      <span class="icon [--icon-size:18px]" aria-hidden="true">add</span>
-      Add text
-    </button>
 
-    <ButtonGroup
+    <ChoiceGroup
       v-model="accessory"
       label="Beside the text"
       :options="[
@@ -70,18 +75,47 @@ function setSpoiler(value: boolean) {
     />
 
     <template v-if="thumbnail">
-      <AppTextField v-model="thumbnail.media.url" input-type="url" label="Image URL" />
-      <AppTextField v-model="thumbnail.description" label="Alt text" :maxlength="1024" />
-      <FilterChip
-        class="self-start"
-        label="Spoiler"
-        :model-value="!!thumbnail.spoiler"
-        @update:model-value="setSpoiler"
+      <TextField
+        variant="outlined"
+        v-model="thumbnail.media.url"
+        type="url"
+        label="Image URL"
+        class="w-full"
+        :placeholder="URL_HINT"
       />
+      <TextField
+        variant="outlined"
+        counter
+        v-model="thumbnail.description"
+        label="Alt text"
+        :maxlength="1024"
+        class="w-full"
+      />
+      <Chip
+        class="self-start"
+        type="filter"
+        :selected="!!thumbnail.spoiler"
+        @update:selected="setSpoiler"
+        >Spoiler</Chip
+      >
     </template>
     <div v-if="button" class="grid grid-cols-1 gap-4 medium:grid-cols-2">
-      <AppTextField v-model="button.label" label="Button label" :maxlength="80" />
-      <AppTextField v-model="button.url" input-type="url" label="Link" />
+      <TextField
+        variant="outlined"
+        counter
+        v-model="button.label"
+        label="Button label"
+        :maxlength="80"
+        class="w-full"
+      />
+      <TextField
+        variant="outlined"
+        v-model="button.url"
+        type="url"
+        label="Link"
+        class="w-full"
+        :placeholder="URL_HINT"
+      />
     </div>
   </div>
 </template>

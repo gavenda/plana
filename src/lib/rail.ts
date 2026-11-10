@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
+import { onBeforeUnmount, onMounted, ref, shallowRef, type Ref } from 'vue'
 
 const STORAGE_KEY = 'plana:rail-expanded'
 
@@ -40,6 +40,23 @@ function restore() {
   requestAnimationFrame(() => requestAnimationFrame(() => (still.value = false)))
 }
 
+/**
+ * Whether the open rail docks beside the page (true) or floats over it, following the window.
+ * Docked on the server and until mounted, so the server render and hydration agree.
+ */
+export function useRailDocks(): Ref<boolean> {
+  const docks = ref(true)
+  let query: MediaQueryList | undefined
+  const update = () => (docks.value = query?.matches ?? true)
+  onMounted(() => {
+    query = window.matchMedia(DOCK_QUERY)
+    update()
+    query.addEventListener('change', update)
+  })
+  onBeforeUnmount(() => query?.removeEventListener('change', update))
+  return docks
+}
+
 /** What the rail's FAB does on the current page; its label and icon come from the route. */
 const fabAction = shallowRef<(() => void) | null>(null)
 
@@ -61,6 +78,7 @@ export function useRail() {
     expanded,
     still,
     restore,
+    set,
     toggle: () => set(!expanded.value),
     collapse: () => set(false),
   }

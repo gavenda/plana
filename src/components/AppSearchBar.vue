@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, useId } from 'vue'
+import { IconButton } from 'tailwind-material3'
 
-/** M3 search bar; `#trailing` puts text such as a match count before the clear button. */
+/** M3 search bar that filters in place (the library's Search opens a separate view); `#trailing` puts text such as a match count before the clear button. */
 defineProps<{ placeholder: string; label?: string }>()
 
 const model = defineModel<string>({ required: true })
@@ -42,15 +43,8 @@ function clear() {
       <slot name="trailing" />
     </span>
 
-    <button
-      v-if="model"
-      class="icon-btn"
-      type="button"
-      aria-label="Clear search"
-      title="Clear search"
-      @click.stop="clear"
-    >
-      <span class="icon [--icon-size:24px]" aria-hidden="true">close</span>
-    </button>
+    <IconButton v-if="model" variant="standard" label="Clear search" @click.stop="clear">
+      <span class="icon" aria-hidden="true">close</span>
+    </IconButton>
   </div>
 </template>

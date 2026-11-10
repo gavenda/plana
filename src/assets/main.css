@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+/* The components (buttons, fields, dialogs, the rail…) come from tailwind-material3. Its theme
+   brings the M3 type scale, elevation and spring motion; Plana's own colours below replace its
+   baseline purple, because a later @theme wins. */
+@import 'tailwind-material3/theme.css';
 
 /* The design system is Material 3 Expressive, built with Tailwind. See BRANDING.md. */
 
@@ -62,6 +66,7 @@
   --color-surface-container-highest: #34343a;
   --color-on-surface: #e3e1e9;
   --color-on-surface-variant: #c6c5d0;
+  --color-surface-variant: #45464f;
 
   --color-outline: #90909a;
   --color-outline-variant: #45464f;
@@ -124,14 +129,15 @@
   --text-label-small--letter-spacing: 0.03125rem;
   --text-label-small--font-weight: 500;
 
-  /* M3 shape scale, mapped onto Tailwind's radius names. */
-  --radius-xs: 4px; /* extra small */
-  --radius-sm: 8px; /* small */
-  --radius-md: 12px; /* medium */
-  --radius-lg: 16px; /* large */
-  --radius-xl: 28px; /* extra large */
-  --radius-2xl: 32px; /* extra large increased */
-  --radius-3xl: 48px; /* extra extra large */
+  /* M3 shape scale, by its own names (rounded-small, rounded-large…). Tailwind's own sizes
+     (rounded-lg, rounded-2xl) keep their defaults, which the library's components rely on. */
+  --radius-extra-small: 4px; /* extra small */
+  --radius-small: 8px; /* small */
+  --radius-medium: 12px; /* medium */
+  --radius-large: 16px; /* large */
+  --radius-extra-large: 28px; /* extra large */
+  --radius-extra-large-increased: 32px; /* extra large increased */
+  --radius-extra-extra-large: 48px; /* extra extra large */
   /* Full (pill) corners, as half the height, for anything whose shape morphs. Tailwind's
      rounded-full is an infinite radius, which can't be animated: a press would hold round
      and then snap square, and a release would jump straight back. Named by height. */
@@ -140,10 +146,7 @@
   --radius-full-40: 20px;
   --radius-full-56: 28px;
 
-  /* M3 elevation, levels 1–3. Dark surfaces also step up in tone. */
-  --shadow-level1: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
-  --shadow-level2: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
-  --shadow-level3: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+  /* M3 elevation (shadow-elevation-1…5) comes from the library's theme. */
 
   /* M3 Expressive motion: springs approximated as overshooting curves.
      Spatial curves move things (size, position, shape); effects curves fade
@@ -155,8 +158,8 @@
   --ease-effects: cubic-bezier(0.34, 0.8, 0.34, 1); /* 200ms */
   --ease-effects-slow: cubic-bezier(0.34, 0.88, 0.34, 1); /* 300ms */
 
-  /* M3 standard and emphasized easing, for the navigation rail's morph (see the rail below),
-     which follows Yuuka's: no overshoot, so the rail and the page beside it settle together. */
+  /* M3 standard and emphasized easing, for transitions that shouldn't overshoot (scrims, page
+     changes). */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-standard-decelerate: cubic-bezier(0, 0, 0, 1);
   --ease-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
@@ -286,8 +289,6 @@
 
   /* The right-hand column of a page with a scene (sign-in), from the large class up. */
   --spacing-scene-panel: clamp(480px, 36vw, 640px);
-  /* A supporting side sheet (SupportingSheet): the widest M3 allows a side sheet. */
-  --spacing-sheet: 400px;
 }
 
 /* Categorical chart colours, for charts whose series are different things (channels in a
@@ -389,7 +390,7 @@
 
   /* Scrollbars, as Material apps draw them (M3 has no spec for one): a thin, fully rounded thumb
      tinted from on-surface-variant, on no track and with no arrow buttons. It darkens a little
-     under the pointer. Utilities still win, as the rail's [scrollbar-width:none] does. */
+     under the pointer. Utilities such as [scrollbar-width:none] still win. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--color-on-surface-variant) 40%, transparent)
@@ -448,88 +449,10 @@
 /* Only the primitives that carry variants and repeat across many views live
    here. Layout and spacing stay as utilities in the markup. */
 @layer components {
-  /* Buttons. Round at rest; the Expressive shape morph squares them off while
-     pressed, on the fast spatial spring. Default is the M3 small size (40dp). Each size
-     sets its own round radius (half its height) and pressed radius, per M3. */
-  .btn {
-    @apply state-layer inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full-40 px-4 text-label-large whitespace-nowrap transition-[border-radius,box-shadow,background-color,color] duration-350 ease-spatial-fast select-none active:not-disabled:rounded-sm disabled:cursor-not-allowed;
-  }
-
-  .btn-sm {
-    @apply h-8 gap-1 rounded-full-32 px-3;
-  }
-
-  /* M3 medium size (56dp), for a page's one main action. */
-  .btn-md {
-    @apply h-14 rounded-full-56 px-6 text-title-medium active:not-disabled:rounded-md;
-  }
-
-  /* Wide width, as Expressive gives icon buttons narrow, default and wide: 24dp a side (the
-     padding M3 used before Expressive's 16dp) for a form's primary action. */
-  .btn-wide {
-    @apply px-6;
-  }
-
-  .btn-filled {
-    @apply bg-primary text-on-primary hover:not-disabled:shadow-level1 disabled:bg-on-surface/12 disabled:text-on-surface/38;
-  }
-
-  .btn-tonal {
-    @apply bg-secondary-container text-on-secondary-container hover:not-disabled:shadow-level1 disabled:bg-on-surface/12 disabled:text-on-surface/38;
-  }
-
-  .btn-text {
-    @apply px-3 text-primary disabled:text-on-surface/38;
-  }
-
-  .icon-btn {
-    @apply state-layer inline-grid size-10 shrink-0 cursor-pointer place-items-center rounded-full-40 text-on-surface-variant transition-[border-radius] duration-350 ease-spatial-fast active:rounded-sm disabled:cursor-not-allowed disabled:text-on-surface/38;
-  }
-
-  /* Tonal icon button, for a supporting action that should still stand out a little. */
-  .icon-btn-tonal {
-    @apply bg-secondary-container text-on-secondary-container disabled:cursor-not-allowed disabled:bg-on-surface/12 disabled:text-on-surface/38;
-  }
-
-  /* Tonal in the error colours, for an action that deletes or removes something. Pair with
-     `.icon-btn-tonal`. */
-  .icon-btn-danger {
-    @apply bg-error-container text-on-error-container;
-  }
-
-  /* M3 Expressive width: narrow is 32dp wide at the small (40dp) height. */
-  .icon-btn-narrow {
-    @apply w-8;
-  }
-
-  /* Filled card: M3 medium corners, on surface-container (a step below the spec's
-     surface-container-highest), no dividers under headers. */
-  .card {
-    @apply overflow-hidden rounded-md bg-surface-container;
-  }
-
-  /* M3 elevated card, for a panel standing on its own over a backdrop (sign-in, 404). */
-  .card-elevated {
-    @apply bg-surface-container-low shadow-level1;
-  }
-
-  /* A card in a tone's container colour, for a state the screen is in (setup unfinished, a load
-     failed). Never the reply to an action: that is a snackbar. */
-  .card-warn {
-    @apply bg-warning-container text-on-warning-container;
-  }
-  .card-error {
-    @apply bg-error-container text-on-error-container;
-  }
-
   /* A section's title sits outside its card, above it, as on Overview: the title on the left
      (with any supporting text beneath it), an action or count on the right. */
   .section-header {
     @apply flex min-h-12 items-center justify-between gap-4 pb-2 pl-4;
-  }
-
-  .card-body {
-    @apply p-6;
   }
 
   /* A placeholder in the shape of content still loading. Tinted from the text colour, so it
@@ -539,383 +462,22 @@
     background-color: color-mix(in oklab, currentColor 12%, transparent);
   }
 
-  /* M3 Expressive segmented list: each item is its own container, 2dp apart, with large
-     corners on the group's outer edges and extra-small ones where items meet, so the group
-     reads as one block of separate pieces rather than a card with dividers. Matches Yuuka's
-     grouped rows. Put items directly inside `.segmented-list`. */
-  .segmented-list {
-    @apply flex flex-col gap-0.5;
-  }
-
-  .segmented-item {
-    @apply flex min-h-14 items-center gap-4 rounded-xs bg-surface-container px-4 py-2 text-on-surface;
-  }
-
-  .segmented-list > .segmented-item:first-child {
-    @apply rounded-t-lg;
-  }
-
-  .segmented-list > .segmented-item:last-child {
-    @apply rounded-b-lg;
-  }
-
-  /* A group's heading, inset past the items it names. */
-  .segmented-header {
-    @apply px-4 pt-3 pb-2 text-title-small text-on-surface-variant;
-  }
-
   /* A channel or user mention (DiscordMention): Discord's blurple, as text on a faint wash of it. */
   .mention-blurple {
     color: color-mix(in oklab, #5865f2 55%, var(--color-on-surface));
     background-color: color-mix(in srgb, #5865f2 24%, transparent);
   }
 
-  /* Outlined text fields are components: OutlinedField, AppSelect, AppTextArea.
-     Supporting text for a hint that is not tied to one field: */
+  /* Supporting text for a hint that is not tied to one field: */
   .supporting-text {
     @apply px-4 text-body-small text-on-surface-variant;
   }
 }
 
-/* -------------------------------------------------------- navigation rail --- */
-/*
- * The navigation rail (AppNavigationRail, RailItem), as one structure that morphs between slim
- * and open. `data-expanded` is the only thing that changes; every property below transitions on
- * the same curve as the rail's own width, so the two states are the same elements in different
- * places. Icons sit 36px from the left in both, which is why they never travel sideways: the pill
- * grows from a capsule around the icon into one that hugs the icon and its label, and the label
- * moves out from under the icon to beside it.
- *
- * Slim, the rail is 96px wide. Open, it is as wide as its content needs (`--rail-open`, measured
- * by AppNavigationRail), between M3's 220 and 360.
- */
-:root {
-  --rail-open: 240px;
-}
-
-.rail {
-  --rail-time: 300ms;
-  --rail-ease: var(--ease-emphasized-decelerate);
-  width: 96px;
-  transition:
-    width var(--rail-time) var(--rail-ease),
-    background-color 200ms var(--ease-standard),
-    box-shadow 200ms var(--ease-standard);
-}
-
-.rail[data-expanded='true'] {
-  width: var(--rail-open);
-}
-
-/* Laid out at the open rail's size whatever the state, and clipped by the rail while it is slim. */
-.rail-inner {
-  display: flex;
-  flex-direction: column;
-  width: max-content;
-  min-width: 200px;
-  max-width: 340px;
-  height: 100%;
-}
-
-/*
- * One entry. It is as wide as its open form (the ghost, an invisible copy of the label set where
- * the open label goes, gives it that width) so the pill can grow to everything but the margins
- * and end up hugging the label.
- */
-.rail-item {
-  position: relative;
-  display: block;
-  flex: none;
-  width: fit-content;
-  min-width: 96px;
-  height: 52px;
-  margin-bottom: 4px;
-  cursor: pointer;
-  text-align: left;
-  color: var(--color-on-surface-variant);
-  outline: none;
-  transition:
-    height var(--rail-time) var(--rail-ease),
-    margin-bottom var(--rail-time) var(--rail-ease),
-    color 200ms var(--ease-standard);
-}
-
-.rail-item[data-expanded='true'] {
-  height: 56px;
-  margin-bottom: 0;
-}
-
-.rail-item[data-active='true'] {
-  color: var(--color-on-secondary-container);
-}
-
-.rail-item-ghost {
-  display: block;
-  height: 0;
-  padding: 0 36px 0 68px;
-  overflow: hidden;
-  visibility: hidden;
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.1px;
-  white-space: nowrap;
-}
-
-.rail-item-pill {
-  position: absolute;
-  top: 0;
-  left: 20px;
-  width: 56px;
-  height: 32px;
-  border-radius: 9999px;
-  transition:
-    top var(--rail-time) var(--rail-ease),
-    width var(--rail-time) var(--rail-ease),
-    height var(--rail-time) var(--rail-ease),
-    background-color 200ms var(--ease-standard);
-}
-
-.rail-item[data-expanded='true'] .rail-item-pill {
-  width: calc(100% - 40px);
-  height: 56px;
-}
-
-.rail-item[data-active='true'] .rail-item-pill {
-  background-color: var(--color-secondary-container);
-}
-
-/* The state layer, on the pill in the item's content colour: 8% on hover, 10% on focus or press. */
-.rail-item-pill::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background-color: currentColor;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 150ms var(--ease-effects-fast);
-}
-
-.rail-item:hover .rail-item-pill::before {
-  opacity: 0.08;
-}
-
-.rail-item:focus-visible .rail-item-pill::before,
-.rail-item:active .rail-item-pill::before {
-  opacity: 0.1;
-}
-
-.rail-item:focus-visible .rail-item-pill {
-  outline: 3px solid var(--color-secondary);
-  outline-offset: 2px;
-}
-
-.rail-item-icon {
-  position: absolute;
-  top: 4px;
-  left: 36px;
-  width: 24px;
-  height: 24px;
-  transition:
-    top var(--rail-time) var(--rail-ease),
-    font-variation-settings 200ms var(--ease-effects);
-}
-
-.rail-item[data-expanded='true'] .rail-item-icon {
-  top: 16px;
-}
-
-/* Slim, the label sits centred under its icon (the icon's centre is 48px in); open, beside it. */
-.rail-item-label {
-  position: absolute;
-  top: 36px;
-  left: 48px;
-  transform: translateX(-50%);
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1rem;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  transition:
-    top var(--rail-time) var(--rail-ease),
-    left var(--rail-time) var(--rail-ease),
-    transform var(--rail-time) var(--rail-ease),
-    font-size var(--rail-time) var(--rail-ease),
-    line-height var(--rail-time) var(--rail-ease),
-    letter-spacing var(--rail-time) var(--rail-ease),
-    color 200ms var(--ease-standard);
-}
-
-.rail-item[data-active='true'] .rail-item-label {
-  color: var(--color-secondary);
-}
-
-.rail-item[data-expanded='true'] .rail-item-label {
-  top: 18px;
-  left: 68px;
-  transform: translateX(0);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  letter-spacing: 0.1px;
-  color: inherit;
-}
-
-/*
- * The page's main action (AppNavigationRail): a 56px FAB in the slim rail, its icon on the same
- * 36px line as the destinations', that stretches into an extended FAB in the open rail. The label
- * column grows from nothing, so the FAB widens to hug it rather than swapping for a wider one.
- */
-.rail-fab {
-  display: inline-grid;
-  grid-template-columns: 24px 0fr;
-  align-items: center;
-  height: 56px;
-  padding: 0 16px;
-  border-radius: var(--radius-lg);
-  background-color: var(--color-primary-container);
-  color: var(--color-on-primary-container);
-  box-shadow: var(--shadow-level1);
-  cursor: pointer;
-  outline: none;
-  transition:
-    grid-template-columns var(--rail-time) var(--rail-ease),
-    column-gap var(--rail-time) var(--rail-ease),
-    padding var(--rail-time) var(--rail-ease),
-    box-shadow 150ms var(--ease-effects-fast);
-}
-
-.rail-fab[data-expanded='true'] {
-  grid-template-columns: 24px 1fr;
-  column-gap: 12px;
-  padding-right: 20px;
-}
-
-.rail-fab:hover {
-  box-shadow: var(--shadow-level2);
-}
-
-.rail-fab:focus-visible {
-  outline: 3px solid var(--color-secondary);
-  outline-offset: 2px;
-}
-
-.rail-fab-label {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.25rem;
-  letter-spacing: 0.1px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 150ms var(--ease-standard);
-}
-
-.rail-fab[data-expanded='true'] .rail-fab-label {
-  opacity: 1;
-  transition-duration: 200ms;
-  transition-delay: 100ms;
-}
-
-/* Something that is only there some of the time: it fades, holding back a beat on the way in. */
-.rail-fade {
-  opacity: 0;
-  transition: opacity 150ms var(--ease-standard);
-}
-
-.rail-fade[data-shown='true'] {
-  opacity: 1;
-  transition-duration: 200ms;
-  transition-delay: 100ms;
-}
-
-/* A group that is only in the open rail grows from zero height instead of appearing. */
-.rail-collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition:
-    grid-template-rows var(--rail-time, 300ms) var(--ease-emphasized-decelerate),
-    opacity 150ms var(--ease-standard);
-}
-
-.rail-collapse[data-open='true'] {
-  grid-template-rows: 1fr;
-  opacity: 1;
-  transition-duration: 300ms, 200ms;
-  transition-delay: 0s, 100ms;
-}
-
-.rail-collapse > div {
-  min-height: 0;
-  overflow: hidden;
-}
-
-/*
- * The page beside the rail. A slim rail always takes its 96px; an open one pushes the page aside
- * only where there is room for both (the expanded window class), and floats over it below that.
- */
-.shell {
-  padding-left: 96px;
-  transition:
-    padding-left 300ms var(--ease-emphasized-decelerate),
-    padding-right 300ms var(--ease-emphasized-decelerate);
-}
-
-/* From the large class a supporting side sheet is docked, not modal: the page makes room for it
-   (the sheet, plus the 16px it floats from the window's edge). */
-@media (min-width: 1200px) {
-  .shell:has(.supporting-sheet) {
-    padding-right: calc(var(--spacing-sheet) + 16px);
-  }
-}
-
-@media (min-width: 840px) {
-  .shell[data-rail-open='true'] {
-    padding-left: var(--rail-open);
-  }
-}
-
-/* While the remembered state is being applied after load, nothing animates into it. */
-.shell[data-rail-still='true'],
-.shell[data-rail-still='true'] .rail,
-.shell[data-rail-still='true'] .rail * {
+/* ---------------------------------------------------------------- shell --- */
+/* While the rail's remembered state is applied after load (App.vue), nothing animates into it. */
+.shell[data-rail-still='true'] * {
   transition: none !important;
-}
-
-/*
- * Where the snackbar (AppSnackbar) sits: 24px above the foot of the window, centred in the page
- * beside the rail, so it follows the page as the rail opens and shuts.
- */
-.snackbar-host {
-  position: fixed;
-  right: 0;
-  bottom: 24px;
-  left: 96px;
-  z-index: 40;
-  display: flex;
-  justify-content: center;
-  padding: 0 24px;
-  pointer-events: none;
-  transition:
-    left 300ms var(--ease-emphasized-decelerate),
-    right 300ms var(--ease-emphasized-decelerate);
-}
-
-@media (min-width: 840px) {
-  .shell[data-rail-open='true'] .snackbar-host {
-    left: var(--rail-open);
-  }
-}
-
-@media (min-width: 1200px) {
-  .shell:has(.supporting-sheet) .snackbar-host {
-    right: calc(var(--spacing-sheet) + 16px);
-  }
-}
-
-.shell[data-rail-still='true'] .snackbar-host {
-  transition: none;
 }
 
 /* Page transitions (see PageTransition in the router), as M3 specifies them (MDC's

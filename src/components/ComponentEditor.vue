@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Chip, TextField } from 'tailwind-material3'
 
-import AppTextArea from '@/components/AppTextArea.vue'
-import ButtonGroup from '@/components/ButtonGroup.vue'
+import ChoiceGroup from '@/components/ChoiceGroup.vue'
 import ButtonRowEditor from '@/components/ButtonRowEditor.vue'
 import ComponentList from '@/components/ComponentList.vue'
-import FilterChip from '@/components/FilterChip.vue'
 import GalleryEditor from '@/components/GalleryEditor.vue'
 import SectionEditor from '@/components/SectionEditor.vue'
 import { colorToHex, hexToColor, isEditable, type AnyBlock } from '@/lib/components-builder'
@@ -53,12 +52,17 @@ const children = computed({
 
 <template>
   <div class="flex flex-col gap-4">
-    <AppTextArea
+    <TextField
+      variant="outlined"
+      multiline
+      :rows="6"
+      counter
       v-if="text"
       v-model="text.content"
       label="Text"
       :maxlength="MAX_TEXT_LENGTH"
       supporting-text="Discord markdown is supported."
+      class="w-full"
     />
 
     <SectionEditor v-else-if="section" v-model="section" />
@@ -66,12 +70,13 @@ const children = computed({
     <GalleryEditor v-else-if="gallery" v-model="gallery" />
 
     <div v-else-if="separator" class="flex flex-wrap items-center gap-3">
-      <FilterChip
-        label="Divider line"
-        :model-value="separator.divider !== false"
-        @update:model-value="separator.divider = $event"
-      />
-      <ButtonGroup
+      <Chip
+        type="filter"
+        :selected="separator.divider !== false"
+        @update:selected="separator.divider = $event"
+        >Divider line</Chip
+      >
+      <ChoiceGroup
         v-model="spacing"
         label="Spacing"
         :options="[
@@ -85,21 +90,22 @@ const children = computed({
 
     <template v-else-if="container">
       <div class="flex flex-wrap items-center gap-3">
-        <FilterChip v-model="accent" label="Accent colour" />
+        <Chip type="filter" v-model:selected="accent">Accent colour</Chip>
         <label v-if="accent" class="flex items-center gap-2 text-body-medium">
           <input
             type="color"
-            class="size-8 cursor-pointer rounded-xs border-0 bg-transparent p-0"
+            class="size-8 cursor-pointer rounded-extra-small border-0 bg-transparent p-0"
             :value="colorToHex(container.accent_color)"
             @input="container.accent_color = hexToColor(($event.target as HTMLInputElement).value)"
           />
           <span class="font-mono">{{ colorToHex(container.accent_color) }}</span>
         </label>
-        <FilterChip
-          label="Spoiler"
-          :model-value="!!container.spoiler"
-          @update:model-value="container.spoiler = $event"
-        />
+        <Chip
+          type="filter"
+          :selected="!!container.spoiler"
+          @update:selected="container.spoiler = $event"
+          >Spoiler</Chip
+        >
       </div>
       <ComponentList v-model="children" nested />
     </template>

@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import {
+  Card,
+  Fab,
+  ListItem,
+  NavigationItem,
+  NavigationRail,
+  NavigationRailMenuButton,
+} from 'tailwind-material3'
 
-import RailItem from '@/components/RailItem.vue'
 import { useLive } from '@/lib/live'
 import { logoUrl } from '@/lib/plana'
-import { railDocks, runRailFab, useRail } from '@/lib/rail'
+import { runRailFab, useRail, useRailDocks } from '@/lib/rail'
 import { useBotStore } from '@/stores/bot'
 import { useGuildStore } from '@/stores/guild'
 import { useSessionStore } from '@/stores/session'
@@ -52,7 +59,13 @@ const destinations = computed(() => {
   }
   return allDestinations.filter((destination) => !destination.adminOnly || session.isAdmin)
 })
-const { expanded, toggle, collapse } = useRail()
+
+/**
+ * tailwind-material3's NavigationRail. Open, it docks beside the page where the window has room
+ * (the expanded class) and floats over it, with a scrim, below that.
+ */
+const { expanded, set, collapse } = useRail()
+const docks = useRailDocks()
 
 const guild = useGuildStore()
 const settings = useSettingsStore()
@@ -84,18 +97,19 @@ const server = computed(() => {
   }
 })
 
-/** A floating rail is in the way once it has done its job; a docked one stays put. */
-function afterChoice() {
-  if (!railDocks()) collapse()
+/** Overview is only current at `/` itself; the rest are also current on pages beneath them. */
+const route = useRoute()
+function isActive(to: string) {
+  return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`)
 }
 
-/** The page's main action, kept while the FAB shrinks away so its label doesn't vanish first. */
-const route = useRoute()
+/** A floating rail is in the way once it has done its job; a docked one stays put. */
+function afterChoice() {
+  if (!docks.value) collapse()
+}
+
+/** The page's main action, from the route. */
 const fab = computed(() => route.meta.fab ?? null)
-const lastFab = ref(fab.value)
-watch(fab, (value) => {
-  if (value) lastFab.value = value
-})
 
 function onFab() {
   afterChoice()
@@ -112,246 +126,143 @@ function signOut() {
   emit('signOut')
 }
 
-function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && expanded.value) collapse()
-}
-
-/**
- * The open rail is as wide as what it holds (the longest label, the account card), as M3's
- * expanded rail is: its content plus a 20px margin, between 220 and 360. The content is always
- * laid out at its open size (the slim rail only clips it), so its width can be read at any time,
- * and the page is told through `--rail-open` how far to move aside.
- */
-const innerEl = ref<HTMLElement | null>(null)
-let observer: ResizeObserver | undefined
-
-function measure() {
-  const width = innerEl.value?.offsetWidth
-  if (!width) return
-  document.documentElement.style.setProperty(
-    '--rail-open',
-    `${Math.min(360, Math.max(220, width + 20))}px`,
-  )
-}
+// A rail left open in a window that shrinks below the dock width would float over the page.
+watch(docks, (value) => {
+  if (!value) collapse()
+})
 
 onMounted(() => {
   // The rail shows without the server if this fails.
   void guild.load()
-  measure()
-  if (innerEl.value && typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(measure)
-    observer.observe(innerEl.value)
-  }
 })
-
-onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <!-- Below the expanded window class the open rail floats over the page, so the page behind it is
-       dimmed and a click on it closes the rail. -->
-  <Transition
-    enter-active-class="transition-opacity duration-300 ease-standard-decelerate"
-    enter-from-class="opacity-0"
-    leave-active-class="transition-opacity duration-200 ease-standard-accelerate"
-    leave-to-class="opacity-0"
-  >
-    <div
-      v-if="expanded"
-      class="fixed inset-0 z-30 bg-scrim/32 expanded:hidden"
-      aria-hidden="true"
-      @click="collapse"
-    />
-  </Transition>
-
-  <!--
-    One structure for both states. Opening the rail changes its width and flips `expanded`; every
-    element below moves to its open geometry by CSS transition (`.rail-item`, `.rail-fade` and
-    `.rail-collapse` in main.css), so the slim and the open rail morph into each other rather than
-    swap. Icons sit 36px from the left in both, which is what lets them stay put while the rest moves.
-  -->
-  <nav
+  <NavigationRail
     id="primary-rail"
-    aria-label="Main"
-    class="rail fixed inset-y-0 left-0 z-40 overflow-hidden bg-surface"
-    :class="{ 'max-expanded:bg-surface-container max-expanded:shadow-level2': expanded }"
-    :data-expanded="expanded"
-    @keydown="onKeydown"
+    :expanded="expanded"
+    :modal="!docks"
+    label="Main"
+    @update:expanded="set"
   >
-    <div ref="innerEl" class="rail-inner pt-11">
-      <!-- The app's mark, in either state, with its name and version beside it once the rail is
-           open. It opens the About pane, not Overview, which has its own destination below. -->
-      <div class="flex pb-3 pl-7">
-        <button
-          type="button"
-          class="state-layer flex cursor-pointer items-center rounded-full text-left"
-          aria-label="About Plana"
-          @click="openAbout"
-        >
-          <img
-            class="size-10 shrink-0 rounded-full bg-primary-container object-cover"
-            :src="markUrl"
-            alt=""
-            width="40"
-            height="40"
-          />
-          <span
-            class="rail-fade flex items-baseline gap-1.5 pr-4 pl-3 whitespace-nowrap text-on-surface"
-            :data-shown="expanded"
-            aria-hidden="true"
-          >
-            <span class="text-title-large">Plana</span>
-            <span class="text-label-small text-on-surface-variant">v{{ version }}</span>
-          </span>
-        </button>
-      </div>
-
+    <template #header="{ expanded: open }">
+      <!-- The app's mark, with its name and version beside it once the rail is open. It opens the
+           About pane, not Overview, which has its own destination below. -->
       <button
         type="button"
-        class="icon-btn m-1 ml-7 text-on-surface"
-        :aria-label="expanded ? 'Collapse navigation' : 'Expand navigation'"
-        :aria-expanded="expanded"
-        aria-controls="primary-rail"
-        @click="toggle"
+        class="relative ms-2 mb-2 flex cursor-pointer items-center rounded-full text-left before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-current before:opacity-0 before:transition-opacity hover:before:opacity-8 focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-secondary focus-visible:outline-solid"
+        aria-label="About Plana"
+        @click="openAbout"
       >
-        <!-- Both glyphs are always there, stacked; the one that matches the state shows. -->
+        <img
+          class="size-10 shrink-0 rounded-full bg-primary-container object-cover"
+          :src="markUrl"
+          alt=""
+          width="40"
+          height="40"
+        />
         <span
-          class="rail-fade col-start-1 row-start-1 icon"
-          :data-shown="!expanded"
+          v-if="open"
+          class="flex items-baseline gap-1.5 pr-4 pl-3 whitespace-nowrap text-on-surface"
           aria-hidden="true"
-          >menu</span
         >
-        <span
-          class="rail-fade col-start-1 row-start-1 icon"
-          :data-shown="expanded"
-          aria-hidden="true"
-          >menu_open</span
-        >
+          <span class="text-title-large">Plana</span>
+          <span class="text-label-small text-on-surface-variant">v{{ version }}</span>
+        </span>
       </button>
 
+      <NavigationRailMenuButton
+        expand-label="Expand navigation"
+        collapse-label="Collapse navigation"
+      >
+        <template #menu-icon><span class="icon" aria-hidden="true">menu</span></template>
+        <template #menu-open-icon><span class="icon" aria-hidden="true">menu_open</span></template>
+      </NavigationRailMenuButton>
+
       <!-- The page's main action, under the menu button as in M3's rail: a FAB in the slim rail,
-           an extended FAB (icon and label) in the open one. It grows in and out between pages. -->
-      <div class="rail-collapse flex-none" :data-open="!!fab" :inert="!fab">
-        <div>
-          <button
-            v-if="lastFab"
-            type="button"
-            class="rail-fab state-layer my-2 ml-5"
-            :data-expanded="expanded"
-            :aria-label="lastFab.label"
-            @click="onFab"
-          >
-            <span class="icon" aria-hidden="true">{{ lastFab.icon }}</span>
-            <span class="rail-fab-label" aria-hidden="true">{{ lastFab.label }}</span>
-          </button>
-        </div>
-      </div>
+           an extended FAB in the open one. -->
+      <Fab v-if="fab" :expanded="open" :label="fab.label" class="mt-2" @click="onFab">
+        <template #icon>
+          <span class="icon" aria-hidden="true">{{ fab.icon }}</span>
+        </template>
+        {{ fab.label }}
+      </Fab>
+    </template>
 
-      <!-- M3's expanded rail keeps this gap between its header and its items. -->
-      <div class="mt-10 flex min-h-0 flex-1 flex-col">
-        <!-- One scrolling column: on a short window the open rail would otherwise run off the bottom. -->
-        <div class="min-h-0 flex-1 [scrollbar-width:none] overflow-x-hidden overflow-y-auto">
-          <!-- The slim rail keeps only the everyday destinations; the others grow in between them
-               as it opens, the way "Sign out" does below, and are inert while shut. -->
-          <template v-for="item in destinations" :key="item.to">
-            <RailItem
-              v-if="item.slim"
-              :to="item.to"
-              :exact="item.to === '/'"
-              :label="item.label"
-              :icon="item.icon"
-              :expanded="expanded"
-              @click="afterChoice"
-            />
-            <div v-else class="rail-collapse" :data-open="expanded" :inert="!expanded">
-              <div>
-                <RailItem
-                  :to="item.to"
-                  :label="item.label"
-                  :icon="item.icon"
-                  :expanded="expanded"
-                  @click="afterChoice"
-                />
-              </div>
-            </div>
-          </template>
-
-          <!-- Only in the open rail: it grows out of nothing rather than appearing, and is inert while shut. -->
-          <div class="rail-collapse" :data-open="expanded" :inert="!expanded">
-            <div>
-              <RailItem label="Sign out" icon="logout" expanded @click="signOut" />
-            </div>
-          </div>
-        </div>
-
-        <!-- The server and who is signed in, at the foot of the open rail however far the
-             destinations scroll. -->
-        <div
-          class="rail-collapse flex-none"
-          :data-open="expanded && (!!session.user || !!server)"
-          :inert="!expanded"
+    <template #default="{ expanded: open }">
+      <!-- The slim rail keeps only the everyday destinations; the rest join it once it opens. -->
+      <template v-for="item in destinations" :key="item.to">
+        <NavigationItem
+          v-if="item.slim || open"
+          :as="RouterLink"
+          :to="item.to"
+          :label="item.label"
+          :active="isActive(item.to)"
+          @click="afterChoice"
         >
-          <div>
-            <div class="segmented-list mx-6 my-4 w-fit">
-              <div
-                v-if="server"
-                class="segmented-item gap-3 bg-surface-container-highest py-3 text-on-surface-variant"
-              >
-                <img
-                  v-if="server.iconUrl"
-                  class="size-10 shrink-0 rounded-full object-cover"
-                  :src="server.iconUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-                <span
-                  v-else
-                  class="grid size-10 shrink-0 place-items-center rounded-full bg-secondary-container text-title-small text-on-secondary-container"
-                  aria-hidden="true"
-                  >{{ server.initial }}</span
-                >
-                <span class="max-w-[136px] min-w-0">
-                  <span class="block truncate text-title-medium text-on-surface">{{
-                    server.name
-                  }}</span>
-                  <span class="block truncate text-body-small">{{ server.members }}</span>
-                </span>
-              </div>
+          <template #icon>
+            <span class="icon" aria-hidden="true">{{ item.icon }}</span>
+          </template>
+          <template #active-icon>
+            <span class="icon icon-filled" aria-hidden="true">{{ item.icon }}</span>
+          </template>
+        </NavigationItem>
+      </template>
 
-              <div
-                v-if="session.user"
-                class="segmented-item gap-3 bg-surface-container-highest py-3 text-on-surface-variant"
-              >
-                <img
-                  v-if="session.user.avatar"
-                  class="size-10 shrink-0 rounded-full object-cover"
-                  :src="session.user.avatar"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-                <span
-                  v-else
-                  class="grid size-10 shrink-0 place-items-center rounded-full bg-primary-container text-title-small text-on-primary-container"
-                  aria-hidden="true"
-                  >{{ initial }}</span
-                >
-                <span class="max-w-[136px] min-w-0">
-                  <span class="block truncate text-title-medium text-on-surface">{{
-                    session.user.displayName
-                  }}</span>
-                  <span class="block truncate font-mono text-body-small">{{
-                    session.user.username
-                  }}</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <template v-if="open">
+        <NavigationItem label="Sign out" @click="signOut">
+          <template #icon><span class="icon" aria-hidden="true">logout</span></template>
+        </NavigationItem>
 
-        <div class="h-6 flex-none" />
-      </div>
-    </div>
-  </nav>
+        <!-- The server and who is signed in, at the foot of the open rail. -->
+        <Card
+          v-if="session.user || server"
+          :padded="false"
+          class="ms-3 mt-6 mb-6 w-fit max-w-[260px]"
+        >
+          <ListItem v-if="server" :supporting-text="server.members">
+            <template #leading>
+              <img
+                v-if="server.iconUrl"
+                class="size-10 shrink-0 rounded-full object-cover"
+                :src="server.iconUrl"
+                alt=""
+                width="40"
+                height="40"
+              />
+              <span
+                v-else
+                class="grid size-10 shrink-0 place-items-center rounded-full bg-secondary-container text-title-small text-on-secondary-container"
+                aria-hidden="true"
+                >{{ server.initial }}</span
+              >
+            </template>
+            <span class="block truncate">{{ server.name }}</span>
+          </ListItem>
+          <ListItem v-if="session.user">
+            <template #leading>
+              <img
+                v-if="session.user.avatar"
+                class="size-10 shrink-0 rounded-full object-cover"
+                :src="session.user.avatar"
+                alt=""
+                width="40"
+                height="40"
+              />
+              <span
+                v-else
+                class="grid size-10 shrink-0 place-items-center rounded-full bg-primary-container text-title-small text-on-primary-container"
+                aria-hidden="true"
+                >{{ initial }}</span
+              >
+            </template>
+            <span class="block truncate">{{ session.user.displayName }}</span>
+            <template #supporting-text>
+              <span class="font-mono">{{ session.user.username }}</span>
+            </template>
+          </ListItem>
+        </Card>
+      </template>
+    </template>
+  </NavigationRail>
 </template>

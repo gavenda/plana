@@ -147,3 +147,6 @@ export function isEditable(block: AnyBlock): boolean {
       return false
   }
 }
+
+/** The placeholder for a URL field, hinting at the scheme it wants. */
+export const URL_HINT = 'https://'

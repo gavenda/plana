@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { Card } from 'tailwind-material3'
 
 import {
   clearActive,
@@ -163,9 +164,9 @@ function step(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div v-if="segments.length > 0" class="card flex flex-col gap-3 px-4 py-4">
+  <Card :padded="false" v-if="segments.length > 0" class="flex flex-col gap-3 px-4 py-4">
     <div
-      class="relative h-7 rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+      class="relative h-7 rounded-small outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
       tabindex="0"
       role="img"
       :aria-label="`Share of time in voice by channel: ${summary}. Use the arrow keys to read a channel.`"
@@ -188,5 +189,5 @@ function step(event: KeyboardEvent) {
         <span class="tabular-nums">{{ percent(segment.share) }}</span>
       </li>
     </ul>
-  </div>
+  </Card>
 </template>

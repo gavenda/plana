@@ -32,6 +32,10 @@ export default defineConfig(({ isSsrBuild }) => ({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // tailwind-material3 ships Vue source, not a build: compile it as our own code, in the
+  // browser and in the SSR bundle alike.
+  optimizeDeps: { exclude: ['tailwind-material3'] },
+  ssr: { noExternal: ['tailwind-material3'] },
   server: {
     port: VITE_DEV_PORT,
     strictPort: true,

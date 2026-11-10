@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Button, IconButton } from 'tailwind-material3'
 
 import ComponentEditor from '@/components/ComponentEditor.vue'
 import {
@@ -42,7 +43,7 @@ function remove(index: number) {
     <div
       v-for="(block, index) in model"
       :key="blockKey(block)"
-      class="flex flex-col gap-4 rounded-md p-4"
+      class="flex flex-col gap-4 rounded-medium p-4"
       :class="nested ? 'bg-surface-container-highest' : 'bg-surface-container-high'"
     >
       <div class="-my-1 -mr-2 flex items-center gap-3">
@@ -51,27 +52,25 @@ function remove(index: number) {
         </span>
         <span class="text-title-small">{{ blockKind(block.type)?.label ?? 'Component' }}</span>
         <span class="flex-1" />
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Move up"
+        <IconButton
+          variant="standard"
+          label="Move up"
           :disabled="index === 0"
           @click="move(index, -1)"
         >
           <span class="icon [--icon-size:20px]" aria-hidden="true">arrow_upward</span>
-        </button>
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Move down"
+        </IconButton>
+        <IconButton
+          variant="standard"
+          label="Move down"
           :disabled="index === model.length - 1"
           @click="move(index, 1)"
         >
           <span class="icon [--icon-size:20px]" aria-hidden="true">arrow_downward</span>
-        </button>
-        <button type="button" class="icon-btn" aria-label="Remove" @click="remove(index)">
+        </IconButton>
+        <IconButton variant="standard" label="Remove" @click="remove(index)">
           <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
-        </button>
+        </IconButton>
       </div>
 
       <ComponentEditor v-model="model[index]!" />
@@ -86,16 +85,16 @@ function remove(index: number) {
       role="group"
       :aria-label="nested ? 'Add to container' : 'Add'"
     >
-      <button
+      <Button
+        variant="tonal"
+        size="xs"
         v-for="kind in kinds"
         :key="kind.type"
-        type="button"
-        class="btn btn-tonal btn-sm"
         @click="add(kind.type)"
+        ><template #icon
+          ><span class="icon [--icon-size:20px]" aria-hidden="true">add</span></template
+        >{{ kind.label }}</Button
       >
-        <span class="icon [--icon-size:18px]" aria-hidden="true">add</span>
-        {{ kind.label }}
-      </button>
     </div>
   </div>
 </template>

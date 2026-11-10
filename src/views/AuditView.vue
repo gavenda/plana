@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Button, Chip, List, ListItem } from 'tailwind-material3'
 
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
-import FilterChip from '@/components/FilterChip.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -233,16 +233,15 @@ onMounted(() => {
       />
 
       <div class="flex flex-wrap gap-2" role="group" aria-label="Filter by kind">
-        <FilterChip
+        <Chip
           v-for="category in AUDIT_CATEGORIES"
           :key="category.id"
-          :label="category.label"
-          :model-value="isSelected(category.id)"
-          @update:model-value="setSelected(category.id, $event)"
-        />
-        <button v-if="filtering" class="btn btn-text btn-sm" type="button" @click="clearFilters">
-          Clear all
-        </button>
+          type="filter"
+          :selected="isSelected(category.id)"
+          @update:selected="setSelected(category.id, $event)"
+          >{{ category.label }}</Chip
+        >
+        <Button variant="text" size="xs" v-if="filtering" @click="clearFilters">Clear all</Button>
       </div>
     </div>
 
@@ -265,52 +264,63 @@ onMounted(() => {
         </div>
       </template>
       <section v-for="group in days" :key="group.day" :aria-labelledby="`day-${group.day}`">
-        <h2 :id="`day-${group.day}`" class="segmented-header">{{ group.label }}</h2>
+        <h2
+          :id="`day-${group.day}`"
+          class="px-4 pt-3 pb-2 text-title-small text-on-surface-variant"
+        >
+          {{ group.label }}
+        </h2>
 
-        <ul class="segmented-list">
-          <li v-for="{ entry, description } in group.items" :key="entry.id" class="segmented-item">
-            <span
-              class="grid size-10 shrink-0 place-items-center rounded-full"
-              :class="toneContainerClass(description.tone)"
-              aria-hidden="true"
-            >
-              <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
-            </span>
+        <List segmented class="bg-surface-container">
+          <ListItem v-for="{ entry, description } in group.items" :key="entry.id">
+            <template #leading>
+              <span
+                class="grid size-10 shrink-0 place-items-center rounded-full"
+                :class="toneContainerClass(description.tone)"
+                aria-hidden="true"
+              >
+                <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
+              </span>
+            </template>
 
-            <div class="min-w-0 flex-1 py-1">
-              <p class="text-body-large [overflow-wrap:anywhere]">
+            <span class="block py-1">
+              <span class="block [overflow-wrap:anywhere]">
                 <AuditSummary :parts="description.parts" />
-              </p>
-              <p class="text-body-medium text-on-surface-variant">
+              </span>
+              <span class="block text-body-medium text-on-surface-variant">
                 {{ description.label }} · {{ SOURCE_LABEL[entry.source] ?? entry.source }}
-              </p>
-              <div
+              </span>
+              <span
                 v-for="quote in description.quotes ?? []"
                 :key="quote.label"
-                class="mt-2 rounded-lg bg-surface-container-highest px-3 py-2"
+                class="mt-2 block rounded-large bg-surface-container-highest px-3 py-2"
               >
-                <p class="text-label-medium text-on-surface-variant">{{ quote.label }}</p>
-                <p
-                  class="max-h-60 overflow-y-auto text-body-medium [overflow-wrap:anywhere] whitespace-pre-wrap"
+                <span class="block text-label-medium text-on-surface-variant">{{
+                  quote.label
+                }}</span>
+                <span
+                  class="block max-h-60 overflow-y-auto text-body-medium [overflow-wrap:anywhere] whitespace-pre-wrap"
                   v-text="quote.text"
                 />
-              </div>
-            </div>
+              </span>
+            </span>
 
-            <time
-              class="shrink-0 self-start pt-1 text-label-small text-on-surface-variant"
-              :datetime="new Date(entry.createdAt).toISOString()"
-              :title="absoluteTime(entry.createdAt)"
-              >{{ clockTime(entry.createdAt) }}</time
-            >
-          </li>
-        </ul>
+            <template #trailing>
+              <time
+                class="self-start pt-1 text-label-small text-on-surface-variant"
+                :datetime="new Date(entry.createdAt).toISOString()"
+                :title="absoluteTime(entry.createdAt)"
+                >{{ clockTime(entry.createdAt) }}</time
+              >
+            </template>
+          </ListItem>
+        </List>
       </section>
 
       <div v-if="cursor != null" class="flex justify-center pt-2">
-        <button class="btn btn-tonal" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? 'Loading…' : 'Load more' }}
-        </button>
+        <Button variant="tonal" :disabled="loadingMore" @click="loadMore">{{
+          loadingMore ? 'Loading…' : 'Load more'
+        }}</Button>
       </div>
     </StateBlock>
   </div>

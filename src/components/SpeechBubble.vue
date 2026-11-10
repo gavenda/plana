@@ -5,7 +5,7 @@ withDefaults(defineProps<{ tail?: 'start' | 'top' }>(), { tail: 'start' })
 
 <template>
   <p
-    class="relative rounded-lg bg-surface-container-highest px-4 py-3 text-body-large text-on-surface before:absolute before:size-3 before:rotate-45 before:bg-surface-container-highest before:content-['']"
+    class="relative rounded-large bg-surface-container-highest px-4 py-3 text-body-large text-on-surface before:absolute before:size-3 before:rotate-45 before:bg-surface-container-highest before:content-['']"
     :class="
       tail === 'start'
         ? 'before:top-1/2 before:-left-1.5 before:-translate-y-1/2'

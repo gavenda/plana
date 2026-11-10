@@ -31,7 +31,7 @@ const channel = (id: string) => guild.channels.find((candidate) => candidate.id 
     <s v-else-if="node.kind === 'strike'"><DiscordInline :nodes="node.children" /></s>
     <span
       v-else-if="node.kind === 'spoiler'"
-      class="cursor-pointer rounded-xs px-0.5 transition-colors"
+      class="cursor-pointer rounded-extra-small px-0.5 transition-colors"
       :class="
         revealed.has(node)
           ? 'bg-on-surface/12'
@@ -43,7 +43,7 @@ const channel = (id: string) => guild.channels.find((candidate) => candidate.id 
     /></span>
     <code
       v-else-if="node.kind === 'code'"
-      class="rounded-xs bg-surface-container-highest px-1 py-0.5 text-[0.85em]"
+      class="rounded-extra-small bg-surface-container-highest px-1 py-0.5 text-[0.85em]"
       >{{ node.text }}</code
     >
     <a

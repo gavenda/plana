@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Button, Card, Chip, List, ListItem } from 'tailwind-material3'
 
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AppSelect from '@/components/AppSelect.vue'
-import ButtonGroup from '@/components/ButtonGroup.vue'
-import FilterChip from '@/components/FilterChip.vue'
+import ChoiceGroup from '@/components/ChoiceGroup.vue'
+import LinkButton from '@/components/LinkButton.vue'
+import LinkIconButton from '@/components/LinkIconButton.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -247,13 +249,9 @@ const plural = (count: number, one: string, many: string) =>
 <template>
   <div class="flex flex-col gap-4">
     <header class="flex min-h-14 flex-wrap items-center gap-4">
-      <RouterLink
-        to="/activity"
-        class="icon-btn shrink-0 text-on-surface"
-        aria-label="Back to Games & music"
-      >
+      <LinkIconButton to="/activity" label="Back to Games & music" class="text-on-surface">
         <span class="icon" aria-hidden="true">arrow_back</span>
-      </RouterLink>
+      </LinkIconButton>
       <div class="min-w-0 flex-1">
         <h2 class="truncate text-headline-small">Game nights</h2>
         <p class="text-body-medium text-on-surface-variant">
@@ -266,7 +264,7 @@ const plural = (count: number, one: string, many: string) =>
       </div>
       <!-- Left of the info button; on narrow windows, a line of its own under the title. -->
       <div v-if="session.isAdmin" class="shrink-0 max-medium:order-last max-medium:basis-full">
-        <ButtonGroup v-model="tab" label="View" :options="TABS" />
+        <ChoiceGroup v-model="tab" label="View" :options="TABS" />
       </div>
       <RichTooltip
         v-if="tab === 'roles'"
@@ -281,7 +279,12 @@ const plural = (count: number, one: string, many: string) =>
     </header>
 
     <template v-if="tab === 'history'">
-      <div :class="history.data.value?.entries.length === 0 && 'card'">
+      <div
+        :class="
+          history.data.value?.entries.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
+      >
         <StateBlock
           :loading="!history.data.value && !history.error.value"
           :error="history.data.value ? null : history.error.value"
@@ -291,81 +294,79 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="5" leading="art" two-line /></template>
-          <ul v-if="history.data.value" class="segmented-list">
-            <li
+          <List segmented v-if="history.data.value" class="bg-surface-container">
+            <ListItem
               v-for="night in history.data.value.entries"
               :key="night.messageId"
-              class="segmented-item items-start py-3"
+              class="items-start"
             >
-              <img
-                v-if="night.iconUrl"
-                class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                :src="night.iconUrl"
-                alt=""
-                width="40"
-                height="40"
-              />
-              <span
-                v-else
-                class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                aria-hidden="true"
-                ><span class="icon [--icon-size:20px]">sports_esports</span></span
-              >
-              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                <p class="flex min-w-0 items-center gap-2">
+              <template #leading>
+                <span class="flex items-center gap-4">
+                  <img
+                    v-if="night.iconUrl"
+                    class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                    :src="night.iconUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                  <span
+                    v-else
+                    class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                    aria-hidden="true"
+                    ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                  >
+                </span>
+              </template>
+              <span class="flex flex-col gap-0.5">
+                <span class="block items-center gap-2">
                   <span class="truncate text-body-large" :title="night.game">{{ night.game }}</span>
                   <span
-                    class="shrink-0 rounded-sm px-2 py-0.5 text-label-medium"
+                    class="shrink-0 rounded-small px-2 py-0.5 text-label-medium"
                     :class="STATUS[night.status].tone"
                     >{{ STATUS[night.status].label }}</span
                   >
-                </p>
-                <p
-                  class="truncate text-body-small text-on-surface-variant"
+                </span>
+                <span
                   :title="absoluteTime(night.startsAt)"
+                  class="block truncate text-body-small text-on-surface-variant"
                 >
                   {{ nightWhen(night) }}
-                </p>
-                <p v-if="night.host" class="truncate text-body-medium">
+                </span>
+                <span v-if="night.host" class="block truncate text-body-medium">
                   Planned by {{ night.host.displayName }}
-                </p>
-                <p v-if="night.came.length > 0" class="text-body-medium">
+                </span>
+                <span v-if="night.came.length > 0" class="block text-body-medium">
                   <span class="text-on-surface-variant">Came:</span> {{ names(night.came) }}
-                </p>
-                <p
+                </span>
+                <span
                   v-else-if="night.status === 'ended' && night.planned"
-                  class="text-body-medium text-on-surface-variant"
+                  class="block text-body-medium text-on-surface-variant"
                 >
                   Nobody gathered for it.
-                </p>
-                <p
+                </span>
+                <span
                   v-if="nightAnswers(night)"
-                  class="text-body-small text-on-surface-variant"
                   :title="night.joining.length ? `In: ${names(night.joining)}` : undefined"
+                  class="block text-body-small text-on-surface-variant"
                 >
                   {{ nightAnswers(night) }}
-                </p>
-              </div>
-              <a
-                class="icon-btn shrink-0 text-on-surface-variant"
-                :href="night.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Open the post in Discord"
-                title="Open in Discord"
-                ><span class="icon" aria-hidden="true">open_in_new</span></a
-              >
-            </li>
-          </ul>
+                </span>
+              </span>
+              <template #trailing>
+                <RichTooltip
+                  title="Open in Discord"
+                  label="Open the post in Discord"
+                  :href="night.url"
+                  icon="open_in_new"
+                />
+              </template>
+            </ListItem>
+          </List>
           <div v-if="history.data.value?.hasMore" class="flex justify-center pt-3">
-            <button
-              class="btn btn-tonal"
-              type="button"
-              :disabled="loadingMore"
-              @click="showMoreNights"
-            >
-              {{ loadingMore ? 'Loading…' : 'Show more' }}
-            </button>
+            <Button variant="tonal" :disabled="loadingMore" @click="showMoreNights">{{
+              loadingMore ? 'Loading…' : 'Show more'
+            }}</Button>
           </div>
         </StateBlock>
       </div>
@@ -375,8 +376,12 @@ const plural = (count: number, one: string, many: string) =>
       <!-- How game nights are set up, so a role picked here isn't a mystery when nothing happens. -->
       <div
         v-if="settings.loaded"
-        class="card flex flex-wrap items-center gap-x-4 gap-y-2 py-3 pr-3 pl-6"
-        :class="!channelName && 'card-warn'"
+        class="flex flex-wrap items-center gap-x-4 gap-y-2 overflow-hidden rounded-medium py-3 pr-3 pl-6"
+        :class="
+          channelName
+            ? 'bg-surface-container-highest'
+            : 'bg-warning-container text-on-warning-container'
+        "
       >
         <span v-if="channelName" class="shrink-0 icon" aria-hidden="true">campaign</span>
         <p class="min-w-0 flex-1 text-body-medium">
@@ -389,12 +394,9 @@ const plural = (count: number, one: string, many: string) =>
             then.
           </template>
         </p>
-        <RouterLink
-          to="/settings"
-          class="btn btn-text"
-          :class="!channelName && 'text-on-warning-container'"
-          >{{ channelName ? 'Settings' : 'Choose a channel' }}</RouterLink
-        >
+        <LinkButton to="/settings" :variant="channelName ? 'text' : 'inherit'">{{
+          channelName ? 'Settings' : 'Choose a channel'
+        }}</LinkButton>
       </div>
 
       <div class="flex flex-col gap-3 medium:flex-row medium:items-center">
@@ -409,14 +411,19 @@ const plural = (count: number, one: string, many: string) =>
           }}</template>
         </AppSearchBar>
         <div class="flex gap-2">
-          <FilterChip
-            v-model="pingingOnly"
-            :label="`Configured${pingingCount ? ` (${pingingCount})` : ''}`"
-          />
+          <Chip type="filter" v-model:selected="pingingOnly">{{
+            `Configured${pingingCount ? ` (${pingingCount})` : ''}`
+          }}</Chip>
         </div>
       </div>
 
-      <div :class="!loading && matches.length === 0 && 'card'">
+      <div
+        :class="
+          !loading &&
+          matches.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
+      >
         <StateBlock
           :loading="loading"
           :error="games.error.value"
@@ -430,78 +437,78 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="6" leading="art" two-line /></template>
-          <ul class="segmented-list">
-            <li
-              v-for="game in visible"
-              :key="game.name"
-              class="segmented-item grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 py-3 medium:grid-cols-[auto_1fr_16rem]"
-            >
-              <img
-                v-if="game.iconUrl"
-                class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                :src="game.iconUrl"
-                alt=""
-                width="40"
-                height="40"
-              />
-              <span
-                v-else
-                class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                aria-hidden="true"
-                ><span class="icon [--icon-size:20px]">sports_esports</span></span
-              >
-              <div class="min-w-0">
-                <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-                <p class="truncate text-body-small text-on-surface-variant">
+          <List segmented class="bg-surface-container">
+            <ListItem v-for="game in visible" :key="game.name">
+              <template #leading>
+                <img
+                  v-if="game.iconUrl"
+                  class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                  :src="game.iconUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+                <span
+                  v-else
+                  class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                  aria-hidden="true"
+                  ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                >
+              </template>
+              <span class="block py-1">
+                <span class="block truncate text-body-large" :title="game.name">{{
+                  game.name
+                }}</span>
+                <span class="block truncate text-body-small text-on-surface-variant">
                   <template v-if="game.players > 0"
                     >{{ formatDuration(game.ms) }} ·
                     {{ plural(game.players, 'player', 'players') }}</template
                   >
                   <template v-else>No play recorded</template>
-                </p>
-              </div>
-              <!-- A button naming the role; pressing it brings up the picker, already open. -->
-              <div
-                class="col-span-2 flex items-center medium:col-span-1 medium:justify-end"
-                @focusout="closePicker($event, game.name)"
-              >
-                <AppSelect
-                  v-if="picking === game.name"
-                  class="w-full"
-                  :model-value="game.roleId"
-                  label="Ping"
-                  :options="roleOptions"
-                  :disabled="saving.has(game.name)"
-                  @update:model-value="(roleId) => pickRole(game, roleId)"
-                />
-                <button
-                  v-else
-                  type="button"
-                  class="btn btn-tonal btn-sm max-w-full"
-                  :disabled="saving.has(game.name) || guild.roles.length === 0"
-                  :aria-label="`Ping role for ${game.name}: ${game.roleId ? `@${guild.roleName(game.roleId) ?? 'role'}` : 'nobody'}. Change`"
-                  @click="openPicker(game.name, $event)"
+                </span>
+              </span>
+              <template #trailing>
+                <div
+                  class="flex w-44 items-center justify-end medium:w-64"
+                  @focusout="closePicker($event, game.name)"
                 >
-                  <span class="icon [--icon-size:18px]" aria-hidden="true">{{
-                    game.roleId ? 'edit' : 'add'
-                  }}</span>
-                  <span
-                    v-if="game.roleId && roleSwatch(game.roleId)"
-                    class="size-2.5 shrink-0 rounded-full"
-                    :style="{ background: roleSwatch(game.roleId) ?? undefined }"
-                    aria-hidden="true"
+                  <AppSelect
+                    v-if="picking === game.name"
+                    class="w-full"
+                    :model-value="game.roleId"
+                    label="Ping"
+                    :options="roleOptions"
+                    :disabled="saving.has(game.name)"
+                    @update:model-value="(roleId) => pickRole(game, roleId)"
                   />
-                  <span class="truncate">{{
-                    game.roleId ? (guild.roleName(game.roleId) ?? 'Unknown role') : 'Add ping'
-                  }}</span>
-                </button>
-              </div>
-            </li>
-          </ul>
+                  <Button
+                    variant="tonal"
+                    size="xs"
+                    v-else
+                    :disabled="saving.has(game.name) || guild.roles.length === 0"
+                    :aria-label="`Ping role for ${game.name}: ${game.roleId ? `@${guild.roleName(game.roleId) ?? 'role'}` : 'nobody'}. Change`"
+                    @click="openPicker(game.name, $event)"
+                    class="max-w-full"
+                    ><template #icon
+                      ><span class="icon [--icon-size:20px]" aria-hidden="true">{{
+                        game.roleId ? 'edit' : 'add'
+                      }}</span></template
+                    ><span
+                      v-if="game.roleId && roleSwatch(game.roleId)"
+                      class="size-2.5 shrink-0 rounded-full"
+                      :style="{ background: roleSwatch(game.roleId) ?? undefined }"
+                      aria-hidden="true"
+                    />
+                    <span class="truncate">{{
+                      game.roleId ? (guild.roleName(game.roleId) ?? 'Unknown role') : 'Add ping'
+                    }}</span></Button
+                  >
+                </div>
+              </template>
+            </ListItem>
+          </List>
           <div v-if="matches.length > visible.length" class="flex justify-center pt-3">
-            <button class="btn btn-tonal" type="button" @click="shown += PAGE_SIZE">
-              Show more
-            </button>
+            <Button variant="tonal" @click="shown += PAGE_SIZE">Show more</Button>
           </div>
         </StateBlock>
       </div>

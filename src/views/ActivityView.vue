@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Card, Chip, List, ListItem } from 'tailwind-material3'
 
+import LinkButton from '@/components/LinkButton.vue'
 import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
-import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
@@ -312,32 +313,34 @@ const plural = (count: number, one: string, many: string) =>
   <div class="flex flex-col gap-4">
     <div class="flex items-start gap-4">
       <div class="flex flex-1 flex-wrap gap-2" role="group" aria-label="Period">
-        <FilterChip
+        <Chip
           v-for="period in PERIODS"
           :key="period.label"
-          :label="period.label"
-          :model-value="days === period.days"
-          @update:model-value="days = period.days"
-        />
+          type="filter"
+          :selected="days === period.days"
+          @update:selected="days = period.days"
+          >{{ period.label }}</Chip
+        >
       </div>
-      <RouterLink
-        v-if="!session.isViewer"
-        to="/activity/game-nights"
-        class="btn btn-tonal btn-wide"
-      >
+      <LinkButton v-if="!session.isViewer" to="/activity/game-nights" variant="tonal">
         <span class="icon [--icon-size:18px]" aria-hidden="true">celebration</span>
         Game nights
-      </RouterLink>
+      </LinkButton>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-      <div v-for="stat in stats" :key="stat.label" class="card flex flex-col gap-1 px-6 py-5">
+      <Card
+        :padded="false"
+        v-for="stat in stats"
+        :key="stat.label"
+        class="flex flex-col gap-1 px-6 py-5"
+      >
         <span class="text-display-small font-medium">
           <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
           <template v-else>{{ stat.value }}</template>
         </span>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
-      </div>
+      </Card>
     </div>
 
     <section aria-labelledby="activity-live">
@@ -347,7 +350,13 @@ const plural = (count: number, one: string, many: string) =>
           live.length
         }}</span>
       </div>
-      <div :class="!loading && live.length === 0 && 'card'">
+      <div
+        :class="
+          !loading &&
+          live.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
+      >
         <StateBlock
           :loading="loading"
           :error="overview.error.value"
@@ -356,26 +365,28 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
-          <ul class="segmented-list">
-            <li v-for="entry in live" :key="entry.key" class="segmented-item">
-              <img
-                class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                :src="entry.member.avatarUrl"
-                alt=""
-                width="40"
-                height="40"
-              />
-              <div class="min-w-0 flex-1 py-1">
-                <p
-                  class="truncate text-body-large"
+          <List segmented class="bg-surface-container">
+            <ListItem v-for="entry in live" :key="entry.key">
+              <template #leading>
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="entry.member.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+              </template>
+              <span class="block py-1">
+                <span
                   :style="{ color: discordTextColor(entry.member.color) }"
+                  class="block truncate text-body-large"
                 >
                   {{ entry.member.displayName }}
-                </p>
-                <p class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
+                </span>
+                <span class="block items-center gap-1.5 text-body-medium text-on-surface-variant">
                   <img
                     v-if="entry.image"
-                    class="size-4 shrink-0 rounded-xs object-cover"
+                    class="size-4 shrink-0 rounded-extra-small object-cover"
                     :src="entry.image"
                     alt=""
                     width="16"
@@ -388,15 +399,17 @@ const plural = (count: number, one: string, many: string) =>
                     >{{ entry.title
                     }}<template v-if="entry.subtitle"> · {{ entry.subtitle }}</template></span
                   >
-                </p>
-              </div>
-              <span
-                class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
-                :title="`Since ${absoluteTime(entry.since)}`"
-                >{{ relativeTime(entry.since) }}</span
-              >
-            </li>
-          </ul>
+                </span>
+              </span>
+              <template #trailing>
+                <span
+                  class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
+                  :title="`Since ${absoluteTime(entry.since)}`"
+                  >{{ relativeTime(entry.since) }}</span
+                >
+              </template>
+            </ListItem>
+          </List>
         </StateBlock>
       </div>
     </section>
@@ -415,7 +428,7 @@ const plural = (count: number, one: string, many: string) =>
           :error="heatmap.state.error.value"
           compact
         >
-          <template #skeleton><div class="skeleton h-56 rounded-md" /></template>
+          <template #skeleton><div class="skeleton h-56 rounded-medium" /></template>
           <ActivityHeatmap
             v-if="heatmap.state.data.value"
             :kind="heatmap.kind"
@@ -433,7 +446,13 @@ const plural = (count: number, one: string, many: string) =>
         <div class="section-header">
           <h2 id="activity-games" class="text-title-medium">Most played games</h2>
         </div>
-        <div :class="!loading && games.length === 0 && 'card'">
+        <div
+          :class="
+            !loading &&
+            games.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="loading"
             :error="overview.error.value"
@@ -444,64 +463,71 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="text" />
             </template>
-            <ol class="segmented-list">
-              <li v-for="(game, index) in games" :key="game.name" class="segmented-item p-0">
-                <button
-                  type="button"
-                  class="state-layer flex min-h-14 w-full min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left transition-colors duration-200 ease-effects-fast"
-                  :class="
-                    game.name === chosenGame && 'bg-secondary-container text-on-secondary-container'
-                  "
-                  :aria-current="game.name === chosenGame ? 'true' : undefined"
-                  @click="chooseGame(game.name)"
-                >
-                  <span
-                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="rankClass(index)"
-                    >#{{ index + 1 }}</span
-                  >
-                  <img
-                    v-if="game.iconUrl"
-                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                    :src="game.iconUrl"
-                    alt=""
-                    width="40"
-                    height="40"
-                  />
-                  <span
-                    v-else
-                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                    aria-hidden="true"
-                    ><span class="icon [--icon-size:20px]">sports_esports</span></span
-                  >
-                  <div class="min-w-0 flex-1 py-1">
-                    <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-                    <!-- As tall as a line of body-small (16px), like a track's artist line, so
-                         both lists' rows match; the 20px avatars overhang it by 2px each way. -->
-                    <div class="flex h-4 items-center gap-2">
-                      <span class="flex -space-x-1.5">
-                        <img
-                          v-for="player in game.top"
-                          :key="player.id"
-                          class="size-5 rounded-full bg-surface-container-highest object-cover ring-2 ring-surface-container"
-                          :src="player.avatarUrl"
-                          :alt="player.displayName"
-                          :title="`${player.displayName} · ${formatDuration(player.ms)}`"
-                          width="20"
-                          height="20"
-                        />
-                      </span>
-                      <span class="truncate text-body-small text-on-surface-variant">{{
-                        plural(game.players, 'player', 'players')
-                      }}</span>
-                    </div>
-                  </div>
+            <List segmented class="bg-surface-container">
+              <ListItem
+                v-for="(game, index) in games"
+                :key="game.name"
+                as="button"
+                :class="
+                  game.name === chosenGame && 'bg-secondary-container text-on-secondary-container'
+                "
+                :aria-current="game.name === chosenGame ? 'true' : undefined"
+                @click="chooseGame(game.name)"
+              >
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
+                    >
+                    <img
+                      v-if="game.iconUrl"
+                      class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                      :src="game.iconUrl"
+                      alt=""
+                      width="40"
+                      height="40"
+                    />
+                    <span
+                      v-else
+                      class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                      aria-hidden="true"
+                      ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                    >
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span :title="game.name" class="block truncate text-body-large">{{
+                    game.name
+                  }}</span>
+                  <!-- As tall as a line of body-small (16px), like a track's artist line, so
+                                         both lists' rows match; the 20px avatars overhang it by 2px each way. -->
+                  <span class="block h-4 items-center gap-2">
+                    <span class="flex -space-x-1.5">
+                      <img
+                        v-for="player in game.top"
+                        :key="player.id"
+                        class="size-5 rounded-full bg-surface-container-highest object-cover ring-2 ring-surface-container"
+                        :src="player.avatarUrl"
+                        :alt="player.displayName"
+                        :title="`${player.displayName} · ${formatDuration(player.ms)}`"
+                        width="20"
+                        height="20"
+                      />
+                    </span>
+                    <span class="truncate text-body-small text-on-surface-variant">{{
+                      plural(game.players, 'player', 'players')
+                    }}</span>
+                  </span>
+                </span>
+                <template #trailing>
                   <span class="shrink-0 text-body-large tabular-nums">{{
                     formatDuration(game.ms)
                   }}</span>
-                </button>
-              </li>
-            </ol>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -510,7 +536,13 @@ const plural = (count: number, one: string, many: string) =>
         <div class="section-header">
           <h2 id="activity-tracks" class="text-title-medium">Most played on Spotify</h2>
         </div>
-        <div :class="!loading && tracks.length === 0 && 'card'">
+        <div
+          :class="
+            !loading &&
+            tracks.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="loading"
             :error="overview.error.value"
@@ -521,18 +553,16 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
             </template>
-            <ol class="segmented-list">
-              <li
+            <List segmented class="bg-surface-container">
+              <!-- The row picks the track; the Spotify link beside it is its own control. -->
+              <ListItem
                 v-for="(track, index) in tracks"
                 :key="track.id"
-                class="segmented-item state-layer gap-2 p-0 pr-4 transition-colors duration-200 ease-effects-fast"
-                :class="
-                  track.id === chosenTrack && 'bg-secondary-container text-on-secondary-container'
-                "
+                :selected="track.id === chosenTrack"
               >
                 <button
                   type="button"
-                  class="flex min-h-14 min-w-0 flex-1 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left"
+                  class="relative -my-2.5 -ms-4 flex min-h-14 w-[calc(100%+1rem)] min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] py-2 ps-4 text-left before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-current before:opacity-0 before:transition-opacity hover:before:opacity-8 focus:outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-secondary focus-visible:outline-solid"
                   :aria-current="track.id === chosenTrack ? 'true' : undefined"
                   @click="chooseTrack(track.id)"
                 >
@@ -543,7 +573,7 @@ const plural = (count: number, one: string, many: string) =>
                   >
                   <img
                     v-if="track.artUrl"
-                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
+                    class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
                     :src="track.artUrl"
                     :alt="track.album ?? ''"
                     :title="track.album ?? undefined"
@@ -552,7 +582,7 @@ const plural = (count: number, one: string, many: string) =>
                   />
                   <span
                     v-else
-                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+                    class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
                     aria-hidden="true"
                     ><span class="icon [--icon-size:20px]">music_note</span></span
                   >
@@ -571,14 +601,16 @@ const plural = (count: number, one: string, many: string) =>
                     }}</span>
                   </div>
                 </button>
-                <RichTooltip
-                  title="Open in Spotify"
-                  :href="spotifyUrl(track.id)"
-                  icon="open_in_new"
-                  narrow
-                />
-              </li>
-            </ol>
+                <template #trailing>
+                  <RichTooltip
+                    title="Open in Spotify"
+                    :href="spotifyUrl(track.id)"
+                    icon="open_in_new"
+                    narrow
+                  />
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -596,7 +628,13 @@ const plural = (count: number, one: string, many: string) =>
             />
           </div>
         </div>
-        <div :class="!vivyLoading && vivyTracks.length === 0 && 'card'">
+        <div
+          :class="
+            !vivyLoading &&
+            vivyTracks.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="vivyLoading"
             :error="vivy.error.value"
@@ -607,55 +645,64 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" rank two-line trailing="stack" />
             </template>
-            <ol class="segmented-list">
-              <li
+            <List segmented class="bg-surface-container">
+              <ListItem
                 v-for="(track, index) in vivyTracks"
                 :key="track.id"
-                class="segmented-item gap-4"
                 :class="track.url && 'pr-2'"
               >
-                <span
-                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="rankClass(index)"
-                  >#{{ index + 1 }}</span
-                >
-                <img
-                  v-if="track.artUrl"
-                  class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                  :src="track.artUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-                <span
-                  v-else
-                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                  aria-hidden="true"
-                  ><span class="icon [--icon-size:20px]">music_note</span></span
-                >
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
-                  <p class="truncate text-body-small text-on-surface-variant">
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
+                    >
+                    <img
+                      v-if="track.artUrl"
+                      class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                      :src="track.artUrl"
+                      alt=""
+                      width="40"
+                      height="40"
+                    />
+                    <span
+                      v-else
+                      class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                      aria-hidden="true"
+                      ><span class="icon [--icon-size:20px]">music_note</span></span
+                    >
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span :title="track.title" class="block truncate text-body-large">{{
+                    track.title
+                  }}</span>
+                  <span class="block truncate text-body-small text-on-surface-variant">
                     {{ track.artist ?? 'Unknown artist' }}
-                  </p>
-                </div>
-                <div class="flex shrink-0 flex-col items-end">
-                  <span class="text-body-large tabular-nums">{{
-                    plural(track.plays, 'play', 'plays')
-                  }}</span>
-                  <span v-if="track.ms > 0" class="text-label-small text-on-surface-variant">{{
-                    formatDuration(track.ms)
-                  }}</span>
-                </div>
-                <RichTooltip
-                  v-if="track.url"
-                  title="Open track"
-                  :href="track.url"
-                  icon="open_in_new"
-                  narrow
-                />
-              </li>
-            </ol>
+                  </span>
+                </span>
+                <template #trailing>
+                  <span class="flex items-center gap-4">
+                    <div class="flex shrink-0 flex-col items-end">
+                      <span class="text-body-large tabular-nums">{{
+                        plural(track.plays, 'play', 'plays')
+                      }}</span>
+                      <span v-if="track.ms > 0" class="text-label-small text-on-surface-variant">{{
+                        formatDuration(track.ms)
+                      }}</span>
+                    </div>
+                    <RichTooltip
+                      v-if="track.url"
+                      title="Open track"
+                      :href="track.url"
+                      icon="open_in_new"
+                      narrow
+                    />
+                  </span>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -669,7 +716,13 @@ const plural = (count: number, one: string, many: string) =>
             >{{ vivyData.totals.requesters }}</span
           >
         </div>
-        <div :class="!vivyLoading && vivyRequesters.length === 0 && 'card'">
+        <div
+          :class="
+            !vivyLoading &&
+            vivyRequesters.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="vivyLoading"
             :error="vivy.error.value"
@@ -678,40 +731,42 @@ const plural = (count: number, one: string, many: string) =>
             compact
           >
             <template #skeleton><SkeletonList :rows="5" rank two-line trailing="text" /></template>
-            <ol class="segmented-list">
-              <li
-                v-for="(requester, index) in vivyRequesters"
-                :key="requester.id"
-                class="segmented-item"
-              >
-                <span
-                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="rankClass(index)"
-                  >#{{ index + 1 }}</span
-                >
-                <img
-                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                  :src="requester.avatarUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-                <div class="min-w-0 flex-1 py-1">
-                  <p
-                    class="truncate text-body-large"
+            <List segmented class="bg-surface-container">
+              <ListItem v-for="(requester, index) in vivyRequesters" :key="requester.id">
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
+                    >
+                    <img
+                      class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                      :src="requester.avatarUrl"
+                      alt=""
+                      width="40"
+                      height="40"
+                    />
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span
                     :style="{ color: discordTextColor(requester.color) }"
+                    class="block truncate text-body-large"
                   >
                     {{ requester.displayName }}
-                  </p>
-                  <p class="truncate font-mono text-body-small text-on-surface-variant">
+                  </span>
+                  <span class="block truncate font-mono text-body-small text-on-surface-variant">
                     {{ requester.username }}
-                  </p>
-                </div>
-                <span class="shrink-0 text-body-large tabular-nums">{{
-                  plural(requester.requests, 'request', 'requests')
-                }}</span>
-              </li>
-            </ol>
+                  </span>
+                </span>
+                <template #trailing>
+                  <span class="shrink-0 text-body-large tabular-nums">{{
+                    plural(requester.requests, 'request', 'requests')
+                  }}</span>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -721,7 +776,7 @@ const plural = (count: number, one: string, many: string) =>
       <template #leading>
         <img
           v-if="sheetIcon"
-          class="size-14 shrink-0 rounded-md bg-surface-container-highest object-cover"
+          class="size-14 shrink-0 rounded-medium bg-surface-container-highest object-cover"
           :src="sheetIcon"
           alt=""
           width="56"
@@ -729,7 +784,7 @@ const plural = (count: number, one: string, many: string) =>
         />
         <span
           v-else
-          class="grid size-14 shrink-0 place-items-center rounded-md bg-surface-container-highest text-on-surface-variant"
+          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container-highest text-on-surface-variant"
           aria-hidden="true"
           ><span class="icon">sports_esports</span></span
         >
@@ -754,46 +809,52 @@ const plural = (count: number, one: string, many: string) =>
             item-class="bg-surface-container-high"
           />
         </template>
-        <ol class="segmented-list">
-          <li
+        <List segmented class="bg-surface-container">
+          <ListItem
             v-for="(player, index) in detail?.players"
             :key="player.id"
-            class="segmented-item bg-surface-container-high"
+            class="bg-surface-container-high"
           >
-            <span
-              class="w-7 shrink-0 text-center text-label-large tabular-nums"
-              :class="rankClass(index)"
-              >#{{ index + 1 }}</span
-            >
-            <img
-              class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-              :src="player.avatarUrl"
-              alt=""
-              width="40"
-              height="40"
-            />
-            <div class="min-w-0 flex-1 py-1">
-              <p
-                class="truncate text-body-large"
+            <template #leading>
+              <span class="flex items-center gap-4">
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="rankClass(index)"
+                  >#{{ index + 1 }}</span
+                >
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="player.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+              </span>
+            </template>
+            <span class="block py-1">
+              <span
                 :style="{ color: discordTextColor(player.color) }"
+                class="block truncate text-body-large"
               >
                 {{ player.displayName }}
-              </p>
-              <p class="truncate font-mono text-body-small text-on-surface-variant">
+              </span>
+              <span class="block truncate font-mono text-body-small text-on-surface-variant">
                 {{ player.username }}
-              </p>
-            </div>
-            <div class="flex shrink-0 flex-col items-end">
-              <span class="text-body-large tabular-nums">{{ formatDuration(player.ms) }}</span>
-              <span
-                v-if="player.playingSince != null"
-                class="text-label-small text-tertiary"
-                :title="`Since ${absoluteTime(player.playingSince)}`"
-                >Playing now</span
-              >
-            </div>
-          </li>
-        </ol>
+              </span>
+            </span>
+            <template #trailing>
+              <div class="flex shrink-0 flex-col items-end">
+                <span class="text-body-large tabular-nums">{{ formatDuration(player.ms) }}</span>
+                <span
+                  v-if="player.playingSince != null"
+                  class="text-label-small text-tertiary"
+                  :title="`Since ${absoluteTime(player.playingSince)}`"
+                  >Playing now</span
+                >
+              </div>
+            </template>
+          </ListItem>
+        </List>
       </StateBlock>
     </SupportingSheet>
 
@@ -801,7 +862,7 @@ const plural = (count: number, one: string, many: string) =>
       <template #leading>
         <img
           v-if="sheetTrack?.artUrl"
-          class="size-14 shrink-0 rounded-md bg-surface-container-highest object-cover"
+          class="size-14 shrink-0 rounded-medium bg-surface-container-highest object-cover"
           :src="sheetTrack.artUrl"
           alt=""
           width="56"
@@ -809,7 +870,7 @@ const plural = (count: number, one: string, many: string) =>
         />
         <span
           v-else
-          class="grid size-14 shrink-0 place-items-center rounded-md bg-surface-container-highest text-on-surface-variant"
+          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container-highest text-on-surface-variant"
           aria-hidden="true"
           ><span class="icon">music_note</span></span
         >
@@ -834,48 +895,54 @@ const plural = (count: number, one: string, many: string) =>
             item-class="bg-surface-container-high"
           />
         </template>
-        <ol class="segmented-list">
-          <li
+        <List segmented class="bg-surface-container">
+          <ListItem
             v-for="(listener, index) in trackDetail?.listeners"
             :key="listener.id"
-            class="segmented-item bg-surface-container-high"
+            class="bg-surface-container-high"
           >
-            <span
-              class="w-7 shrink-0 text-center text-label-large tabular-nums"
-              :class="rankClass(index)"
-              >#{{ index + 1 }}</span
-            >
-            <img
-              class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-              :src="listener.avatarUrl"
-              alt=""
-              width="40"
-              height="40"
-            />
-            <div class="min-w-0 flex-1 py-1">
-              <p
-                class="truncate text-body-large"
+            <template #leading>
+              <span class="flex items-center gap-4">
+                <span
+                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                  :class="rankClass(index)"
+                  >#{{ index + 1 }}</span
+                >
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="listener.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+              </span>
+            </template>
+            <span class="block py-1">
+              <span
                 :style="{ color: discordTextColor(listener.color) }"
+                class="block truncate text-body-large"
               >
                 {{ listener.displayName }}
-              </p>
-              <p class="truncate font-mono text-body-small text-on-surface-variant">
+              </span>
+              <span class="block truncate font-mono text-body-small text-on-surface-variant">
                 {{ listener.username }}
-              </p>
-            </div>
-            <div class="flex shrink-0 flex-col items-end">
-              <span class="text-body-large tabular-nums">{{
-                plural(listener.plays, 'play', 'plays')
-              }}</span>
-              <span
-                v-if="listener.listeningSince != null"
-                class="text-label-small text-tertiary"
-                :title="`Since ${absoluteTime(listener.listeningSince)}`"
-                >Listening now</span
-              >
-            </div>
-          </li>
-        </ol>
+              </span>
+            </span>
+            <template #trailing>
+              <div class="flex shrink-0 flex-col items-end">
+                <span class="text-body-large tabular-nums">{{
+                  plural(listener.plays, 'play', 'plays')
+                }}</span>
+                <span
+                  v-if="listener.listeningSince != null"
+                  class="text-label-small text-tertiary"
+                  :title="`Since ${absoluteTime(listener.listeningSince)}`"
+                  >Listening now</span
+                >
+              </div>
+            </template>
+          </ListItem>
+        </List>
       </StateBlock>
     </SupportingSheet>
   </div>

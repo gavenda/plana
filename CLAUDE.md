@@ -89,6 +89,19 @@ comm -23 \
 It prints nothing when every icon is listed. It can't see names returned by functions (such
 as `auditIcon`), so check those by hand.
 
+## Dashboard components come from tailwind-material3
+
+Buttons, cards, lists, fields, chips, dialogs, sheets, the snackbar and the rail are
+[tailwind-material3](https://github.com/gavenda/tailwind-material3)'s, installed from GitHub
+(`bun update tailwind-material3` pulls its latest commit). Don't hand-roll one in `main.css`;
+see the Components section of BRANDING.md for which to use and Plana's own wrappers.
+
+- Its components use Tailwind's default radii (`rounded-lg`, `rounded-2xl`), so Plana's markup
+  uses the M3-named ones instead: `rounded-small`, `rounded-medium`, `rounded-large`…
+- vue-tsc loses the template's scope after a static attribute containing `//` on a component
+  (`placeholder="https://"`, `href="https://…"`), reporting "Cannot find name" on later lines.
+  Put the URL in a script constant and bind it.
+
 ## Charts
 
 Every chart is drawn with Chart.js; don't hand-roll SVG charts. See `TrendChart.vue` (line),

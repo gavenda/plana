@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, shallowRef } from 'vue'
+import { Card, Chip } from 'tailwind-material3'
 
 import AppSearchBar from '@/components/AppSearchBar.vue'
-import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { apiFetch } from '@/lib/api'
@@ -125,7 +125,7 @@ async function copyShown() {
       </div>
     </div>
 
-    <div class="card card-body flex flex-col gap-4">
+    <Card :padded="false" class="flex flex-col gap-4 p-6">
       <AppSearchBar v-model="query" placeholder="Search the log" label="Search the log">
         <template v-if="query" #trailing>
           <span class="text-body-small">{{ visible.length }}</span>
@@ -133,12 +133,13 @@ async function copyShown() {
       </AppSearchBar>
 
       <div class="flex flex-wrap gap-2" role="group" aria-label="Levels">
-        <FilterChip
+        <Chip
           v-for="filter in LOG_FILTERS"
           :key="filter.id"
-          v-model="shown[filter.id]!"
-          :label="filter.label"
-        />
+          type="filter"
+          v-model:selected="shown[filter.id]!"
+          >{{ filter.label }}</Chip
+        >
       </div>
 
       <StateBlock :loading="!data && loading" :error="data ? null : error" :retry="load">
@@ -156,7 +157,7 @@ async function copyShown() {
         </p>
         <ol
           v-else
-          class="max-h-[32rem] overflow-y-auto rounded-sm bg-surface-container-highest py-2 font-mono text-body-small"
+          class="max-h-[32rem] overflow-y-auto rounded-small bg-surface-container-highest py-2 font-mono text-body-small"
           aria-live="off"
         >
           <li v-for="entry in visible" :key="entry.id">
@@ -190,7 +191,7 @@ async function copyShown() {
             </component>
             <pre
               v-if="entry.detail && expanded.has(entry.id)"
-              class="mx-4 mb-2 overflow-x-auto rounded-xs bg-surface-container px-3 py-2 text-on-surface-variant"
+              class="mx-4 mb-2 overflow-x-auto rounded-extra-small bg-surface-container px-3 py-2 text-on-surface-variant"
               >{{ entry.detail }}</pre>
           </li>
         </ol>
@@ -199,6 +200,6 @@ async function copyShown() {
       <p v-if="paused" class="supporting-text px-0 text-warning">
         Paused. New lines are held until you resume.
       </p>
-    </div>
+    </Card>
   </section>
 </template>

@@ -84,20 +84,18 @@ Her [wiki page](https://bluearchive.wiki/wiki/Plana) gives the facts, her
   Tailwind variant, so it is correct on the first server-rendered paint.
 - Don't add compact (phone) layouts, bottom navigation bars, or navigation drawers.
 - **Navigation is a navigation rail** ([`AppNavigationRail.vue`](src/components/AppNavigationRail.vue),
-  [`RailItem.vue`](src/components/RailItem.vue)), built the way Yuuka's is: slim (96dp, icon
-  over label) by default, and open (icon beside label) from the menu button, as wide as its
-  content needs between 220 and 360dp. Both states are one structure that morphs (see
-  [Motion](#motion)). The slim rail shows only the everyday destinations (Overview, Triage,
-  Audit log); the open rail grows the rest in between them, "Sign out" under the destinations and the server and
-  account (avatar, display name, username) at its foot, as a segmented list. From 840px it pushes the page aside; below
-  that it floats over the page behind a scrim and closes after a choice. The choice is
+  on tailwind-material3's `NavigationRail`, `NavigationItem` and `NavigationRailMenuButton`):
+  collapsed (96dp, icon over label) by default, and expanded (icon beside label) from the menu
+  button, as wide as its content needs between 220 and 360dp. The collapsed rail shows only the
+  everyday destinations (Overview, Triage, Audit log); the expanded rail adds the rest, "Sign
+  out" under the destinations and a card with the server and account (avatar, display name,
+  username) at its foot. From 840px it pushes the page aside; below that it is the library's
+  modal rail, floating over the page behind a scrim, and closes after a choice. The choice is
   remembered per browser, and only restored where it docks.
-- **A page's main action is a FAB in the rail**, under the menu button, as in M3's rail: a
-  56dp FAB (`primary-container`, `rounded-lg`, `shadow-level1`) in the slim rail that
-  stretches into an extended FAB, its label beside the icon, in the open one. Its icon stays
-  on the destinations' 36px line in both. A route names it (`meta.fab`: label and icon) and
-  the page gives it its action (`useRailFab` in `src/lib/rail.ts`); it grows in and out
-  between pages. Only Birthdays has one, "Add birthday", which opens the birthday dialog.
+- **A page's main action is a FAB in the rail**, under the menu button, as in M3's rail: the
+  library's `Fab` (`primary-container`), a 56dp FAB in the collapsed rail that extends, its
+  label beside the icon, in the expanded one. A route names it (`meta.fab`: label and icon)
+  and the page gives it its action (`useRailFab` in `src/lib/rail.ts`). Only Birthdays has one, "Add birthday", which opens the birthday dialog.
 - **There is no top app bar.** The rail shows where you are, so each page has a heading for
   screen readers only. Overview is the exception: her greeting is its visible heading, with
   the server's name and member count under it.
@@ -150,12 +148,12 @@ inputs when one changes, never edited one at a time. The custom `success-*` and
 | Use                                    | Roles                                                                |
 | -------------------------------------- | -------------------------------------------------------------------- |
 | Page background, rail                  | `surface` / `on-surface`                                             |
-| Open rail floating over the page       | `surface-container`, `shadow-level2`, a 32% `scrim` behind           |
-| Server and account in the open rail    | `surface-container-highest`                                          |
-| Cards                                  | `surface-container` (filled card)                                    |
-| Segmented list items                   | `surface-container`                                                  |
+| Open rail floating over the page       | `surface-container`, `shadow-elevation-2`, a 32% `scrim` behind           |
+| Server and account in the open rail    | `surface-container-highest` (a filled card)                          |
+| Cards                                  | `surface-container-highest` (the library's filled card)              |
+| Segmented lists                        | items on `surface`, 2dp apart on a `surface-container` group         |
 | Avatar placeholders                    | `surface-container-highest`                                          |
-| Sign-in and 404 panels                 | `surface-container-low`, `shadow-level1` (`.card-elevated`)          |
+| Sign-in and 404 panels                 | `surface-container-low`, `shadow-elevation-1` (an elevated `Card`)   |
 | Dialogs                                | `surface-container-high`                                             |
 | Secondary text, icons, list headers    | `on-surface-variant`                                                 |
 | Field borders                          | `outline`; dividers use `outline-variant`                            |
@@ -223,7 +221,7 @@ size; the whole portrait is 9/7 of that wide and 19/14 of it tall, to make room 
 hidden from screen readers (`aria-hidden`), since the words beside her say what the screen has
 to.
 
-`PlanaSays` puts her portrait beside a speech bubble (`SpeechBubble`): a `rounded-lg`
+`PlanaSays` puts her portrait beside a speech bubble (`SpeechBubble`): a `rounded-large`
 container in `surface-container-highest` with a tail towards her, `text-body-large`.
 Her line goes in the bubble; anything the reader has to act on goes outside it, in plain
 text or a button.
@@ -397,7 +395,7 @@ them as `src/assets/plana/scene-look.webp`, `scene-raise.webp` and `scene-scan.w
 (1600px wide).
 
 - **Where.** The sign-in page only, from the _large_ window class up. The frames fill the
-  left of the window, inset 24px and in `rounded-3xl`, and the panel and Schale's emblem
+  left of the window, inset 24px and in `rounded-extra-extra-large`, and the panel and Schale's emblem
   move to a column on the right (`--spacing-scene-panel`). Below _large_ the scene is
   hidden and the page is the centred panel over the backdrop, as on 404.
 - **At rest** she is on `look`, whatever the panel says, sign-in failures included. The
@@ -414,19 +412,19 @@ them as `src/assets/plana/scene-look.webp`, `scene-raise.webp` and `scene-scan.w
 
 ## Dialogs
 
-Dialogs are M3 basic dialogs (`AppDialog`, a native `<dialog>` for focus trapping and
-Escape): `rounded-xl` on `surface-container-high`, `shadow-level3`, a `scrim` at 32%,
-280–560dp wide, headline `text-headline-small`, supporting text `text-body-medium` in
-`on-surface-variant`, text buttons at the end. It opens on `ease-spatial` (scale from 90%
-and fade) and closes on `ease-effects`.
+Dialogs are tailwind-material3's basic `Dialog` (a native `<dialog>` for focus trapping and
+Escape): 28dp corners on `surface-container-high`, `shadow-elevation-3`, a `scrim` at 32%,
+280–560dp wide, the `#headline` slot in `text-headline-small`, content `text-body-medium` in
+`on-surface-variant`, text buttons in `#actions` at the end. It opens and closes on the
+library's spring motion.
 
 **A form that isn't the page's whole purpose goes in a dialog**: Birthdays' add and change
 form opens from the rail's FAB and each row's Edit button, with text buttons (Cancel ·
 Save). A failed save closes the dialog, so its snackbar can be reached, and the snackbar's
 "Try again" reopens it on the same answers.
 
-**A confirmation dialog shows her in the hero slot**, above a centred headline, as M3's
-hero icon. A dialog that holds a form or a list has no hero and no face. **Never use
+**A confirmation dialog shows her portrait** at the top of its content, centred with the
+text under it (the library's `#icon` slot is a 24dp icon, too small for her). A dialog that holds a form or a list has no hero and no face. **Never use
 `window.confirm`**: like a native `<select>`, the browser draws it.
 
 | Dialog                        | Mood        | Headline                       | Supporting text                                             | Buttons         |
@@ -442,12 +440,12 @@ at the person deciding, not to persuade them.
 ## Snackbar
 
 The result of an action, success or failure, is an M3 snackbar, never an inline banner.
-`AppSnackbar` sits once in the shell; a view calls `useSnackbar()` from
+`AppSnackbar` (tailwind-material3's `Snackbar`) sits once in the shell; a view calls `useSnackbar()` from
 [`src/lib/snackbar.ts`](src/lib/snackbar.ts): `show(text, { action })` for what happened,
 `showError(cause, fallback)` for why it failed.
 
-- `inverse-surface` with `inverse-on-surface` text in `text-body-medium`, `rounded-xs`,
-  `shadow-level3`, 344–672dp wide, centred 24px above the foot of the page beside the rail.
+- `inverse-surface` with `inverse-on-surface` text in `text-body-medium`, 4dp corners,
+  `shadow-elevation-3`, up to 672dp wide, centred at the foot of the window.
 - At most one action, a text button in `inverse-primary` ("Open in Discord"). An error
   adds a close icon button.
 - One at a time: a new message replaces the one showing. It leaves after 4s, or 8s with an
@@ -473,25 +471,28 @@ weight (`font-medium`) rather than inventing a size.
 
 ## Shape
 
-The M3 shape scale replaces Tailwind's default radii:
+The M3 shape scale, as utilities named after its tokens. Tailwind's own sizes (`rounded-lg`,
+`rounded-2xl`…) keep their defaults, which tailwind-material3's components use, so Plana's own
+markup uses the names below instead:
 
 | Utility                 | M3 token          | Size            | Used for                                                                                  |
 | ----------------------- | ----------------- | --------------- | ----------------------------------------------------------------------------------------- |
-| `rounded-xs`            | extra small       | 4px             | text fields, menu items                                                                   |
-| `rounded-sm`            | small             | 8px             | pressed buttons and icon buttons                                                          |
-| `rounded-md`            | medium            | 12px            | cards, stat tiles, sign-in and 404 panels, pressed medium buttons, selected menu item     |
-| `rounded-lg`            | large             | 16px            | menus, speech bubbles, segmented list ends                                                |
-| `rounded-xl`            | extra large       | 28px            | dialogs                                                                                   |
-| `rounded-3xl`           | extra extra large | 48px            | the sign-in scene                                                                         |
+| `rounded-extra-small`            | extra small       | 4px             | text fields, menu items                                                                   |
+| `rounded-small`            | small             | 8px             | pressed buttons and icon buttons                                                          |
+| `rounded-medium`            | medium            | 12px            | cards, stat tiles, sign-in and 404 panels, pressed medium buttons, selected menu item     |
+| `rounded-large`            | large             | 16px            | menus, speech bubbles, segmented list ends                                                |
+| `rounded-extra-large`            | extra large       | 28px            | dialogs                                                                                   |
+| `rounded-extra-extra-large`           | extra extra large | 48px            | the sign-in scene                                                                         |
 | `rounded-full`          | full              | —               | rail indicators, avatars, the logo                                                        |
-| `rounded-full-<height>` | full              | half the height | anything that morphs from round: buttons at rest (32, 40, 56), date picker cells (36, 40) |
+| `rounded-full-<height>` | full              | half the height | Plana's own shapes that morph from round: date picker cells (36, 40), the sign-in button (56) |
 
 Her portrait's badge is the one shape outside this scale: M3 Expressive's 9-sided cookie
 (see [Plana's portraits](#planas-portraits)).
 
-**Shape morphing** is the Expressive signature: buttons are pill-shaped at rest and
-square off to `rounded-sm` while pressed (`rounded-md` for the 56px `.btn-md`). Cards don't
-morph: a clickable stat tile lifts to `shadow-level1` on hover instead. Animate radius changes on the spatial spring.
+**Shape morphing** is the Expressive signature: the library's buttons are pill-shaped at
+rest and square off while pressed, and list items round further on hover and focus. Cards
+don't morph: a clickable stat tile (an interactive `Card`) lifts to `shadow-elevation-1` on
+hover instead.
 
 A shape that morphs from round takes `rounded-full-<height>`, never `rounded-full`.
 Tailwind's `rounded-full` is an infinite radius, which can't be animated: a press holds
@@ -500,7 +501,9 @@ round and then snaps square, and a release jumps straight back. A new height get
 
 ## Motion
 
-Expressive springs, approximated as cubic-bézier curves (`ease-*` utilities):
+The components move on tailwind-material3's Expressive springs (`ease-spring-*`, with
+`duration-(--duration-spring-*)`, from its theme). Plana's own markup uses these curves
+(`ease-*` utilities, in `main.css`):
 
 | Utility             | Duration | Use                                       |
 | ------------------- | -------- | ----------------------------------------- |
@@ -511,14 +514,8 @@ Expressive springs, approximated as cubic-bézier curves (`ease-*` utilities):
 | `ease-effects`      | 200ms    | color changes, icon fill, dialogs closing |
 | `ease-effects-slow` | 300ms    | fades                                     |
 
-The navigation rail is the exception, and moves as Yuuka's does: M3's emphasized decelerate
-curve over 300ms (`ease-emphasized-decelerate`) for the rail's width, the page moving aside,
-and every item's pill, icon and label, so they all land together without overshoot. Things
-that come and go with the open rail (the name, the menu glyph, the destinations the slim rail
-leaves out, "Sign out", the account card)
-fade on `ease-standard`, 150ms out and 200ms in after a 100ms beat; groups grow from zero
-height rather than appear. The scrim fades in on `ease-standard-decelerate` and out on
-`ease-standard-accelerate`. The rules live under "navigation rail" in `main.css`.
+The navigation rail's expand and collapse is the library's: the rail widens on the default
+spatial spring, indicators grow to wrap icon and label, and labels cross-fade.
 
 Spatial curves overshoot (they move and resize things); effects curves never overshoot
 (they change color and opacity). `prefers-reduced-motion` turns transitions off. Her
@@ -526,14 +523,15 @@ portrait never moves on its own: no bobbing, blinking or idle animation.
 
 ## Elevation
 
-`shadow-level1` to `shadow-level3`. In the dark scheme, tone does most of the work: lift
+`shadow-elevation-1` to `shadow-elevation-3`. In the dark scheme, tone does most of the work: lift
 a surface by moving up a `surface-container-*` step first, and add a shadow only for
 hovered filled/tonal buttons, floating panels and dialogs.
 
 ## Interaction
 
-- **State layers** (`state-layer` utility): an overlay in the content color at 8% on
-  hover and 10% on focus or press. Every clickable surface gets one.
+- **State layers**: an overlay in the content color at 8% on hover and 10% on focus, with a
+  ripple on press. The library's components have their own; Plana's own clickable surfaces
+  (calendar days, the menu's options) use the `state-layer` utility.
 - **Focus**: a 3px `secondary` outline, offset 2px.
 - **Icons**: Material Symbols Rounded, outlined by default, `icon-filled` for the
   selected state. Size with `[--icon-size:20px]`. The font is subset to the icons in use,
@@ -541,34 +539,49 @@ hovered filled/tonal buttons, floating panels and dialogs.
 
 ## Components
 
-Shared components in `main.css`, named after their M3 counterparts:
+The M3 components are [tailwind-material3](https://github.com/gavenda/tailwind-material3),
+installed from GitHub and imported by name (`import { Button } from 'tailwind-material3'`).
+Its slots take Plana's Material Symbols spans as icons (`<span class="icon">add</span>`).
 
-| Class                                                                   | M3 component                                                                                                                                                                                                                                                                                                                                                       |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.btn` + `.btn-filled` / `.btn-tonal` / `.btn-text`, `.btn-sm`          | Buttons (small, and extra small with `.btn-sm`)                                                                                                                                                                                                                                                                                                                    |
-| `.icon-btn` + `.icon-btn-tonal`, `.icon-btn-danger`, `.icon-btn-narrow` | Icon button (standard or tonal; default or narrow width). Row actions in a list are narrow tonal; one that deletes or removes adds `.icon-btn-danger` for the error colours.                                                                                                                                                                                       |
-| `.card`, `.card-body`                                                   | Filled card                                                                                                                                                                                                                                                                                                                                                        |
-| `.card-elevated` on a `.card`                                           | Elevated card, for a panel on its own over a backdrop: the sign-in and 404 panels                                                                                                                                                                                                                                                                                  |
-| `.card-warn` / `.card-error` on a `.card`                               | A filled card in a tone's container colour, for a state the screen is in (setup unfinished, a load failed), with any way out as a text button at the right end, the text filling the rest of the row. Never the reply to an action: that is a [snackbar](#snackbar). M3 has no banner or chip-as-label; status is coloured text (`text-warning`, `text-tertiary`). |
-| `.segmented-list`, `.segmented-item`, `.segmented-header`               | Expressive segmented list: items 2dp apart, large outer corners, extra-small inner ones, no dividers (as Yuuka's grouped rows). Used wherever rows of records would otherwise be a table: the Audit log is one per day; Triage, Birthdays, and Overview's triage, recent activity, top plays and upcoming birthdays are one each. Settings' roles and channels are one too: per feature (Triage, Birthday, System), its name in a `secondary-container` item and then its fields, roles in the first column; last, an item with Discard and Save. No data tables.                  |
+| Library component                  | Used for                                                                                                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                           | Buttons: `filled` for a form's main action, `tonal`, `text` (dialog actions, "Clear all"); `size="xs"` for small ones in rows                                                               |
+| `IconButton`                       | Icon buttons: `standard`, or `tonal` and `width="narrow"` for row actions. One that deletes is `outlined` with an `error`-coloured icon                                                     |
+| `Card`                             | Filled cards; `variant="elevated"` for a panel on its own over a backdrop (sign-in, 404). Pass `:padded="false"` and pad with utilities                                                     |
+| `List segmented` + `ListItem`      | Rows of records, wherever they would otherwise be a table: the Audit log (one per day), Triage, Birthdays, Overview's lists, top plays. Art and ranks go in `#leading`, figures and actions in `#trailing`. No data tables |
+| `TextField variant="outlined"`     | Text fields, single and multi-line, with `counter` and `maxlength`                                                                                                                          |
+| `Chip type="filter"`               | Filter chips                                                                                                                                                                                |
+| `Dialog`, `SideSheet`, `Snackbar`  | See [Dialogs](#dialogs) and [Snackbar](#snackbar); the side sheet through `SupportingSheet`                                                                                                 |
+| `NavigationRail`, `Fab`            | The rail and its FAB (see above)                                                                                                                                                            |
+| `Tooltip`                          | Through `RichTooltip`                                                                                                                                                                       |
 
-Vue components, where M3 needs behaviour CSS can't give:
+A state the screen is in (setup unfinished, a load failed) is a block in a tone's container
+colour (`rounded-medium bg-warning-container`, or `error-container`), with any way out as a text
+button at the right end. Never the reply to an action: that is a [snackbar](#snackbar). M3 has
+no banner or chip-as-label; status is coloured text (`text-warning`, `text-tertiary`).
+Settings' roles and channels are laid out as a segmented list, though they are a form: per
+feature, its name in a `secondary-container` block and then its fields; last, a block with
+Discard and Save.
 
-| Component                                           | M3 component                                                                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [`OutlinedField`](src/components/OutlinedField.vue) | Outlined text field container: notched outline, floating label, supporting text, counter                                              |
-| [`AppSelect`](src/components/AppSelect.vue)         | Exposed dropdown menu (outlined field + menu)                                                                                         |
-| [`ButtonGroup`](src/components/ButtonGroup.vue)     | Connected button group, single-select: tonal buttons 2dp apart, the chosen one fully round in `secondary`. For tabs and a choice of 2 to 4; arrow keys move the choice |
-| [`AppTextArea`](src/components/AppTextArea.vue)     | Outlined text field, multi-line, with character counter                                                                               |
-| `AppDialog`                                         | Basic dialog, with an optional hero (see [Dialogs](#dialogs))                                                                         |
-| `AppSnackbar`                                       | Snackbar, the one reply to an action (see [Snackbar](#snackbar))                                                                      |
-| `PlanaPortrait`, `PlanaSays`, `SpeechBubble`        | Her portrait, and her portrait with a line (see [Plana's portraits](#planas-portraits))                                               |
-| `HaloMark`                                          | Circular progress indicator, indeterminate, in her halo's shape                                                                       |
-| `StateBlock`                                        | Loading, error and empty states around a block (see below)                                                                            |
-| `SkeletonList`                                      | Skeleton loader for a segmented list (see [Skeletons](#skeletons))                                                                    |
-| `RefreshButton`                                     | Tonal narrow icon button with a small badge: a `success` dot while the live connection is open                                        |
-| `SchaleMark`                                        | Schale's emblem, as a watermark (see [The Schale mark](#the-schale-mark))                                                             |
-| `DiscordMention`, `AuditSummary`, `DiscordMessage`  | A role, channel or user as a Discord mention; an audit summary with its names as mentions; message text with its Discord markup drawn |
+Plana's own components, built on the library where M3 needs more than it gives:
+
+| Component                                             | What it is                                                                                                                              |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [`AppSelect`](src/components/AppSelect.vue)           | Exposed dropdown menu: the library's `TextField` with a filterable listbox (the library's `Menu` moves focus, which a field can't)       |
+| [`AppDatePicker`](src/components/AppDatePicker.vue)   | Date picker for a month and day with no year (the library's pickers always pick a year), with the library's field and buttons           |
+| [`ChoiceGroup`](src/components/ChoiceGroup.vue)       | A single choice of 2 to 4 as the library's connected `ButtonGroup` of tonal buttons                                                     |
+| `LinkButton`, `LinkIconButton`                        | A link drawn as the library's text/tonal button or standard icon button, since those only render `<button>`                             |
+| `RichTooltip`                                         | An info or action icon button with the library's `Tooltip`                                                                              |
+| `SupportingSheet`                                     | The library's modal `SideSheet`, floating, with a leading image beside its content                                                     |
+| `AppSearchBar`                                        | A search bar that filters in place (the library's `Search` opens a separate view)                                                       |
+| `AppSnackbar`                                         | The library's `Snackbar`, drawing `useSnackbar()`'s message (see [Snackbar](#snackbar))                                                  |
+| `PlanaPortrait`, `PlanaSays`, `SpeechBubble`          | Her portrait, and her portrait with a line (see [Plana's portraits](#planas-portraits))                                                 |
+| `HaloMark`                                            | Circular progress indicator, indeterminate, in her halo's shape                                                                         |
+| `StateBlock`                                          | Loading, error and empty states around a block (see below)                                                                              |
+| `SkeletonList`                                        | Skeleton loader shaped as a segmented list (see [Skeletons](#skeletons))                                                                |
+| `RefreshButton`                                       | Tonal narrow icon button with a small badge: a `success` dot while the live connection is open                                          |
+| `SchaleMark`                                          | Schale's emblem, as a watermark (see [The Schale mark](#the-schale-mark))                                                               |
+| `DiscordMention`, `AuditSummary`, `DiscordMessage`    | A role, channel or user as a Discord mention; an audit summary with its names as mentions; message text with its Discord markup drawn   |
 
 `StateBlock` shows `HaloMark` while loading, or its `#skeleton` slot when given one. Given
 an `emptyMood`, its `emptyText` is her line in a bubble, with an optional `#empty` slot for
@@ -581,8 +594,8 @@ can carry `trailing` text, a colour `swatch`, be `disabled`, and share a `group`
 section (pass grouped lists through `groupOptions`). Its menu is a popover in the top layer,
 so a card's overflow can't clip it and it works inside a dialog.
 
-`AppSelect` menus follow M3 Expressive standard menus: a `rounded-lg` container on
-`surface-container-low` at `shadow-level2`,
+`AppSelect` menus follow M3 Expressive standard menus: a `rounded-large` container on
+`surface-container-low` at `shadow-elevation-2`,
 48dp items, and the selected item filled with `tertiary-container`, given medium
 corners and a check mark. The menu springs open from the field on
 `ease-spatial-fast`, flips above the field when there's no room below, and follows the

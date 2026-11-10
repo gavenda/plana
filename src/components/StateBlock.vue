@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from 'tailwind-material3'
 import HaloMark from '@/components/HaloMark.vue'
 import PlanaSays from '@/components/PlanaSays.vue'
 import type { PlanaMood } from '@/lib/plana'
@@ -37,12 +38,19 @@ defineProps<{
     <span>Processing…</span>
   </div>
 
-  <div v-else-if="error && compact" class="card card-error mx-6 my-4 px-4 py-3">{{ error }}</div>
+  <div
+    v-else-if="error && compact"
+    class="mx-6 my-4 overflow-hidden rounded-medium bg-error-container px-4 py-3 text-on-error-container"
+  >
+    {{ error }}
+  </div>
 
   <div v-else-if="error" class="flex flex-col items-center gap-4 px-6 py-10">
     <PlanaSays mood="confused">I'm confused... This didn't load.</PlanaSays>
-    <p class="card card-error px-4 py-3">{{ error }}</p>
-    <button v-if="retry" class="btn btn-tonal" type="button" @click="retry()">Try again</button>
+    <p class="overflow-hidden rounded-medium bg-error-container px-4 py-3 text-on-error-container">
+      {{ error }}
+    </p>
+    <Button variant="tonal" v-if="retry" @click="retry()">Try again</Button>
   </div>
 
   <div v-else-if="empty && emptyMood" class="flex flex-col items-center gap-3 px-6 py-10">

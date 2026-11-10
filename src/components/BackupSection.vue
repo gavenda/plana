@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { Button, Card, Dialog, List, ListItem } from 'tailwind-material3'
 
-import AppDialog from '@/components/AppDialog.vue'
+import LinkButton from '@/components/LinkButton.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -244,6 +245,9 @@ async function backUpNow() {
     starting.value = false
   }
 }
+
+/** Cloudflare's R2 page, where the bucket and its keys are made. */
+const R2_DASHBOARD = 'https://dash.cloudflare.com/?to=/:account/r2'
 </script>
 
 <template>
@@ -267,11 +271,11 @@ async function backUpNow() {
       </span>
     </div>
 
-    <div class="card card-body">
+    <Card :padded="false" class="p-6">
       <StateBlock :loading="!data && loading" :error="data ? null : error" :retry="run">
         <template #skeleton>
           <div class="grid grid-cols-2 gap-6 expanded:grid-cols-3">
-            <span v-for="fact in 6" :key="fact" class="skeleton h-10 rounded-xs" />
+            <span v-for="fact in 6" :key="fact" class="skeleton h-10 rounded-extra-small" />
           </div>
         </template>
 
@@ -281,13 +285,9 @@ async function backUpNow() {
               <p class="text-on-surface-variant">
                 Off-site backups are off. Turning them on takes about five minutes in Cloudflare.
               </p>
-              <a
-                class="btn btn-text"
-                href="https://dash.cloudflare.com/?to=/:account/r2"
-                target="_blank"
-                rel="noopener noreferrer"
+              <LinkButton :href="R2_DASHBOARD"
                 ><span class="icon [--icon-size:20px]" aria-hidden="true">open_in_new</span>Open R2
-                in Cloudflare</a
+                in Cloudflare</LinkButton
               >
             </div>
 
@@ -306,7 +306,7 @@ async function backUpNow() {
                   <div v-if="step.env" class="mt-2 flex flex-col gap-1">
                     <div class="flex items-start gap-2">
                       <pre
-                        class="min-w-0 flex-1 overflow-x-auto rounded-sm bg-surface-container-highest px-4 py-3 font-mono text-body-small"
+                        class="min-w-0 flex-1 overflow-x-auto rounded-small bg-surface-container-highest px-4 py-3 font-mono text-body-small"
                         >{{ ENV_TEMPLATE }}</pre>
                       <RichTooltip
                         action
@@ -326,7 +326,7 @@ async function backUpNow() {
           <div v-else class="flex flex-col gap-6">
             <p
               v-if="data.status === 'failing' && !running"
-              class="card card-error px-4 py-3 text-body-medium"
+              class="overflow-hidden rounded-medium bg-error-container px-4 py-3 text-body-medium text-on-error-container"
             >
               The last attempt failed {{ relativeTime(data.lastFailureAt) }}:
               {{ data.lastError ?? 'unknown error' }}.
@@ -334,7 +334,10 @@ async function backUpNow() {
                 >Plana tries again {{ relativeTime(data.nextDueAt) }}.</template
               >
             </p>
-            <p v-if="data.listError" class="card card-warn px-4 py-3 text-body-medium">
+            <p
+              v-if="data.listError"
+              class="overflow-hidden rounded-medium bg-warning-container px-4 py-3 text-body-medium text-on-warning-container"
+            >
               Could not list the bucket: {{ data.listError }}
             </p>
 
@@ -346,35 +349,37 @@ async function backUpNow() {
             </dl>
 
             <div v-if="data.backups.length > 0" class="flex flex-col">
-              <h3 class="segmented-header px-0">Newest backups</h3>
-              <ul class="segmented-list">
-                <li
-                  v-for="backup in data.backups"
-                  :key="backup.key"
-                  class="segmented-item bg-surface-container-high"
-                >
-                  <span class="icon text-on-surface-variant" aria-hidden="true">backup</span>
-                  <div class="flex min-w-0 flex-1 flex-col">
+              <h3 class="pt-3 pb-2 text-title-small text-on-surface-variant">Newest backups</h3>
+              <List segmented class="bg-surface-container">
+                <ListItem v-for="backup in data.backups" :key="backup.key">
+                  <template #leading>
+                    <span class="icon text-on-surface-variant" aria-hidden="true">backup</span>
+                  </template>
+                  <span class="flex flex-col">
                     <span class="truncate text-body-large" :title="absoluteTime(backup.time)">
                       {{ dayLabel(backup.time) }}, {{ clockTime(backup.time) }}
                     </span>
                     <code class="truncate text-body-small text-on-surface-variant">{{
                       backup.key
                     }}</code>
-                  </div>
-                  <span class="text-label-large text-on-surface-variant">{{
-                    size(backup.size)
-                  }}</span>
-                  <RichTooltip
-                    action
-                    title="Restore"
-                    icon="settings_backup_restore"
-                    narrow
-                    :disabled="running || restarting !== null"
-                    @click="askRestore(backup)"
-                  />
-                </li>
-              </ul>
+                  </span>
+                  <template #trailing>
+                    <span class="flex items-center gap-4">
+                      <span class="text-label-large text-on-surface-variant">{{
+                        size(backup.size)
+                      }}</span>
+                      <RichTooltip
+                        action
+                        title="Restore"
+                        icon="settings_backup_restore"
+                        narrow
+                        :disabled="running || restarting !== null"
+                        @click="askRestore(backup)"
+                      />
+                    </span>
+                  </template>
+                </ListItem>
+              </List>
               <p v-if="data.total > data.backups.length" class="supporting-text px-0 pt-2">
                 And {{ data.total - data.backups.length }} older in the bucket.
               </p>
@@ -382,13 +387,13 @@ async function backUpNow() {
 
             <p
               v-if="restarting"
-              class="card px-4 py-3 text-body-medium"
               :class="
                 restarting === 'slow'
-                  ? 'card-warn'
+                  ? 'bg-warning-container text-on-warning-container'
                   : 'bg-primary-container text-on-primary-container'
               "
               role="status"
+              class="overflow-hidden rounded-medium px-4 py-3 text-body-medium"
             >
               <template v-if="restarting === 'waiting'"
                 >Restoring. Plana is restarting on the backup; this page reloads once she's
@@ -402,35 +407,34 @@ async function backUpNow() {
             </p>
 
             <div class="flex justify-end">
-              <button
-                class="btn btn-tonal btn-wide"
-                type="button"
-                :disabled="running"
-                @click="backUpNow"
+              <Button variant="tonal" :disabled="running" @click="backUpNow"
+                ><template #icon
+                  ><span class="icon [--icon-size:20px]" aria-hidden="true">backup</span></template
+                >{{ running ? 'Backing up…' : 'Back up now' }}</Button
               >
-                <span class="icon [--icon-size:20px]" aria-hidden="true">backup</span>
-                {{ running ? 'Backing up…' : 'Back up now' }}
-              </button>
             </div>
           </div>
         </template>
       </StateBlock>
-    </div>
+    </Card>
 
-    <AppDialog v-model:open="restoreOpen" headline="Restore this backup?">
-      <template #hero><PlanaPortrait mood="attentive" /></template>
-      <template v-if="restoring">
-        Plana's database goes back to {{ dayLabel(restoring.time) }},
-        {{ clockTime(restoring.time) }}. Everything recorded since is lost: activity, answers, audit
-        entries and settings. She backs up the database as it is first, so this can be undone, then
-        restarts for about half a minute. Nobody is signed out.
-      </template>
+    <Dialog v-model:open="restoreOpen">
+      <template #headline>Restore this backup?</template>
+      <div class="flex flex-col items-center gap-4 text-center">
+        <PlanaPortrait mood="attentive" />
+        <p v-if="restoring">
+          Plana's database goes back to {{ dayLabel(restoring.time) }},
+          {{ clockTime(restoring.time) }}. Everything recorded since is lost: activity, answers,
+          audit entries and settings. She backs up the database as it is first, so this can be
+          undone, then restarts for about half a minute. Nobody is signed out.
+        </p>
+      </div>
       <template #actions>
-        <button class="btn btn-text" type="button" @click="restoreOpen = false">Cancel</button>
-        <button class="btn btn-text" type="button" :disabled="restoreBusy" @click="restore">
-          {{ restoreBusy ? 'Restoring…' : 'Restore' }}
-        </button>
+        <Button variant="text" @click="restoreOpen = false">Cancel</Button>
+        <Button variant="text" :disabled="restoreBusy" @click="restore">{{
+          restoreBusy ? 'Restoring…' : 'Restore'
+        }}</Button>
       </template>
-    </AppDialog>
+    </Dialog>
   </section>
 </template>

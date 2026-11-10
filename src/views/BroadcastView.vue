@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { Button, Card, TextField } from 'tailwind-material3'
 
 import AppSelect from '@/components/AppSelect.vue'
-import AppTextArea from '@/components/AppTextArea.vue'
-import ButtonGroup from '@/components/ButtonGroup.vue'
+import ChoiceGroup from '@/components/ChoiceGroup.vue'
 import ComponentList from '@/components/ComponentList.vue'
 import ComponentsPreview from '@/components/ComponentsPreview.vue'
 import DiscordMention from '@/components/DiscordMention.vue'
@@ -144,7 +144,7 @@ async function send() {
 
       <!-- The form in its card; the preview beside it on the page, so it isn't a card in a card. -->
       <div class="grid grid-cols-1 items-start gap-6 large:grid-cols-[minmax(0,1fr)_360px]">
-        <div class="card card-body">
+        <Card :padded="false" class="p-6">
           <StateBlock
             :loading="!guild.directory && !guild.error"
             :error="guild.error"
@@ -153,15 +153,15 @@ async function send() {
             <!-- The channel, the message and Send, as they will stand. -->
             <template #skeleton>
               <div class="flex flex-col gap-6">
-                <span class="skeleton h-14 rounded-xs" />
-                <span class="skeleton mb-5 h-40 rounded-xs" />
+                <span class="skeleton h-14 rounded-extra-small" />
+                <span class="skeleton mb-5 h-40 rounded-extra-small" />
                 <span class="skeleton h-10 w-44 self-end" />
               </div>
             </template>
             <form class="flex flex-col gap-6" @submit.prevent="send">
               <AppSelect v-model="channelId" label="Channel" :options="channelOptions" />
 
-              <ButtonGroup
+              <ChoiceGroup
                 v-model="mode"
                 label="Message type"
                 :options="[
@@ -170,17 +170,22 @@ async function send() {
                 ]"
               />
 
-              <AppTextArea
+              <TextField
+                variant="outlined"
+                multiline
+                :rows="6"
+                counter
                 v-if="mode === 'text'"
                 v-model="content"
                 label="Message"
                 :maxlength="MAX_LENGTH"
                 supporting-text="Discord markdown is supported."
+                class="w-full"
               />
 
               <template v-else>
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                  <ButtonGroup
+                  <ChoiceGroup
                     v-model="editor"
                     label="Edit with"
                     :options="[
@@ -206,21 +211,27 @@ async function send() {
                 <ComponentList v-if="editor === 'builder'" v-model="components" />
 
                 <div v-else class="flex flex-col gap-2">
-                  <AppTextArea
+                  <TextField
+                    variant="outlined"
+                    multiline
+                    :rows="6"
                     :model-value="json"
                     label="Components JSON"
-                    mono
                     :error="jsonError != null"
                     :supporting-text="
                       jsonError ??
                       'A component array, or a message payload with `components`. Fix any errors here to go back to the builder.'
                     "
-                    @update:model-value="onJsonInput"
+                    @update:model-value="onJsonInput(String($event ?? ''))"
+                    class="w-full"
                   />
-                  <button type="button" class="btn btn-text btn-sm self-end" @click="copyJson">
-                    <span class="icon [--icon-size:18px]" aria-hidden="true">content_copy</span>
-                    Copy JSON
-                  </button>
+                  <Button variant="text" size="xs" @click="copyJson" class="self-end"
+                    ><template #icon
+                      ><span class="icon [--icon-size:20px]" aria-hidden="true"
+                        >content_copy</span
+                      ></template
+                    >Copy JSON</Button
+                  >
                 </div>
 
                 <p
@@ -234,23 +245,20 @@ async function send() {
               </template>
 
               <div class="flex justify-end">
-                <button
-                  class="btn btn-filled btn-wide"
-                  type="submit"
-                  :disabled="!canSend || sending"
+                <Button variant="filled" type="submit" :disabled="!canSend || sending"
+                  ><template #icon
+                    ><span class="icon [--icon-size:20px]" aria-hidden="true">send</span></template
+                  >{{ sending ? 'Sending…' : 'Send message' }}</Button
                 >
-                  <span class="icon [--icon-size:20px]" aria-hidden="true">send</span>
-                  {{ sending ? 'Sending…' : 'Send message' }}
-                </button>
               </div>
             </form>
           </StateBlock>
-        </div>
+        </Card>
 
         <aside class="flex flex-col gap-2.5">
           <p class="px-4 text-title-small">Preview</p>
 
-          <div class="flex gap-3 rounded-lg bg-surface-container-lowest p-4">
+          <div class="flex gap-3 rounded-large bg-surface-container-lowest p-4">
             <div
               class="grid size-10 shrink-0 place-items-center rounded-full bg-primary font-bold text-on-primary"
               aria-hidden="true"
@@ -261,7 +269,7 @@ async function send() {
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-title-small">Plana</span>
                 <span
-                  class="rounded-xs bg-primary-container px-1 text-label-small text-on-primary-container"
+                  class="rounded-extra-small bg-primary-container px-1 text-label-small text-on-primary-container"
                   >BOT</span
                 >
                 <span class="text-body-medium text-on-surface-variant">

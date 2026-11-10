@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { Button, List, ListItem } from 'tailwind-material3'
 
+import LinkButton from '@/components/LinkButton.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -106,7 +107,7 @@ async function assign(member: PendingMember, roleId: string) {
   <div class="flex flex-col gap-4">
     <div
       v-if="settings.loaded && !settings.configured"
-      class="card card-warn flex items-center gap-4 py-3 pr-3 pl-6"
+      class="flex items-center gap-4 overflow-hidden rounded-medium bg-warning-container py-3 pr-3 pl-6 text-on-warning-container"
     >
       <p class="min-w-0 flex-1 text-body-medium">
         {{
@@ -115,12 +116,7 @@ async function assign(member: PendingMember, roleId: string) {
             : 'No triage role is configured. Choose one to see who is waiting.'
         }}
       </p>
-      <RouterLink
-        v-if="session.isAdmin"
-        to="/settings"
-        class="btn btn-text text-on-warning-container"
-        >Finish setup</RouterLink
-      >
+      <LinkButton v-if="session.isAdmin" variant="inherit" to="/settings">Finish setup</LinkButton>
     </div>
 
     <section v-if="!settings.loaded || hasTriageRole" aria-labelledby="queue-pending">
@@ -130,7 +126,13 @@ async function assign(member: PendingMember, roleId: string) {
       </div>
 
       <!-- Loading, empty and error states sit in one card in place of the list. -->
-      <div :class="!loading && members.length === 0 && 'card'">
+      <div
+        :class="
+          !loading &&
+          members.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
+      >
         <StateBlock
           :loading="loading"
           :error="pending.error.value"
@@ -140,80 +142,83 @@ async function assign(member: PendingMember, roleId: string) {
           :retry="pending.run"
         >
           <template #skeleton><SkeletonList two-line trailing="actions" /></template>
-          <ul class="segmented-list">
-            <li v-for="member in members" :key="member.id" class="segmented-item flex-wrap">
-              <img
-                class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                :src="member.avatarUrl"
-                alt=""
-                width="40"
-                height="40"
-              />
+          <List segmented class="bg-surface-container">
+            <ListItem v-for="member in members" :key="member.id">
+              <template #leading>
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="member.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+              </template>
+              <!-- Details, wait and the role buttons wrap onto a second line when the row is narrow. -->
+              <span class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div class="block min-w-0 flex-1 basis-40 py-1">
+                  <p
+                    class="truncate text-body-large"
+                    :style="{ color: discordTextColor(member.color) }"
+                  >
+                    {{ member.displayName }}
+                  </p>
+                  <p class="truncate font-mono text-body-small text-on-surface-variant">
+                    {{ member.username }}
+                  </p>
+                </div>
 
-              <div class="min-w-0 flex-1 basis-40 py-1">
-                <p
-                  class="truncate text-body-large"
-                  :style="{ color: discordTextColor(member.color) }"
-                >
-                  {{ member.displayName }}
-                </p>
-                <p class="truncate font-mono text-body-small text-on-surface-variant">
-                  {{ member.username }}
-                </p>
-              </div>
-
-              <div class="flex shrink-0 flex-col items-end text-right">
-                <span class="flex items-center gap-2 text-body-medium">
-                  <template v-if="waitingDays(member) != null">
-                    <span
-                      :class="overdue(member) && 'text-warning'"
-                      :title="`In triage since ${absoluteTime(member.waitingSince)}`"
-                      >Waiting {{ waitingDays(member) }}d</span
+                <div class="flex shrink-0 flex-col items-end text-right">
+                  <span class="flex items-center gap-2 text-body-medium">
+                    <template v-if="waitingDays(member) != null">
+                      <span
+                        :class="overdue(member) && 'text-warning'"
+                        :title="`In triage since ${absoluteTime(member.waitingSince)}`"
+                        >Waiting {{ waitingDays(member) }}d</span
+                      >
+                      <span aria-hidden="true">·</span>
+                    </template>
+                    <span :title="absoluteTime(member.joinedAt)"
+                      >Joined {{ relativeTime(member.joinedAt) }}</span
                     >
-                    <span aria-hidden="true">·</span>
-                  </template>
-                  <span :title="absoluteTime(member.joinedAt)"
-                    >Joined {{ relativeTime(member.joinedAt) }}</span
-                  >
-                </span>
-                <span class="flex items-center gap-2 text-label-small text-on-surface-variant">
-                  <template v-if="Date.now() - member.createdAt < NEW_ACCOUNT_MS">
-                    <span class="text-warning">New</span>
-                    <span aria-hidden="true">·</span>
-                  </template>
-                  <span :title="absoluteTime(member.createdAt)"
-                    >Account made {{ relativeTime(member.createdAt) }}</span
-                  >
-                </span>
-              </div>
+                  </span>
+                  <span class="flex items-center gap-2 text-label-small text-on-surface-variant">
+                    <template v-if="Date.now() - member.createdAt < NEW_ACCOUNT_MS">
+                      <span class="text-warning">New</span>
+                      <span aria-hidden="true">·</span>
+                    </template>
+                    <span :title="absoluteTime(member.createdAt)"
+                      >Account made {{ relativeTime(member.createdAt) }}</span
+                    >
+                  </span>
+                </div>
 
-              <div class="ml-auto flex shrink-0 flex-wrap justify-end gap-2">
-                <button
-                  v-for="(role, index) in assignable"
-                  :key="role.id"
-                  class="btn btn-sm"
-                  :class="index === 0 ? 'btn-filled' : 'btn-tonal'"
-                  :disabled="busyId === member.id"
-                  @click="assign(member, role.id)"
-                >
-                  <!-- The role's own colour, as Discord shows beside a role; none for a role without one. -->
+                <div class="ml-auto flex shrink-0 flex-wrap justify-end gap-2">
+                  <Button
+                    v-for="(role, index) in assignable"
+                    :key="role.id"
+                    :variant="index === 0 ? 'filled' : 'tonal'"
+                    size="xs"
+                    :disabled="busyId === member.id"
+                    @click="assign(member, role.id)"
+                    ><!-- The role's own colour, as Discord shows beside a role; none for a role without one. -->
+                    <span
+                      v-if="role.color"
+                      class="size-2.5 shrink-0 rounded-full ring-1 ring-current/30"
+                      :style="{ backgroundColor: role.color }"
+                      aria-hidden="true"
+                    />
+                    {{ role.name }}</Button
+                  >
                   <span
-                    v-if="role.color"
-                    class="size-2.5 shrink-0 rounded-full ring-1 ring-current/30"
-                    :style="{ backgroundColor: role.color }"
-                    aria-hidden="true"
-                  />
-                  {{ role.name }}
-                </button>
-                <span
-                  v-if="assignable.length === 0"
-                  class="text-body-medium text-on-surface-variant"
-                >
-                  No roles configured
-                </span>
-              </div>
-            </li>
-          </ul>
+                    v-if="assignable.length === 0"
+                    class="text-body-medium text-on-surface-variant"
+                  >
+                    No roles configured
+                  </span>
+                </div>
+              </span>
+            </ListItem>
+          </List>
         </StateBlock>
       </div>
     </section>

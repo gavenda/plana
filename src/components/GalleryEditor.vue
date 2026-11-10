@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import AppTextField from '@/components/AppTextField.vue'
-import FilterChip from '@/components/FilterChip.vue'
+import { Button, Chip, IconButton, TextField } from 'tailwind-material3'
+import { URL_HINT } from '@/lib/components-builder'
 import type { MediaGallery } from '@/lib/components-v2'
 
 /** A media gallery: up to ten images by URL. */
@@ -16,38 +16,49 @@ const model = defineModel<MediaGallery>({ required: true })
     >
       <div class="flex items-start gap-2">
         <div class="min-w-0 flex-1">
-          <AppTextField
+          <TextField
+            variant="outlined"
             v-model="item.media.url"
-            input-type="url"
+            type="url"
+            :placeholder="URL_HINT"
             :label="`Image ${index + 1} URL`"
+            class="w-full"
           />
         </div>
-        <button
+        <IconButton
+          variant="standard"
+          label="Remove image"
           v-if="model.items.length > 1"
-          type="button"
-          class="icon-btn mt-2"
-          aria-label="Remove image"
           @click="model.items.splice(index, 1)"
+          class="mt-2"
         >
           <span class="icon [--icon-size:20px]" aria-hidden="true">close</span>
-        </button>
+        </IconButton>
       </div>
-      <AppTextField v-model="item.description" label="Alt text" :maxlength="1024" />
-      <FilterChip
-        class="self-start"
-        label="Spoiler"
-        :model-value="!!item.spoiler"
-        @update:model-value="item.spoiler = $event"
+      <TextField
+        variant="outlined"
+        counter
+        v-model="item.description"
+        label="Alt text"
+        :maxlength="1024"
+        class="w-full"
       />
+      <Chip
+        class="self-start"
+        type="filter"
+        :selected="!!item.spoiler"
+        @update:selected="item.spoiler = $event"
+        >Spoiler</Chip
+      >
     </div>
-    <button
+    <Button
+      variant="text"
+      size="xs"
       v-if="model.items.length < 10"
-      type="button"
-      class="btn btn-text btn-sm self-start"
       @click="model.items.push({ media: { url: '' }, description: '' })"
+      class="self-start"
+      ><template #icon><span class="icon [--icon-size:20px]" aria-hidden="true">add</span></template
+      >Add image</Button
     >
-      <span class="icon [--icon-size:18px]" aria-hidden="true">add</span>
-      Add image
-    </button>
   </div>
 </template>

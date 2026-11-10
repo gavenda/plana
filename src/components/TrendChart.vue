@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef, useId, watch } from 'vue'
+import { Card } from 'tailwind-material3'
 
 import {
   clearActive,
@@ -210,7 +211,12 @@ function step(event: KeyboardEvent) {
 </script>
 
 <template>
-  <section class="card flex flex-col gap-3 px-5 pt-4 pb-3" :aria-labelledby="`${id}-label`">
+  <Card
+    :padded="false"
+    as="section"
+    :aria-labelledby="`${id}-label`"
+    class="flex flex-col gap-3 px-5 pt-4 pb-3"
+  >
     <div class="flex items-center gap-2 text-on-surface-variant">
       <span class="icon [--icon-size:20px]" aria-hidden="true">{{ icon }}</span>
       <h3 :id="`${id}-label`" class="text-label-large">{{ label }}</h3>
@@ -230,10 +236,10 @@ function step(event: KeyboardEvent) {
     </p>
     <span v-else class="skeleton h-4 w-32 rounded-full" />
 
-    <div v-if="loading" class="skeleton h-24 rounded-sm" />
+    <div v-if="loading" class="skeleton h-24 rounded-small" />
     <template v-else>
       <div
-        class="relative h-24 cursor-crosshair rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+        class="relative h-24 cursor-crosshair rounded-small outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
         tabindex="0"
         role="img"
         :aria-label="`${label} per day, ${dates?.length ?? 0} days. Use the arrow keys to read a day.`"
@@ -272,5 +278,5 @@ function step(event: KeyboardEvent) {
         </table>
       </div>
     </template>
-  </section>
+  </Card>
 </template>

@@ -25,7 +25,7 @@ const style = computed(() => {
 
 <template>
   <span
-    class="rounded-xs px-1 font-medium whitespace-nowrap"
+    class="rounded-extra-small px-1 font-medium whitespace-nowrap"
     :class="kind !== 'role' && 'mention-blurple'"
     :style="style"
     >{{ kind === 'channel' ? `#${name}` : `@${name}` }}</span

@@ -25,10 +25,10 @@ const { connected } = useLiveStatus()
     :disabled="disabled"
     @click="$emit('click')"
   >
-    <!-- M3's small badge: a 6dp dot on the top end, in the success colour for "live". -->
+    <!-- M3's small badge: a 6dp dot on the icon's top end, in the success colour for "live". -->
     <span
       v-if="connected"
-      class="absolute top-1 right-0.5 size-1.5 rounded-full bg-success"
+      class="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-success"
       aria-hidden="true"
     />
   </RichTooltip>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { Button } from 'tailwind-material3'
 
 import AppSelect from '@/components/AppSelect.vue'
 import BackupSection from '@/components/BackupSection.vue'
@@ -394,9 +395,14 @@ function reset(section: Section) {
         </template>
       </div>
 
-      <!-- A segmented list: per feature, a tonal item with its name and one with its fields;
-           last, the buttons that save them all. A load failure shows in a card of its own. -->
-      <div :class="{ 'card card-body': store.error }">
+      <!-- Laid out as the library's segmented list (blocks 2dp apart in a rounded group), though
+           it is a form: per feature, a tonal block with its name and one with its fields; last,
+           the buttons that save them all. A load failure shows in a card of its own. -->
+      <div
+        :class="{
+          'overflow-hidden rounded-medium bg-surface-container-highest p-6': store.error,
+        }"
+      >
         <StateBlock
           :loading="!store.loaded && !store.error"
           :error="store.error"
@@ -404,16 +410,16 @@ function reset(section: Section) {
         >
           <!-- The form's cards, fields and buttons, as they will stand. -->
           <template #skeleton>
-            <div class="segmented-list">
+            <div class="flex flex-col gap-0.5 overflow-hidden rounded-2xl bg-surface-container">
               <template v-for="group in section.groups" :key="group.id">
                 <div
                   v-if="section.titled"
-                  class="segmented-item min-h-12 bg-secondary-container px-6"
+                  class="flex min-h-12 items-center rounded-[4px] bg-secondary-container px-6"
                 >
                   <span class="skeleton h-3.5 w-20" />
                 </div>
                 <div
-                  class="segmented-item grid grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                  class="grid grid-cols-1 items-start gap-6 rounded-[4px] bg-surface p-6 expanded:grid-cols-2"
                 >
                   <div
                     v-for="(column, index) in group.columns"
@@ -423,33 +429,33 @@ function reset(section: Section) {
                     <span
                       v-for="field in column"
                       :key="field.key"
-                      class="skeleton h-14 rounded-xs"
+                      class="skeleton h-14 rounded-extra-small"
                     />
                   </div>
                 </div>
               </template>
-              <div class="segmented-item justify-end gap-2 px-6 py-4">
+              <div class="flex items-center justify-end gap-2 rounded-[4px] bg-surface px-6 py-4">
                 <span class="skeleton h-10 w-20" />
                 <span class="skeleton h-10 w-40" />
               </div>
             </div>
           </template>
           <form @submit.prevent="submit(section)">
-            <div class="segmented-list">
+            <div class="flex flex-col gap-0.5 overflow-hidden rounded-2xl bg-surface-container">
               <!-- Each feature: its name as a tonal item, then an item with its fields. Items
                    sit directly in the list so its corners land on the outer ones. -->
               <template v-for="group in section.groups" :key="group.id">
                 <h3
                   v-if="section.titled"
                   :id="group.id"
-                  class="segmented-item min-h-12 bg-secondary-container px-6 text-title-small text-on-secondary-container"
+                  class="flex min-h-12 items-center rounded-[4px] bg-secondary-container px-6 text-title-small text-on-secondary-container"
                 >
                   {{ group.title }}
                 </h3>
                 <div
                   role="group"
                   :aria-labelledby="section.titled ? group.id : section.id"
-                  class="segmented-item grid min-w-0 grid-cols-1 items-start gap-6 p-6 expanded:grid-cols-2"
+                  class="grid min-w-0 grid-cols-1 items-start gap-6 rounded-[4px] bg-surface p-6 expanded:grid-cols-2"
                 >
                   <div
                     v-for="(column, index) in group.columns"
@@ -474,23 +480,18 @@ function reset(section: Section) {
                 </div>
               </template>
 
-              <div class="segmented-item justify-end gap-2 px-6 py-4">
-                <button
-                  class="btn btn-text"
-                  type="button"
+              <div class="flex items-center justify-end gap-2 rounded-[4px] bg-surface px-6 py-4">
+                <Button
+                  variant="text"
                   :disabled="!dirtyIn(section) || saving"
                   @click="reset(section)"
+                  >Discard</Button
                 >
-                  Discard
-                </button>
-                <button
-                  class="btn btn-filled btn-wide"
-                  type="submit"
-                  :disabled="!dirtyIn(section) || saving"
+                <Button variant="filled" type="submit" :disabled="!dirtyIn(section) || saving"
+                  ><template #icon
+                    ><span class="icon [--icon-size:20px]" aria-hidden="true">save</span></template
+                  >{{ saving ? 'Saving…' : 'Save changes' }}</Button
                 >
-                  <span class="icon [--icon-size:20px]" aria-hidden="true">save</span>
-                  {{ saving ? 'Saving…' : 'Save changes' }}
-                </button>
               </div>
             </div>
           </form>

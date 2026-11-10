@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId } from 'vue'
+import { Button, IconButton, TextField } from 'tailwind-material3'
 
-import OutlinedField from '@/components/OutlinedField.vue'
 import { daysIn, firstWeekday, formatMonthDay, MONTHS, parseMonthDay } from '@/lib/dates'
 
-/** M3 modal date picker for a month and day (no year); nothing changes until OK. */
+/**
+ * M3 modal date picker for a month and day (no year); nothing changes until OK. The library's
+ * DatePicker always picks a year, so the calendar is Plana's own; the field, buttons and the
+ * typed date are tailwind-material3's.
+ */
 const props = defineProps<{
   label: string
   disabled?: boolean
@@ -15,10 +19,7 @@ const month = defineModel<number | null>('month', { required: true })
 const day = defineModel<number | null>('day', { required: true })
 
 const id = useId()
-const labelId = `${id}-label`
 const headlineId = `${id}-headline`
-const supportingId = `${id}-supporting`
-const inputId = `${id}-input`
 
 const WEEKDAYS = [
   { short: 'S', long: 'Sunday' },
@@ -34,10 +35,8 @@ const SHORT_MONTHS = MONTHS.map((name) => name.slice(0, 3))
 
 const dialog = ref<HTMLDialogElement | null>(null)
 const grid = ref<HTMLElement | null>(null)
-const field = ref<HTMLButtonElement | null>(null)
-const textInput = ref<HTMLInputElement | null>(null)
-const focused = ref(false)
-const inputFocused = ref(false)
+const field = ref<InstanceType<typeof TextField> | null>(null)
+const textInput = ref<InstanceType<typeof TextField> | null>(null)
 
 const value = computed(() =>
   month.value != null && day.value != null ? formatMonthDay(month.value, day.value) : '',
@@ -229,41 +228,32 @@ async function toggleMode() {
 
 <template>
   <div>
-    <OutlinedField
+    <!-- Read-only: the date is picked in the dialog, which a click or Enter opens. -->
+    <TextField
+      ref="field"
+      variant="outlined"
+      class="w-full"
+      readonly
       :label="label"
-      :label-id="labelId"
-      :populated="value !== ''"
-      :focused="focused"
+      :model-value="value"
       :disabled="disabled"
       :supporting-text="supportingText"
-      :supporting-id="supportingId"
+      aria-haspopup="dialog"
+      @click="openPicker"
+      @keydown.enter.prevent="openPicker"
+      @keydown.space.prevent="openPicker"
     >
-      <button
-        ref="field"
-        type="button"
-        class="flex h-14 w-full cursor-pointer items-center rounded-xs bg-transparent pr-12 pl-4 text-left text-body-large text-on-surface focus-visible:outline-none disabled:cursor-not-allowed disabled:text-on-surface/38"
-        :disabled="disabled"
-        aria-haspopup="dialog"
-        :aria-labelledby="labelId"
-        :aria-describedby="supportingText ? supportingId : undefined"
-        @focus="focused = true"
-        @blur="focused = false"
-        @click="openPicker"
-      >
-        <span class="truncate">{{ value }}</span>
-      </button>
-      <span
-        class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 icon"
-        :class="disabled ? 'text-on-surface/38' : 'text-on-surface-variant'"
-        aria-hidden="true"
-        >calendar_today</span
-      >
-    </OutlinedField>
+      <template #trailing-icon>
+        <IconButton variant="standard" label="Choose date" :disabled="disabled" @click="openPicker">
+          <span class="icon" aria-hidden="true">calendar_today</span>
+        </IconButton>
+      </template>
+    </TextField>
 
     <dialog
       ref="dialog"
       :aria-labelledby="headlineId"
-      class="m-auto w-[360px] max-w-[calc(100vw-48px)] scale-90 rounded-xl bg-surface-container-high p-0 text-on-surface opacity-0 shadow-level3 transition-[scale,opacity,display,overlay] transition-discrete duration-200 ease-effects backdrop:bg-scrim/32 open:scale-100 open:opacity-100 open:duration-500 open:ease-spatial starting:open:scale-90 starting:open:opacity-0"
+      class="m-auto w-[360px] max-w-[calc(100vw-48px)] scale-90 rounded-extra-large bg-surface-container-high p-0 text-on-surface opacity-0 shadow-elevation-3 transition-[scale,opacity,display,overlay] transition-discrete duration-200 ease-effects backdrop:bg-scrim/32 open:scale-100 open:opacity-100 open:duration-(--duration-spring-default-spatial) open:ease-spring-default-spatial starting:open:scale-90 starting:open:opacity-0"
       @click="onDialogClick"
       @close="onDialogClose"
     >
@@ -280,17 +270,15 @@ async function toggleMode() {
           >
             {{ headline }}
           </p>
-          <button
-            type="button"
-            class="icon-btn"
-            :aria-label="mode === 'calendar' ? 'Switch to typing' : 'Switch to calendar'"
-            :title="mode === 'calendar' ? 'Switch to typing' : 'Switch to calendar'"
+          <IconButton
+            variant="standard"
+            :label="mode === 'calendar' ? 'Switch to typing' : 'Switch to calendar'"
             @click="toggleMode"
           >
             <span class="icon" aria-hidden="true">{{
               mode === 'calendar' ? 'edit' : 'calendar_today'
             }}</span>
-          </button>
+          </IconButton>
         </div>
       </div>
 
@@ -299,15 +287,17 @@ async function toggleMode() {
       <!-- Calendar mode. -->
       <div v-if="mode === 'calendar'" class="px-3 pt-1">
         <div class="flex h-12 items-center justify-between">
+          <!-- The month menu's switch: an on-surface-variant label with a turning arrow, as M3 draws
+               the year switch. -->
           <button
             type="button"
-            class="btn btn-text gap-1 pr-2 pl-3 text-on-surface-variant"
+            class="relative inline-flex h-10 cursor-pointer items-center gap-1 rounded-full pr-2 pl-3 text-label-large text-on-surface-variant before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-current before:opacity-0 before:transition-opacity hover:before:opacity-8 focus:outline-none focus-visible:outline-3 focus-visible:outline-secondary focus-visible:outline-solid focus-visible:before:opacity-10"
             :aria-expanded="view === 'months'"
             @click="view = view === 'days' ? 'months' : 'days'"
           >
             {{ MONTHS[viewMonth - 1] }}
             <span
-              class="icon transition-transform duration-350 ease-spatial-fast [--icon-size:18px]"
+              class="icon transition-transform duration-(--duration-spring-fast-spatial) ease-spring-fast-spatial [--icon-size:18px]"
               :class="view === 'months' && 'rotate-180'"
               aria-hidden="true"
               >arrow_drop_down</span
@@ -315,24 +305,12 @@ async function toggleMode() {
           </button>
 
           <div v-if="view === 'days'" class="flex">
-            <button
-              type="button"
-              class="icon-btn"
-              aria-label="Previous month"
-              title="Previous month"
-              @click="shiftMonth(-1)"
-            >
+            <IconButton variant="standard" label="Previous month" @click="shiftMonth(-1)">
               <span class="icon" aria-hidden="true">chevron_left</span>
-            </button>
-            <button
-              type="button"
-              class="icon-btn"
-              aria-label="Next month"
-              title="Next month"
-              @click="shiftMonth(1)"
-            >
+            </IconButton>
+            <IconButton variant="standard" label="Next month" @click="shiftMonth(1)">
               <span class="icon" aria-hidden="true">chevron_right</span>
-            </button>
+            </IconButton>
           </div>
         </div>
 
@@ -374,7 +352,7 @@ async function toggleMode() {
                   :tabindex="cell === focusDay ? 0 : -1"
                   :aria-label="formatMonthDay(viewMonth, cell)"
                   :aria-current="viewMonth === todayMonth && cell === todayDay ? 'date' : undefined"
-                  class="state-layer mx-auto grid size-10 cursor-pointer place-items-center rounded-full-40 text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-sm"
+                  class="state-layer mx-auto grid size-10 cursor-pointer place-items-center rounded-full-40 text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-small"
                   :class="
                     viewMonth === draftMonth && cell === draftDay
                       ? 'bg-primary text-on-primary'
@@ -408,7 +386,7 @@ async function toggleMode() {
             type="button"
             role="option"
             :aria-selected="viewMonth === index + 1"
-            class="state-layer h-9 cursor-pointer rounded-full-36 text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-md"
+            class="state-layer h-9 cursor-pointer rounded-full-36 text-body-large transition-[border-radius] duration-350 ease-spatial-fast active:rounded-medium"
             :class="
               viewMonth === index + 1
                 ? 'bg-primary text-on-primary'
@@ -425,45 +403,28 @@ async function toggleMode() {
 
       <!-- Input mode: the date typed as MM/DD. -->
       <form v-else class="px-6 pt-4 pb-2" @submit.prevent="confirm">
-        <OutlinedField
+        <TextField
+          ref="textInput"
+          v-model="text"
+          variant="outlined"
+          class="w-full"
           label="Date"
-          :label-id="`${inputId}-label`"
-          :control-id="inputId"
-          :populated="text !== ''"
-          :focused="inputFocused"
-          :invalid="inputError != null"
-          :supporting-text="inputError ?? 'MM/DD'"
-          :supporting-id="`${inputId}-supporting`"
-        >
-          <input
-            :id="inputId"
-            ref="textInput"
-            v-model="text"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            placeholder="MM/DD"
-            maxlength="5"
-            class="h-14 w-full rounded-xs bg-transparent px-4 text-body-large text-on-surface placeholder:text-on-surface-variant focus-visible:outline-none"
-            :aria-invalid="inputError != null"
-            :aria-describedby="`${inputId}-supporting`"
-            @input="inputError = null"
-            @focus="inputFocused = true"
-            @blur="inputFocused = false"
-          />
-        </OutlinedField>
+          placeholder="MM/DD"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="5"
+          :error="inputError != null"
+          :error-text="inputError ?? undefined"
+          supporting-text="MM/DD"
+          @input="inputError = null"
+        />
       </form>
 
       <div class="flex justify-end gap-2 px-3 pt-2 pb-3">
-        <button class="btn btn-text" type="button" @click="close">Cancel</button>
-        <button
-          class="btn btn-text"
-          type="button"
-          :disabled="mode === 'calendar' && draftDay == null"
-          @click="confirm"
-        >
+        <Button variant="text" @click="close">Cancel</Button>
+        <Button variant="text" :disabled="mode === 'calendar' && draftDay == null" @click="confirm">
           OK
-        </button>
+        </Button>
       </div>
     </dialog>
   </div>

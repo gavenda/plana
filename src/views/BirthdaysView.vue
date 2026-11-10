@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { Button, Dialog, IconButton, List, ListItem } from 'tailwind-material3'
 
 import AppDatePicker from '@/components/AppDatePicker.vue'
-import AppDialog from '@/components/AppDialog.vue'
 import AppSelect from '@/components/AppSelect.vue'
+import LinkButton from '@/components/LinkButton.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -175,17 +175,14 @@ async function remove() {
   <div class="flex flex-col gap-4">
     <div
       v-if="settings.loaded && !settings.settings.birthdayChannelId"
-      class="card card-warn flex items-center gap-4 py-3 pr-3 pl-6"
+      class="flex items-center gap-4 overflow-hidden rounded-medium bg-warning-container py-3 pr-3 pl-6 text-on-warning-container"
     >
       <p class="min-w-0 flex-1 text-body-medium">
         Birthday announcements are off until a birthday channel is chosen. Birthdays saved here are
         kept for when they are switched on.
       </p>
-      <RouterLink
-        v-if="session.isAdmin"
-        to="/settings"
-        class="btn btn-text text-on-warning-container"
-        >Choose a channel</RouterLink
+      <LinkButton v-if="session.isAdmin" variant="inherit" to="/settings"
+        >Choose a channel</LinkButton
       >
     </div>
 
@@ -198,7 +195,13 @@ async function remove() {
       </div>
 
       <!-- Loading, empty and error states sit in one card in place of the list. -->
-      <div :class="!loading && birthdays.length === 0 && 'card'">
+      <div
+        :class="
+          !loading &&
+          birthdays.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
+      >
         <StateBlock
           :loading="loading"
           :error="overview.error.value"
@@ -209,68 +212,73 @@ async function remove() {
         >
           <template #empty>Members add theirs with <code>/birthday set</code>.</template>
           <template #skeleton><SkeletonList :rows="4" two-line trailing="stack" /></template>
-          <ul class="segmented-list">
-            <li v-for="entry in birthdays" :key="entry.id" class="segmented-item">
-              <img
-                class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                :src="entry.avatarUrl"
-                alt=""
-                width="40"
-                height="40"
-              />
+          <List segmented class="bg-surface-container">
+            <ListItem v-for="entry in birthdays" :key="entry.id">
+              <template #leading>
+                <img
+                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                  :src="entry.avatarUrl"
+                  alt=""
+                  width="40"
+                  height="40"
+                />
+              </template>
 
-              <div class="min-w-0 flex-1 py-1">
-                <p
-                  class="truncate text-body-large"
-                  :style="{ color: discordTextColor(entry.color) }"
-                >
-                  {{ entry.displayName }}
-                </p>
-                <p class="truncate font-mono text-body-small text-on-surface-variant">
-                  {{ entry.username }}
-                </p>
-              </div>
+              <span class="block truncate" :style="{ color: discordTextColor(entry.color) }">
+                {{ entry.displayName }}
+              </span>
+              <template #supporting-text>
+                <span class="block truncate font-mono text-body-small">{{ entry.username }}</span>
+              </template>
 
-              <div class="flex shrink-0 flex-col items-end">
-                <span class="text-body-large">{{ formatDate(entry) }}</span>
-                <span
-                  class="text-label-small"
-                  :class="entry.daysUntil === 0 ? 'text-tertiary' : 'text-on-surface-variant'"
-                  >{{ formatUntil(entry.daysUntil) }}</span
-                >
-              </div>
-
-              <div class="flex shrink-0 gap-2">
-                <button
-                  class="icon-btn icon-btn-tonal icon-btn-narrow"
-                  type="button"
-                  :aria-label="`Edit ${entry.displayName}'s birthday`"
-                  title="Edit"
-                  :disabled="busy"
-                  @click="openForm(entry.id)"
-                >
-                  <span class="icon [--icon-size:20px]" aria-hidden="true">edit</span>
-                </button>
-                <button
-                  class="icon-btn icon-btn-tonal icon-btn-danger icon-btn-narrow"
-                  type="button"
-                  :aria-label="`Remove ${entry.displayName}'s birthday`"
-                  title="Remove"
-                  :disabled="busy"
-                  @click="confirmRemove(entry)"
-                >
-                  <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
-                </button>
-              </div>
-            </li>
-          </ul>
+              <template #trailing>
+                <span class="flex items-center gap-4">
+                  <span class="flex flex-col items-end">
+                    <span class="text-body-large">{{ formatDate(entry) }}</span>
+                    <span
+                      class="text-label-small"
+                      :class="entry.daysUntil === 0 ? 'text-tertiary' : 'text-on-surface-variant'"
+                      >{{ formatUntil(entry.daysUntil) }}</span
+                    >
+                  </span>
+                  <span class="flex gap-2">
+                    <IconButton
+                      variant="tonal"
+                      width="narrow"
+                      :label="`Edit ${entry.displayName}'s birthday`"
+                      :disabled="busy"
+                      @click="openForm(entry.id)"
+                    >
+                      <span class="icon [--icon-size:20px]" aria-hidden="true">edit</span>
+                    </IconButton>
+                    <IconButton
+                      variant="outlined"
+                      width="narrow"
+                      :label="`Remove ${entry.displayName}'s birthday`"
+                      :disabled="busy"
+                      @click="confirmRemove(entry)"
+                    >
+                      <span class="icon text-error [--icon-size:20px]" aria-hidden="true"
+                        >delete</span
+                      >
+                    </IconButton>
+                  </span>
+                </span>
+              </template>
+            </ListItem>
+          </List>
         </StateBlock>
       </div>
     </section>
 
     <!-- A form in a dialog has no hero and no face (see "Dialogs" in BRANDING.md). -->
-    <AppDialog v-model:open="formOpen" :headline="formHeadline">
-      <form :id="formId" class="flex flex-col gap-6 pt-2" @submit.prevent="save">
+    <Dialog v-model:open="formOpen">
+      <template #headline>{{ formHeadline }}</template>
+      <form
+        :id="formId"
+        class="flex w-[400px] max-w-full flex-col gap-6 pt-2"
+        @submit.prevent="save"
+      >
         <AppSelect
           :model-value="memberId"
           label="Member"
@@ -286,22 +294,23 @@ async function remove() {
         />
       </form>
       <template #actions>
-        <button class="btn btn-text" type="button" :disabled="busy" @click="formOpen = false">
-          Cancel
-        </button>
-        <button class="btn btn-text" type="submit" :form="formId" :disabled="!canSave">
-          {{ busy ? 'Saving…' : 'Save' }}
-        </button>
+        <Button variant="text" :disabled="busy" @click="formOpen = false">Cancel</Button>
+        <Button variant="text" type="submit" :form="formId" :disabled="!canSave">{{
+          busy ? 'Saving…' : 'Save'
+        }}</Button>
       </template>
-    </AppDialog>
+    </Dialog>
 
-    <AppDialog v-model:open="removeOpen" headline="Remove birthday?">
-      <template #hero><PlanaPortrait mood="attentive" /></template>
-      {{ removing?.displayName }}'s birthday will be deleted and won't be announced.
+    <Dialog v-model:open="removeOpen">
+      <template #headline>Remove birthday?</template>
+      <div class="flex flex-col items-center gap-4 text-center">
+        <PlanaPortrait mood="attentive" />
+        <p>{{ removing?.displayName }}'s birthday will be deleted and won't be announced.</p>
+      </div>
       <template #actions>
-        <button class="btn btn-text" type="button" @click="removeOpen = false">Cancel</button>
-        <button class="btn btn-text" type="button" @click="remove">Remove</button>
+        <Button variant="text" @click="removeOpen = false">Cancel</Button>
+        <Button variant="text" @click="remove">Remove</Button>
       </template>
-    </AppDialog>
+    </Dialog>
   </div>
 </template>

@@ -39,7 +39,7 @@ const isButton = (value: { type: number }): value is LinkButton =>
         </div>
         <a
           v-if="isButton(block.accessory)"
-          class="inline-flex h-8 shrink-0 items-center gap-1 rounded-xs bg-surface-container-highest px-3 text-label-large text-on-surface"
+          class="inline-flex h-8 shrink-0 items-center gap-1 rounded-extra-small bg-surface-container-highest px-3 text-label-large text-on-surface"
           :href="block.accessory.url || undefined"
           target="_blank"
           rel="noopener"
@@ -49,14 +49,14 @@ const isButton = (value: { type: number }): value is LinkButton =>
         </a>
         <img
           v-else-if="block.accessory.media.url"
-          class="size-20 shrink-0 rounded-sm object-cover"
+          class="size-20 shrink-0 rounded-small object-cover"
           :class="{ 'blur-md': block.accessory.spoiler }"
           :src="block.accessory.media.url"
           :alt="block.accessory.description ?? ''"
         />
         <span
           v-else
-          class="grid size-20 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
+          class="grid size-20 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
         >
           <span class="icon" aria-hidden="true">image</span>
         </span>
@@ -64,7 +64,7 @@ const isButton = (value: { type: number }): value is LinkButton =>
 
       <div
         v-else-if="block.type === ComponentKind.MediaGallery"
-        class="grid gap-1 overflow-hidden rounded-sm"
+        class="grid gap-1 overflow-hidden rounded-small"
         :class="block.items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'"
       >
         <template v-for="(item, index) in block.items" :key="index">
@@ -96,7 +96,7 @@ const isButton = (value: { type: number }): value is LinkButton =>
         <a
           v-for="(button, index) in block.components"
           :key="index"
-          class="inline-flex h-8 items-center gap-1 rounded-xs bg-surface-container-highest px-3 text-label-large text-on-surface"
+          class="inline-flex h-8 items-center gap-1 rounded-extra-small bg-surface-container-highest px-3 text-label-large text-on-surface"
           :href="button.url || undefined"
           target="_blank"
           rel="noopener"
@@ -108,7 +108,7 @@ const isButton = (value: { type: number }): value is LinkButton =>
 
       <div
         v-else-if="block.type === ComponentKind.Container"
-        class="rounded-sm border-l-4 bg-surface-container-high p-4"
+        class="rounded-small border-l-4 bg-surface-container-high p-4"
         :style="{
           borderLeftColor:
             block.accent_color != null ? colorToHex(block.accent_color) : 'transparent',

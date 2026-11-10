@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { Card } from 'tailwind-material3'
 
 import {
   clearActive,
@@ -218,7 +219,7 @@ function step(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="card flex flex-col gap-3 px-4 py-4">
+  <Card :padded="false" class="flex flex-col gap-3 px-4 py-4">
     <!-- Squares shrink to fit the column, down to MIN_CELL; past that it scrolls sideways. -->
     <div ref="box" class="overflow-x-auto">
       <div class="grid w-max grid-cols-[auto_auto] grid-rows-[auto_auto] gap-x-2 gap-y-1">
@@ -242,7 +243,7 @@ function step(event: KeyboardEvent) {
           >
         </div>
         <div
-          class="relative rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+          class="relative rounded-small outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
           :style="{ width: `${weeks * cell}px`, height: `${7 * cell}px` }"
           tabindex="0"
           role="img"
@@ -300,5 +301,5 @@ function step(event: KeyboardEvent) {
         </tbody>
       </table>
     </div>
-  </div>
+  </Card>
 </template>

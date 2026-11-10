@@ -1,11 +1,13 @@
 <script setup lang="ts" generic="T extends string | number | null">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
+import { TextField } from 'tailwind-material3'
 
-import OutlinedField from '@/components/OutlinedField.vue'
 import type { SelectOption } from '@/lib/select'
 
 /**
- * M3 editable exposed dropdown menu: an outlined text field that opens a menu of options.
+ * M3 editable exposed dropdown menu: an outlined text field (tailwind-material3's TextField) that
+ * opens a menu of options. The library's Menu moves focus into the menu, which a field you type
+ * in can't do, so the menu here is its own listbox, drawn as an M3 menu.
  * Typing filters the menu; choosing an option (or Enter on the highlighted one) sets the value,
  * and leaving the field without choosing discards what was typed. Keyboard and screen reader
  * behaviour follow the WAI-ARIA combobox pattern with a list popup, with focus kept on the
@@ -21,12 +23,14 @@ const props = defineProps<{
 const model = defineModel<T>({ required: true })
 
 const id = useId()
-const labelId = `${id}-label`
 const listboxId = `${id}-listbox`
-const supportingId = `${id}-supporting`
 const optionId = (index: number) => `${id}-option-${index}`
 
-const field = ref<HTMLInputElement | null>(null)
+const textField = ref<InstanceType<typeof TextField> | null>(null)
+/** The input itself, for focus and selection. */
+const field = computed(() => (textField.value?.input as HTMLInputElement | null) ?? null)
+/** The whole field, which the menu lines up with. */
+const fieldBox = computed(() => (textField.value?.$el as HTMLElement | undefined) ?? null)
 const menu = ref<HTMLElement | null>(null)
 
 const open = ref(false)
@@ -102,7 +106,7 @@ const GAP = 4
 const EDGE = 8
 
 function position() {
-  const rect = field.value?.getBoundingClientRect()
+  const rect = fieldBox.value?.querySelector(':scope > div')?.getBoundingClientRect()
   if (!rect) return
 
   const below = window.innerHeight - rect.bottom - GAP - EDGE
@@ -154,7 +158,7 @@ function choose(index: number) {
 
 function onPointerDownOutside(event: PointerEvent) {
   const target = event.target as Node
-  if (field.value?.contains(target) || menu.value?.contains(target)) return
+  if (fieldBox.value?.contains(target) || menu.value?.contains(target)) return
   hide()
 }
 
@@ -262,59 +266,42 @@ function onClick() {
 
 <template>
   <div>
-    <OutlinedField
+    <TextField
+      ref="textField"
+      variant="outlined"
+      class="w-full"
       :label="label"
-      :label-id="labelId"
-      :populated="editing ? query !== '' : selected != null"
-      :focused="focused || open"
+      :model-value="editing ? query : (selected?.label ?? '')"
       :disabled="disabled"
       :supporting-text="supportingText"
-      :supporting-id="supportingId"
+      role="combobox"
+      autocomplete="off"
+      spellcheck="false"
+      aria-autocomplete="list"
+      aria-haspopup="listbox"
+      :aria-expanded="open"
+      :aria-controls="listboxId"
+      :aria-activedescendant="open && activeIndex >= 0 ? optionId(activeIndex) : undefined"
+      @input="onInput"
+      @click="onClick"
+      @keydown="onKeydown"
+      @focus="onFocus"
+      @blur="onBlur"
     >
-      <span
-        v-if="selected?.swatch && !editing"
-        class="pointer-events-none absolute top-1/2 left-4 size-3 -translate-y-1/2 rounded-full"
-        :style="{ backgroundColor: selected.swatch }"
-        aria-hidden="true"
-      />
-      <input
-        ref="field"
-        type="text"
-        role="combobox"
-        autocomplete="off"
-        spellcheck="false"
-        aria-autocomplete="list"
-        aria-haspopup="listbox"
-        :aria-expanded="open"
-        :aria-controls="listboxId"
-        :aria-labelledby="labelId"
-        :aria-describedby="supportingText ? supportingId : undefined"
-        :aria-activedescendant="open && activeIndex >= 0 ? optionId(activeIndex) : undefined"
-        :disabled="disabled"
-        :value="editing ? query : (selected?.label ?? '')"
-        class="h-14 w-full truncate rounded-xs bg-transparent pr-12 text-body-large text-on-surface focus-visible:outline-none disabled:cursor-not-allowed disabled:text-on-surface/38"
-        :class="selected?.swatch && !editing ? 'pl-9' : 'pl-4'"
-        @input="onInput"
-        @click="onClick"
-        @keydown="onKeydown"
-        @focus="onFocus"
-        @blur="onBlur"
-      />
-
-      <span
-        class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 icon transition-transform duration-350 ease-spatial-fast"
-        :class="[
-          open && 'rotate-180',
-          disabled
-            ? 'text-on-surface/38'
-            : focused || open
-              ? 'text-primary'
-              : 'text-on-surface-variant',
-        ]"
-        aria-hidden="true"
-        >arrow_drop_down</span
-      >
-    </OutlinedField>
+      <template v-if="selected?.swatch && !editing" #icon>
+        <span class="grid place-items-center" aria-hidden="true">
+          <span class="size-3 rounded-full" :style="{ backgroundColor: selected.swatch }" />
+        </span>
+      </template>
+      <template #trailing-icon>
+        <span
+          class="pointer-events-none icon transition-transform duration-(--duration-spring-fast-spatial) ease-spring-fast-spatial"
+          :class="[open && 'rotate-180', !disabled && (focused || open) && 'text-primary']"
+          aria-hidden="true"
+          >arrow_drop_down</span
+        >
+      </template>
+    </TextField>
 
     <Teleport v-if="mounted" :to="menuHost">
       <Transition
@@ -330,8 +317,8 @@ function onClick() {
           ref="menu"
           role="listbox"
           popover="manual"
-          :aria-labelledby="labelId"
-          class="fixed inset-auto m-0 overflow-y-auto overscroll-contain rounded-lg border-0 bg-surface-container-low p-1 text-on-surface shadow-level2"
+          :aria-label="label"
+          class="fixed inset-auto m-0 overflow-y-auto overscroll-contain rounded-large border-0 bg-surface-container-low p-1 text-on-surface shadow-elevation-2"
           :class="placement === 'top' ? 'origin-bottom' : 'origin-top'"
           :style="menuStyle"
           @mousedown.prevent
@@ -369,8 +356,8 @@ function onClick() {
                 class="state-layer flex min-h-12 items-center gap-3 px-3 py-2 text-label-large transition-[border-radius] duration-350 ease-spatial-fast"
                 :class="[
                   index === selectedIndex
-                    ? 'rounded-md bg-tertiary-container text-on-tertiary-container'
-                    : 'rounded-xs',
+                    ? 'rounded-medium bg-tertiary-container text-on-tertiary-container'
+                    : 'rounded-extra-small',
                   option.disabled
                     ? 'cursor-not-allowed text-on-surface/38'
                     : index === selectedIndex

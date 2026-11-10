@@ -32,7 +32,7 @@ const HEADING_CLASS = {
     </blockquote>
     <pre
       v-else-if="block.kind === 'code'"
-      class="overflow-x-auto rounded-sm border border-outline-variant bg-surface-container-highest p-2 text-[0.85em] whitespace-pre-wrap"
+      class="overflow-x-auto rounded-small border border-outline-variant bg-surface-container-highest p-2 text-[0.85em] whitespace-pre-wrap"
     ><code>{{ block.text }}</code></pre>
     <component
       :is="block.ordered ? 'ol' : 'ul'"

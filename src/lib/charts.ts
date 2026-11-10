@@ -68,7 +68,7 @@ export function htmlTooltip() {
         box.dataset.chartTooltip = ''
         box.setAttribute('aria-hidden', 'true')
         box.className =
-          'pointer-events-none absolute top-0 left-0 z-10 flex flex-col rounded-xs bg-inverse-surface px-2 py-1 whitespace-nowrap text-inverse-on-surface shadow-level2 transition-opacity duration-150'
+          'pointer-events-none absolute top-0 left-0 z-10 flex flex-col rounded-extra-small bg-inverse-surface px-2 py-1 whitespace-nowrap text-inverse-on-surface shadow-elevation-2 transition-opacity duration-150'
         host.append(box)
       }
       if (tooltip.opacity === 0) {

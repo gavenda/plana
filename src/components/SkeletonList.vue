@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { List, ListItem } from 'tailwind-material3'
+
 /**
- * A segmented list in the shape of the rows about to load, for `StateBlock`'s `#skeleton`
+ * A segmented list (tailwind-material3's List and ListItem) in the shape of the rows about to load, for `StateBlock`'s `#skeleton`
  * slot. Match the real rows: their leading image, rank, line count and trailing text.
  */
 withDefaults(
@@ -25,30 +27,36 @@ const WIDTHS = ['60%', '42%', '72%', '50%', '65%', '38%']
 </script>
 
 <template>
-  <ul class="segmented-list" aria-hidden="true">
-    <li v-for="row in rows" :key="row" class="segmented-item" :class="itemClass">
-      <span v-if="rank" class="skeleton mx-1.5 h-3 w-4 shrink-0" />
-      <span
-        class="skeleton size-10 shrink-0"
-        :class="leading === 'art' ? 'rounded-sm' : 'rounded-full'"
-      />
-      <div class="flex min-w-0 flex-1 flex-col gap-2 py-1">
+  <List segmented class="bg-surface-container" aria-hidden="true">
+    <ListItem v-for="row in rows" :key="row" :class="itemClass">
+      <template #leading>
+        <span class="flex items-center gap-4">
+          <span v-if="rank" class="skeleton mx-1.5 h-3 w-4 shrink-0" />
+          <span
+            class="skeleton size-10 shrink-0"
+            :class="leading === 'art' ? 'rounded-small' : 'rounded-full'"
+          />
+        </span>
+      </template>
+      <span class="flex flex-col gap-2 py-1">
         <span class="skeleton h-3.5" :style="{ width: WIDTHS[(row - 1) % WIDTHS.length] }" />
         <span
           v-if="twoLine"
           class="skeleton h-2.5"
           :style="{ width: WIDTHS[(row + 2) % WIDTHS.length] }"
         />
-      </div>
-      <span v-if="trailing === 'text'" class="skeleton h-3.5 w-12 shrink-0" />
-      <div v-else-if="trailing === 'stack'" class="flex shrink-0 flex-col items-end gap-2">
-        <span class="skeleton h-3.5 w-16" />
-        <span class="skeleton h-2.5 w-10" />
-      </div>
-      <div v-else-if="trailing === 'actions'" class="flex shrink-0 gap-2">
-        <span class="skeleton h-8 w-20" />
-        <span class="skeleton h-8 w-20" />
-      </div>
-    </li>
-  </ul>
+      </span>
+      <template v-if="trailing" #trailing>
+        <span v-if="trailing === 'text'" class="skeleton h-3.5 w-12" />
+        <span v-else-if="trailing === 'stack'" class="flex flex-col items-end gap-2">
+          <span class="skeleton h-3.5 w-16" />
+          <span class="skeleton h-2.5 w-10" />
+        </span>
+        <span v-else class="flex gap-2">
+          <span class="skeleton h-8 w-20" />
+          <span class="skeleton h-8 w-20" />
+        </span>
+      </template>
+    </ListItem>
+  </List>
 </template>

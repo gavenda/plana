@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { Card } from 'tailwind-material3'
 
 import PlanaSays from '@/components/PlanaSays.vue'
 import { sceneUrls, type PlanaMood, type SceneFrame } from '@/lib/plana'
@@ -129,7 +130,7 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
 <template>
   <!-- The scene, inset on the left; App.vue moves the panel into the column beside it. -->
   <div
-    class="pointer-events-none fixed inset-y-6 right-scene-panel left-6 -z-10 hidden overflow-hidden rounded-3xl bg-surface-container-low select-none large:block"
+    class="pointer-events-none fixed inset-y-6 right-scene-panel left-6 -z-10 hidden overflow-hidden rounded-extra-extra-large bg-surface-container-low select-none large:block"
     aria-hidden="true"
   >
     <img
@@ -144,16 +145,23 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
   </div>
 
   <div class="flex w-full justify-center">
-    <div
-      class="card card-elevated flex w-full max-w-[420px] flex-col items-center gap-4 px-10 py-12 text-center"
+    <Card
+      variant="elevated"
+      :padded="false"
+      class="flex w-full max-w-[420px] flex-col items-center gap-4 px-10 py-12 text-center"
     >
       <h1 class="sr-only">Sign in to Plana</h1>
       <PlanaSays :mood="plana.mood" layout="column">{{ plana.line }}</PlanaSays>
 
-      <p v-if="error" class="card card-error px-4 py-3">{{ error }}</p>
+      <p
+        v-if="error"
+        class="overflow-hidden rounded-medium bg-error-container px-4 py-3 text-on-error-container"
+      >
+        {{ error }}
+      </p>
 
       <a
-        class="btn btn-md btn-filled isolate mt-2 w-full touch-none overflow-hidden [-webkit-touch-callout:none]"
+        class="relative isolate mt-2 inline-flex h-14 w-full cursor-pointer touch-none items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-6 font-plain text-title-medium whitespace-nowrap text-on-primary select-none [-webkit-touch-callout:none] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-current before:opacity-0 before:transition-opacity hover:shadow-elevation-1 hover:before:opacity-8 focus:outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-secondary focus-visible:outline-solid"
         :href="loginHref"
         draggable="false"
         :aria-disabled="verified"
@@ -183,6 +191,6 @@ const plana = computed<{ mood: PlanaMood; line: string }>(() => {
         </svg>
         Sign in with Discord
       </a>
-    </div>
+    </Card>
   </div>
 </template>

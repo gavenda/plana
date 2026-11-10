@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { Card, List, ListItem } from 'tailwind-material3'
 
+import LinkButton from '@/components/LinkButton.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -201,7 +203,7 @@ const recent = computed(() =>
   <div class="flex flex-col gap-4">
     <div
       v-if="settings.loaded && missing.length > 0"
-      class="card card-warn flex items-center gap-4 py-4 pr-3 pl-6"
+      class="flex items-center gap-4 overflow-hidden rounded-medium bg-warning-container py-4 pr-3 pl-6 text-on-warning-container"
     >
       <div class="flex min-w-0 flex-1 flex-col gap-1">
         <p class="text-title-medium">Finish setting up</p>
@@ -211,22 +213,18 @@ const recent = computed(() =>
           >.
         </p>
       </div>
-      <RouterLink
-        v-if="session.isAdmin"
-        class="btn btn-text text-on-warning-container"
-        to="/settings"
-        >Open settings</RouterLink
-      >
+      <LinkButton v-if="session.isAdmin" variant="inherit" to="/settings">Open settings</LinkButton>
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-      <component
-        :is="stat.to ? RouterLink : 'div'"
+      <Card
         v-for="stat in stats"
         :key="stat.label"
+        :as="stat.to ? RouterLink : 'div'"
         :to="stat.to ?? undefined"
-        class="card flex flex-col gap-1 px-6 py-5 transition-shadow duration-150 ease-effects-fast"
-        :class="stat.to && 'state-layer hover:shadow-level1'"
+        :interactive="!!stat.to"
+        :padded="false"
+        class="flex flex-col gap-1 px-6 py-5"
       >
         <span class="text-display-small font-medium">
           <span
@@ -236,7 +234,7 @@ const recent = computed(() =>
           <template v-else>{{ stat.value }}</template>
         </span>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
-      </component>
+      </Card>
     </div>
 
     <section aria-labelledby="overview-trends">
@@ -246,9 +244,14 @@ const recent = computed(() =>
           >Days in {{ daily.data.value.timeZone }}</span
         >
       </div>
-      <p v-if="daily.error.value" class="card px-6 py-4 text-body-medium text-on-surface-variant">
+      <Card
+        :padded="false"
+        as="p"
+        v-if="daily.error.value"
+        class="px-6 py-4 text-body-medium text-on-surface-variant"
+      >
         Couldn't load the last 4 weeks: {{ daily.error.value }}
-      </p>
+      </Card>
       <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
         <TrendChart
           v-for="trend in TRENDS"
@@ -268,9 +271,15 @@ const recent = computed(() =>
       <section v-if="staff" aria-labelledby="overview-activity">
         <div class="section-header">
           <h2 id="overview-activity" class="text-title-medium">Recent activity</h2>
-          <RouterLink class="btn btn-text" to="/audit">Full log</RouterLink>
+          <LinkButton to="/audit">Full log</LinkButton>
         </div>
-        <div :class="!activityLoading && recent.length === 0 && 'card'">
+        <div
+          :class="
+            !activityLoading &&
+            recent.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="activityLoading"
             :error="activity.error.value"
@@ -279,28 +288,34 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList two-line trailing="text" /></template>
-            <ul class="segmented-list">
-              <li v-for="{ entry, description } in recent" :key="entry.id" class="segmented-item">
-                <span
-                  class="grid size-10 shrink-0 place-items-center rounded-full"
-                  :class="toneContainerClass(description.tone)"
-                  aria-hidden="true"
-                >
-                  <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
-                </span>
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="description.summary">
+            <List segmented class="bg-surface-container">
+              <ListItem v-for="{ entry, description } in recent" :key="entry.id">
+                <template #leading>
+                  <span
+                    class="grid size-10 shrink-0 place-items-center rounded-full"
+                    :class="toneContainerClass(description.tone)"
+                    aria-hidden="true"
+                  >
+                    <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span :title="description.summary" class="block truncate text-body-large">
                     <AuditSummary :parts="description.parts" />
-                  </p>
-                  <p class="text-body-medium text-on-surface-variant">{{ description.label }}</p>
-                </div>
-                <span
-                  class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
-                  :title="absoluteTime(entry.createdAt)"
-                  >{{ relativeTime(entry.createdAt) }}</span
-                >
-              </li>
-            </ul>
+                  </span>
+                  <span class="block text-body-medium text-on-surface-variant">{{
+                    description.label
+                  }}</span>
+                </span>
+                <template #trailing>
+                  <span
+                    class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
+                    :title="absoluteTime(entry.createdAt)"
+                    >{{ relativeTime(entry.createdAt) }}</span
+                  >
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -311,10 +326,16 @@ const recent = computed(() =>
       >
         <div class="section-header">
           <h2 id="overview-triage" class="text-title-medium">Waiting in triage</h2>
-          <RouterLink class="btn btn-text" to="/queue">View all</RouterLink>
+          <LinkButton to="/queue">View all</LinkButton>
         </div>
         <!-- Loading, empty and error states sit in one card in place of the list. -->
-        <div :class="!pendingLoading && (pending.data.value?.length ?? 0) === 0 && 'card'">
+        <div
+          :class="
+            !pendingLoading &&
+            (pending.data.value?.length ?? 0) === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="pendingLoading"
             :error="pending.error.value"
@@ -323,31 +344,31 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList trailing="text" /></template>
-            <ul class="segmented-list">
-              <li
-                v-for="member in pending.data.value?.slice(0, 5)"
-                :key="member.id"
-                class="segmented-item"
-              >
-                <img
-                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                  :src="member.avatarUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
+            <List segmented class="bg-surface-container">
+              <ListItem v-for="member in pending.data.value?.slice(0, 5)" :key="member.id">
+                <template #leading>
+                  <img
+                    class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                    :src="member.avatarUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                </template>
                 <span
-                  class="min-w-0 flex-1 truncate text-body-large"
+                  class="block truncate text-body-large"
                   :style="{ color: discordTextColor(member.color) }"
                   >{{ member.displayName }}</span
                 >
-                <span
-                  class="shrink-0 text-label-small text-on-surface-variant"
-                  :title="absoluteTime(member.joinedAt)"
-                  >{{ relativeTime(member.joinedAt) }}</span
-                >
-              </li>
-            </ul>
+                <template #trailing>
+                  <span
+                    class="shrink-0 text-label-small text-on-surface-variant"
+                    :title="absoluteTime(member.joinedAt)"
+                    >{{ relativeTime(member.joinedAt) }}</span
+                  >
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -355,9 +376,15 @@ const recent = computed(() =>
       <section aria-labelledby="overview-games">
         <div class="section-header">
           <h2 id="overview-games" class="text-title-medium">Top games this week</h2>
-          <RouterLink class="btn btn-text" to="/activity">View all</RouterLink>
+          <LinkButton to="/activity">View all</LinkButton>
         </div>
-        <div :class="!playLoading && topGames.length === 0 && 'card'">
+        <div
+          :class="
+            !playLoading &&
+            topGames.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="playLoading"
             :error="play.error.value"
@@ -368,46 +395,54 @@ const recent = computed(() =>
             <template #skeleton>
               <SkeletonList leading="art" rank two-line trailing="text" />
             </template>
-            <ol class="segmented-list">
-              <li v-for="(game, index) in topGames" :key="game.name" class="segmented-item p-0">
-                <RouterLink
-                  :to="{ path: '/activity', query: { game: game.name } }"
-                  class="state-layer flex min-h-14 w-full min-w-0 items-center gap-4 rounded-[inherit] px-4 py-2"
-                >
-                  <span
-                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="rankClass(index)"
-                    >#{{ index + 1 }}</span
-                  >
-                  <img
-                    v-if="game.iconUrl"
-                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                    :src="game.iconUrl"
-                    alt=""
-                    width="40"
-                    height="40"
-                  />
-                  <span
-                    v-else
-                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                    aria-hidden="true"
-                    ><span class="icon [--icon-size:20px]">sports_esports</span></span
-                  >
-                  <div class="min-w-0 flex-1 py-1">
-                    <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-                    <p
-                      class="truncate text-body-small text-on-surface-variant"
-                      :title="game.top.map((player) => player.displayName).join(', ')"
+            <List segmented class="bg-surface-container">
+              <ListItem
+                v-for="(game, index) in topGames"
+                :key="game.name"
+                :as="RouterLink"
+                :to="{ path: '/activity', query: { game: game.name } }"
+              >
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
                     >
-                      {{ playerNames(game) }}
-                    </p>
-                  </div>
+                    <img
+                      v-if="game.iconUrl"
+                      class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                      :src="game.iconUrl"
+                      alt=""
+                      width="40"
+                      height="40"
+                    />
+                    <span
+                      v-else
+                      class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                      aria-hidden="true"
+                      ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                    >
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span :title="game.name" class="block truncate text-body-large">{{
+                    game.name
+                  }}</span>
+                  <span
+                    :title="game.top.map((player) => player.displayName).join(', ')"
+                    class="block truncate text-body-small text-on-surface-variant"
+                  >
+                    {{ playerNames(game) }}
+                  </span>
+                </span>
+                <template #trailing>
                   <span class="shrink-0 text-body-large tabular-nums">{{
                     formatDuration(game.ms)
                   }}</span>
-                </RouterLink>
-              </li>
-            </ol>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -415,9 +450,15 @@ const recent = computed(() =>
       <section aria-labelledby="overview-tracks">
         <div class="section-header">
           <h2 id="overview-tracks" class="text-title-medium">Top tracks this week</h2>
-          <RouterLink class="btn btn-text" to="/activity">View all</RouterLink>
+          <LinkButton to="/activity">View all</LinkButton>
         </div>
-        <div :class="!playLoading && topTracks.length === 0 && 'card'">
+        <div
+          :class="
+            !playLoading &&
+            topTracks.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="playLoading"
             :error="play.error.value"
@@ -428,43 +469,51 @@ const recent = computed(() =>
             <template #skeleton>
               <SkeletonList leading="art" rank two-line trailing="text" />
             </template>
-            <ol class="segmented-list">
-              <li v-for="(track, index) in topTracks" :key="track.id" class="segmented-item p-0">
-                <RouterLink
-                  :to="{ path: '/activity', query: { track: track.id } }"
-                  class="state-layer flex min-h-14 w-full min-w-0 items-center gap-4 rounded-[inherit] px-4 py-2"
-                >
-                  <span
-                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="rankClass(index)"
-                    >#{{ index + 1 }}</span
-                  >
-                  <img
-                    v-if="track.artUrl"
-                    class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                    :src="track.artUrl"
-                    :alt="track.album ?? ''"
-                    width="40"
-                    height="40"
-                  />
-                  <span
-                    v-else
-                    class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                    aria-hidden="true"
-                    ><span class="icon [--icon-size:20px]">music_note</span></span
-                  >
-                  <div class="min-w-0 flex-1 py-1">
-                    <p class="truncate text-body-large" :title="track.title">{{ track.title }}</p>
-                    <p class="truncate text-body-small text-on-surface-variant">
-                      {{ track.artist ?? 'Unknown artist' }}
-                    </p>
-                  </div>
+            <List segmented class="bg-surface-container">
+              <ListItem
+                v-for="(track, index) in topTracks"
+                :key="track.id"
+                :as="RouterLink"
+                :to="{ path: '/activity', query: { track: track.id } }"
+              >
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
+                    >
+                    <img
+                      v-if="track.artUrl"
+                      class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                      :src="track.artUrl"
+                      :alt="track.album ?? ''"
+                      width="40"
+                      height="40"
+                    />
+                    <span
+                      v-else
+                      class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                      aria-hidden="true"
+                      ><span class="icon [--icon-size:20px]">music_note</span></span
+                    >
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span :title="track.title" class="block truncate text-body-large">{{
+                    track.title
+                  }}</span>
+                  <span class="block truncate text-body-small text-on-surface-variant">
+                    {{ track.artist ?? 'Unknown artist' }}
+                  </span>
+                </span>
+                <template #trailing>
                   <span class="shrink-0 text-body-large tabular-nums">{{
                     track.plays === 1 ? '1 play' : `${track.plays.toLocaleString()} plays`
                   }}</span>
-                </RouterLink>
-              </li>
-            </ol>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -472,9 +521,15 @@ const recent = computed(() =>
       <section aria-labelledby="overview-voice">
         <div class="section-header">
           <h2 id="overview-voice" class="text-title-medium">Most time in voice this week</h2>
-          <RouterLink class="btn btn-text" to="/voice">View all</RouterLink>
+          <LinkButton to="/voice">View all</LinkButton>
         </div>
-        <div :class="!voiceLoading && topVoice.length === 0 && 'card'">
+        <div
+          :class="
+            !voiceLoading &&
+            topVoice.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="voiceLoading"
             :error="voice.error.value"
@@ -483,39 +538,45 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList rank two-line trailing="stack" /></template>
-            <ol class="segmented-list">
-              <li v-for="(member, index) in topVoice" :key="member.id" class="segmented-item p-0">
-                <RouterLink
-                  :to="{ path: '/voice', query: { member: member.id } }"
-                  class="state-layer flex min-h-14 w-full min-w-0 items-center gap-4 rounded-[inherit] px-4 py-2"
-                >
-                  <span
-                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="rankClass(index)"
-                    >#{{ index + 1 }}</span
-                  >
-                  <img
-                    class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                    :src="member.avatarUrl"
-                    alt=""
-                    width="40"
-                    height="40"
-                  />
-                  <div class="min-w-0 flex-1 py-1">
-                    <p
-                      class="truncate text-body-large"
-                      :style="{ color: discordTextColor(member.color) }"
+            <List segmented class="bg-surface-container">
+              <ListItem
+                v-for="(member, index) in topVoice"
+                :key="member.id"
+                :as="RouterLink"
+                :to="{ path: '/voice', query: { member: member.id } }"
+              >
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
                     >
-                      {{ member.displayName }}
-                    </p>
-                    <p class="truncate text-body-small text-on-surface-variant">
-                      {{
-                        member.sessions === 1
-                          ? '1 session'
-                          : `${member.sessions.toLocaleString()} sessions`
-                      }}
-                    </p>
-                  </div>
+                    <img
+                      class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                      :src="member.avatarUrl"
+                      alt=""
+                      width="40"
+                      height="40"
+                    />
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span
+                    :style="{ color: discordTextColor(member.color) }"
+                    class="block truncate text-body-large"
+                  >
+                    {{ member.displayName }}
+                  </span>
+                  <span class="block truncate text-body-small text-on-surface-variant">
+                    {{
+                      member.sessions === 1
+                        ? '1 session'
+                        : `${member.sessions.toLocaleString()} sessions`
+                    }}
+                  </span>
+                </span>
+                <template #trailing>
                   <div class="flex shrink-0 flex-col items-end">
                     <span class="text-body-large tabular-nums">{{
                       formatDuration(member.ms)
@@ -527,9 +588,9 @@ const recent = computed(() =>
                       >In voice now</span
                     >
                   </div>
-                </RouterLink>
-              </li>
-            </ol>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -537,9 +598,15 @@ const recent = computed(() =>
       <section aria-labelledby="overview-channels">
         <div class="section-header">
           <h2 id="overview-channels" class="text-title-medium">Busiest voice channels this week</h2>
-          <RouterLink class="btn btn-text" to="/voice">View all</RouterLink>
+          <LinkButton to="/voice">View all</LinkButton>
         </div>
-        <div :class="!voiceLoading && topChannels.length === 0 && 'card'">
+        <div
+          :class="
+            !voiceLoading &&
+            topChannels.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="voiceLoading"
             :error="voice.error.value"
@@ -548,34 +615,44 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList rank two-line trailing="stack" /></template>
-            <ol class="segmented-list">
-              <li v-for="(channel, index) in topChannels" :key="channel.id" class="segmented-item">
-                <span
-                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="rankClass(index)"
-                  >#{{ index + 1 }}</span
-                >
-                <span
-                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                  aria-hidden="true"
-                  ><span class="icon [--icon-size:20px]">volume_up</span></span
-                >
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="channel.name">{{ channel.name }}</p>
-                  <p class="truncate text-body-small text-on-surface-variant">
+            <List segmented class="bg-surface-container">
+              <ListItem v-for="(channel, index) in topChannels" :key="channel.id">
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
+                    >
+                    <span
+                      class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                      aria-hidden="true"
+                      ><span class="icon [--icon-size:20px]">volume_up</span></span
+                    >
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span :title="channel.name" class="block truncate text-body-large">{{
+                    channel.name
+                  }}</span>
+                  <span class="block truncate text-body-small text-on-surface-variant">
                     {{
                       channel.members === 1
                         ? '1 member'
                         : `${channel.members.toLocaleString()} members`
                     }}
-                  </p>
-                </div>
-                <div class="flex shrink-0 flex-col items-end">
-                  <span class="text-body-large tabular-nums">{{ formatDuration(channel.ms) }}</span>
-                  <span class="text-label-small text-on-surface-variant">Active</span>
-                </div>
-              </li>
-            </ol>
+                  </span>
+                </span>
+                <template #trailing>
+                  <div class="flex shrink-0 flex-col items-end">
+                    <span class="text-body-large tabular-nums">{{
+                      formatDuration(channel.ms)
+                    }}</span>
+                    <span class="text-label-small text-on-surface-variant">Active</span>
+                  </div>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -583,9 +660,15 @@ const recent = computed(() =>
       <section aria-labelledby="overview-birthdays">
         <div class="section-header">
           <h2 id="overview-birthdays" class="text-title-medium">Upcoming birthdays</h2>
-          <RouterLink v-if="staff" class="btn btn-text" to="/birthdays">View all</RouterLink>
+          <LinkButton v-if="staff" to="/birthdays">View all</LinkButton>
         </div>
-        <div :class="!upcomingLoading && birthdays.length === 0 && 'card'">
+        <div
+          :class="
+            !upcomingLoading &&
+            birthdays.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="upcomingLoading"
             :error="upcoming.error.value"
@@ -594,36 +677,42 @@ const recent = computed(() =>
             compact
           >
             <template #skeleton><SkeletonList two-line trailing="stack" /></template>
-            <ul class="segmented-list">
-              <li v-for="entry in birthdays" :key="entry.id" class="segmented-item">
-                <img
-                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                  :src="entry.avatarUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-                <div class="min-w-0 flex-1 py-1">
-                  <p
-                    class="truncate text-body-large"
+            <List segmented class="bg-surface-container">
+              <ListItem v-for="entry in birthdays" :key="entry.id">
+                <template #leading>
+                  <img
+                    class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                    :src="entry.avatarUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                  />
+                </template>
+                <span class="block py-1">
+                  <span
                     :style="{ color: discordTextColor(entry.color) }"
+                    class="block truncate text-body-large"
                   >
                     {{ entry.displayName }}
-                  </p>
-                  <p class="truncate font-mono text-body-small text-on-surface-variant">
+                  </span>
+                  <span class="block truncate font-mono text-body-small text-on-surface-variant">
                     {{ entry.username }}
-                  </p>
-                </div>
-                <div class="flex shrink-0 flex-col items-end">
-                  <span class="text-body-large">{{ formatMonthDay(entry.month, entry.day) }}</span>
-                  <span
-                    class="text-label-small"
-                    :class="entry.daysUntil === 0 ? 'text-tertiary' : 'text-on-surface-variant'"
-                    >{{ formatUntil(entry.daysUntil) }}</span
-                  >
-                </div>
-              </li>
-            </ul>
+                  </span>
+                </span>
+                <template #trailing>
+                  <div class="flex shrink-0 flex-col items-end">
+                    <span class="text-body-large">{{
+                      formatMonthDay(entry.month, entry.day)
+                    }}</span>
+                    <span
+                      class="text-label-small"
+                      :class="entry.daysUntil === 0 ? 'text-tertiary' : 'text-on-surface-variant'"
+                      >{{ formatUntil(entry.daysUntil) }}</span
+                    >
+                  </div>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>

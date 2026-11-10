@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import { Card } from 'tailwind-material3'
 
 import {
   clearActive,
@@ -223,9 +224,9 @@ function step(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="card flex flex-col gap-3 px-4 py-4">
+  <Card :padded="false" class="flex flex-col gap-3 px-4 py-4">
     <div
-      class="relative h-56 rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+      class="relative h-56 rounded-small outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
       tabindex="0"
       role="img"
       :aria-label="`Average members ${DOING[kind]} by weekday and hour, in ${timeZone}. Use the arrow keys to read an hour.`"
@@ -279,5 +280,5 @@ function step(event: KeyboardEvent) {
         </tbody>
       </table>
     </div>
-  </div>
+  </Card>
 </template>

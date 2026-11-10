@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Button, Card, Chip, IconButton, List, ListItem } from 'tailwind-material3'
 
 import ActivityStrip from '@/components/ActivityStrip.vue'
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import AuditSummary from '@/components/AuditSummary.vue'
 import DiscordMention from '@/components/DiscordMention.vue'
-import FilterChip from '@/components/FilterChip.vue'
 import PlanaSays from '@/components/PlanaSays.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -363,7 +363,11 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
 
       <div
         class="min-h-0 flex-1 overflow-y-auto"
-        :class="!listLoading && matches.length === 0 && 'card'"
+        :class="
+          !listLoading &&
+          matches.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
       >
         <StateBlock
           :loading="listLoading"
@@ -373,17 +377,16 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
           :retry="list.run"
         >
           <template #skeleton><SkeletonList :rows="8" two-line /></template>
-          <ul class="segmented-list">
-            <li v-for="member in visible" :key="member.id" class="segmented-item p-0">
-              <button
-                type="button"
-                class="state-layer flex min-h-14 w-full min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left transition-colors duration-200 ease-effects-fast"
-                :class="
-                  member.id === chosen && 'bg-secondary-container text-on-secondary-container'
-                "
-                :aria-current="member.id === chosen ? 'true' : undefined"
-                @click="choose(member.id)"
-              >
+          <List segmented class="bg-surface-container">
+            <ListItem
+              v-for="member in visible"
+              :key="member.id"
+              as="button"
+              :class="member.id === chosen && 'bg-secondary-container text-on-secondary-container'"
+              :aria-current="member.id === chosen ? 'true' : undefined"
+              @click="choose(member.id)"
+            >
+              <template #leading>
                 <img
                   class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
                   :src="member.avatarUrl"
@@ -392,17 +395,19 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   height="40"
                   loading="lazy"
                 />
-                <div class="min-w-0 flex-1 py-1">
-                  <p
-                    class="truncate text-body-large"
-                    :style="{ color: discordTextColor(member.color) }"
-                  >
-                    {{ member.displayName }}
-                  </p>
-                  <p class="truncate font-mono text-body-small text-on-surface-variant">
-                    {{ member.username }}
-                  </p>
-                </div>
+              </template>
+              <span class="block py-1">
+                <span
+                  :style="{ color: discordTextColor(member.color) }"
+                  class="block truncate text-body-large"
+                >
+                  {{ member.displayName }}
+                </span>
+                <span class="block truncate font-mono text-body-small text-on-surface-variant">
+                  {{ member.username }}
+                </span>
+              </span>
+              <template #trailing>
                 <span
                   v-if="member.birthday"
                   class="shrink-0 icon text-on-surface-variant [--icon-size:18px]"
@@ -410,13 +415,11 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                   aria-hidden="true"
                   >cake</span
                 >
-              </button>
-            </li>
-          </ul>
+              </template>
+            </ListItem>
+          </List>
           <div v-if="matches.length > visible.length" class="flex justify-center pt-3">
-            <button class="btn btn-tonal" type="button" @click="shown += PAGE_SIZE">
-              Show more
-            </button>
+            <Button variant="tonal" @click="shown += PAGE_SIZE">Show more</Button>
           </div>
         </StateBlock>
       </div>
@@ -428,27 +431,28 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
       class="flex min-h-0 min-w-0 flex-col"
       :class="!chosen && 'max-expanded:hidden'"
     >
-      <div
+      <Card
+        :padded="false"
         v-if="!chosen"
-        class="card grid h-full place-items-center bg-surface-container-low px-6 py-10"
+        class="grid h-full place-items-center bg-surface-container-low px-6 py-10"
       >
         <PlanaSays mood="attentive" layout="column"
           >Choose a member. I'll bring up everything I have on file.</PlanaSays
         >
-      </div>
+      </Card>
 
       <div v-else class="flex min-h-0 flex-1 flex-col gap-3">
         <!-- Who it is stays put; their records scroll beneath. As tall as the search bar beside it,
              so both panes' first cards start level. -->
         <header class="flex h-14 shrink-0 items-center gap-4">
-          <button
-            type="button"
-            class="icon-btn shrink-0 text-on-surface expanded:hidden"
-            aria-label="Back to members"
+          <IconButton
+            variant="standard"
+            label="Back to members"
             @click="backToList"
+            class="shrink-0 expanded:hidden"
           >
             <span class="icon" aria-hidden="true">arrow_back</span>
-          </button>
+          </IconButton>
           <img
             v-if="person"
             class="size-14 shrink-0 rounded-full bg-surface-container-highest object-cover"
@@ -471,7 +475,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
           </div>
           <span
             v-if="detail && !detail.inServer"
-            class="shrink-0 rounded-sm bg-error-container px-2 py-1 text-label-medium text-on-error-container"
+            class="shrink-0 rounded-small bg-error-container px-2 py-1 text-label-medium text-on-error-container"
             >Left the server</span
           >
         </header>
@@ -486,7 +490,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
 
             <div v-if="detail" class="flex flex-col gap-4">
               <!-- Who they are. -->
-              <div class="card flex flex-col gap-4 px-6 py-5">
+              <Card :padded="false" class="flex flex-col gap-4 px-6 py-5">
                 <dl class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
                   <div v-for="fact in facts" :key="fact.label">
                     <dt class="text-label-medium text-on-surface-variant">{{ fact.label }}</dt>
@@ -505,13 +509,15 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                     />
                   </div>
                 </div>
-              </div>
+              </Card>
 
               <ul v-if="rightNow.length > 0" class="flex flex-col gap-2">
-                <li
+                <Card
+                  :padded="false"
+                  as="li"
                   v-for="item in rightNow"
                   :key="item.key"
-                  class="card flex items-center gap-3 bg-primary-container px-4 py-3 text-body-medium text-on-primary-container"
+                  class="flex items-center gap-3 bg-primary-container px-4 py-3 text-body-medium text-on-primary-container"
                 >
                   <span class="icon [--icon-size:20px]" aria-hidden="true">{{ item.icon }}</span>
                   <span class="min-w-0 flex-1 truncate"
@@ -522,31 +528,33 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                     :title="`Since ${absoluteTime(item.since)}`"
                     >{{ relativeTime(item.since) }}</span
                   >
-                </li>
+                </Card>
               </ul>
 
               <div class="flex flex-wrap gap-2" role="group" aria-label="Period">
-                <FilterChip
+                <Chip
                   v-for="period in PERIODS"
                   :key="period.label"
-                  :label="period.label"
-                  :model-value="days === period.days"
-                  @update:model-value="days = period.days"
-                />
+                  type="filter"
+                  :selected="days === period.days"
+                  @update:selected="days = period.days"
+                  >{{ period.label }}</Chip
+                >
               </div>
 
               <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
-                <div
+                <Card
+                  :padded="false"
                   v-for="stat in stats"
                   :key="stat.label"
-                  class="card flex flex-col gap-1 px-6 py-5"
+                  class="flex flex-col gap-1 px-6 py-5"
                 >
                   <span class="text-display-small font-medium">{{ stat.value }}</span>
                   <span class="text-label-large opacity-80">{{ stat.label }}</span>
                   <span v-if="stat.note" class="text-body-small text-on-surface-variant">{{
                     stat.note
                   }}</span>
-                </div>
+                </Card>
               </div>
 
               <div class="grid items-start gap-6 large:grid-cols-2">
@@ -557,36 +565,36 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       plural(detail.voice.sessions, 'session', 'sessions')
                     }}</span>
                   </div>
-                  <div v-if="detail.voice.channels.length === 0" class="card">
+                  <Card :padded="false" v-if="detail.voice.channels.length === 0">
                     <StateBlock
                       empty
                       :empty-text="`No time in voice in ${periodLabel?.toLowerCase()}.`"
                     />
-                  </div>
-                  <ol v-else class="segmented-list">
-                    <li
-                      v-for="channel in detail.voice.channels"
-                      :key="channel.id"
-                      class="segmented-item"
-                    >
-                      <span
-                        class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                        aria-hidden="true"
-                        ><span class="icon [--icon-size:20px]">volume_up</span></span
-                      >
-                      <div class="min-w-0 flex-1 py-1">
-                        <p class="truncate text-body-large" :title="channel.name">
+                  </Card>
+                  <List segmented v-else class="bg-surface-container">
+                    <ListItem v-for="channel in detail.voice.channels" :key="channel.id">
+                      <template #leading>
+                        <span
+                          class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                          aria-hidden="true"
+                          ><span class="icon [--icon-size:20px]">volume_up</span></span
+                        >
+                      </template>
+                      <span class="block py-1">
+                        <span :title="channel.name" class="block truncate text-body-large">
                           {{ channel.name }}
-                        </p>
-                        <p class="truncate text-body-small text-on-surface-variant">
+                        </span>
+                        <span class="block truncate text-body-small text-on-surface-variant">
                           {{ plural(channel.sessions, 'session', 'sessions') }}
-                        </p>
-                      </div>
-                      <span class="shrink-0 text-body-large tabular-nums">{{
-                        formatDuration(channel.ms)
-                      }}</span>
-                    </li>
-                  </ol>
+                        </span>
+                      </span>
+                      <template #trailing>
+                        <span class="shrink-0 text-body-large tabular-nums">{{
+                          formatDuration(channel.ms)
+                        }}</span>
+                      </template>
+                    </ListItem>
+                  </List>
                 </section>
 
                 <section aria-labelledby="member-games">
@@ -596,47 +604,55 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       plural(detail.games.count, 'game', 'games')
                     }}</span>
                   </div>
-                  <div v-if="detail.games.top.length === 0" class="card">
+                  <Card :padded="false" v-if="detail.games.top.length === 0">
                     <StateBlock
                       empty
                       :empty-text="`No games played in ${periodLabel?.toLowerCase()}.`"
                     />
-                  </div>
-                  <ol v-else class="segmented-list">
-                    <li v-for="game in detail.games.top" :key="game.name" class="segmented-item">
-                      <img
-                        v-if="game.iconUrl"
-                        class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                        :src="game.iconUrl"
-                        alt=""
-                        width="40"
-                        height="40"
-                      />
-                      <span
-                        v-else
-                        class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                        aria-hidden="true"
-                        ><span class="icon [--icon-size:20px]">sports_esports</span></span
-                      >
-                      <div class="min-w-0 flex-1 py-1">
-                        <p class="truncate text-body-large" :title="game.name">{{ game.name }}</p>
-                        <p class="truncate text-body-small text-on-surface-variant">
-                          {{ plural(game.sessions, 'session', 'sessions') }}
-                        </p>
-                      </div>
-                      <div class="flex shrink-0 flex-col items-end">
-                        <span class="text-body-large tabular-nums">{{
-                          formatDuration(game.ms)
+                  </Card>
+                  <List segmented v-else class="bg-surface-container">
+                    <ListItem v-for="game in detail.games.top" :key="game.name">
+                      <template #leading>
+                        <span class="flex items-center gap-4">
+                          <img
+                            v-if="game.iconUrl"
+                            class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                            :src="game.iconUrl"
+                            alt=""
+                            width="40"
+                            height="40"
+                          />
+                          <span
+                            v-else
+                            class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                            aria-hidden="true"
+                            ><span class="icon [--icon-size:20px]">sports_esports</span></span
+                          >
+                        </span>
+                      </template>
+                      <span class="block py-1">
+                        <span :title="game.name" class="block truncate text-body-large">{{
+                          game.name
                         }}</span>
-                        <span
-                          v-if="game.playingSince != null"
-                          class="text-label-small text-tertiary"
-                          :title="`Since ${absoluteTime(game.playingSince)}`"
-                          >Playing now</span
-                        >
-                      </div>
-                    </li>
-                  </ol>
+                        <span class="block truncate text-body-small text-on-surface-variant">
+                          {{ plural(game.sessions, 'session', 'sessions') }}
+                        </span>
+                      </span>
+                      <template #trailing>
+                        <div class="flex shrink-0 flex-col items-end">
+                          <span class="text-body-large tabular-nums">{{
+                            formatDuration(game.ms)
+                          }}</span>
+                          <span
+                            v-if="game.playingSince != null"
+                            class="text-label-small text-tertiary"
+                            :title="`Since ${absoluteTime(game.playingSince)}`"
+                            >Playing now</span
+                          >
+                        </div>
+                      </template>
+                    </ListItem>
+                  </List>
                 </section>
 
                 <section aria-labelledby="member-music">
@@ -646,45 +662,47 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       plural(detail.music.count, 'track', 'tracks')
                     }}</span>
                   </div>
-                  <div v-if="detail.music.top.length === 0" class="card">
+                  <Card :padded="false" v-if="detail.music.top.length === 0">
                     <StateBlock
                       empty
                       :empty-text="`No tracks played in ${periodLabel?.toLowerCase()}.`"
                     />
-                  </div>
-                  <ol v-else class="segmented-list">
-                    <li
-                      v-for="entry in detail.music.top"
-                      :key="entry.track.id"
-                      class="segmented-item"
-                    >
-                      <img
-                        v-if="entry.track.artUrl"
-                        class="size-10 shrink-0 rounded-sm bg-surface-container-highest object-cover"
-                        :src="entry.track.artUrl"
-                        alt=""
-                        width="40"
-                        height="40"
-                      />
-                      <span
-                        v-else
-                        class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                        aria-hidden="true"
-                        ><span class="icon [--icon-size:20px]">music_note</span></span
-                      >
-                      <div class="min-w-0 flex-1 py-1">
-                        <p class="truncate text-body-large" :title="entry.track.title">
+                  </Card>
+                  <List segmented v-else class="bg-surface-container">
+                    <ListItem v-for="entry in detail.music.top" :key="entry.track.id">
+                      <template #leading>
+                        <span class="flex items-center gap-4">
+                          <img
+                            v-if="entry.track.artUrl"
+                            class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                            :src="entry.track.artUrl"
+                            alt=""
+                            width="40"
+                            height="40"
+                          />
+                          <span
+                            v-else
+                            class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                            aria-hidden="true"
+                            ><span class="icon [--icon-size:20px]">music_note</span></span
+                          >
+                        </span>
+                      </template>
+                      <span class="block py-1">
+                        <span :title="entry.track.title" class="block truncate text-body-large">
                           {{ entry.track.title }}
-                        </p>
-                        <p class="truncate text-body-small text-on-surface-variant">
+                        </span>
+                        <span class="block truncate text-body-small text-on-surface-variant">
                           {{ entry.track.artist ?? 'Unknown artist' }}
-                        </p>
-                      </div>
-                      <span class="shrink-0 text-body-large tabular-nums">{{
-                        plural(entry.plays, 'play', 'plays')
-                      }}</span>
-                    </li>
-                  </ol>
+                        </span>
+                      </span>
+                      <template #trailing>
+                        <span class="shrink-0 text-body-large tabular-nums">{{
+                          plural(entry.plays, 'play', 'plays')
+                        }}</span>
+                      </template>
+                    </ListItem>
+                  </List>
                 </section>
 
                 <!-- Beside Music, in the space the grid leaves; it covers 6 months whatever the period. -->
@@ -698,7 +716,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                     :retry="activity.run"
                     compact
                   >
-                    <template #skeleton><div class="skeleton h-48 rounded-md" /></template>
+                    <template #skeleton><div class="skeleton h-48 rounded-medium" /></template>
                     <ActivityStrip v-if="strip" :days="strip.days" :time-zone="strip.timeZone" />
                   </StateBlock>
                 </section>
@@ -714,38 +732,38 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                     {{ detail.audit.total.toLocaleString() }}</span
                   >
                 </div>
-                <div v-if="auditItems.length === 0" class="card">
+                <Card :padded="false" v-if="auditItems.length === 0">
                   <StateBlock empty empty-text="Nothing recorded about this member." />
-                </div>
-                <ul v-else class="segmented-list">
-                  <li
-                    v-for="{ entry, description } in auditItems"
-                    :key="entry.id"
-                    class="segmented-item"
-                  >
-                    <span
-                      class="grid size-10 shrink-0 place-items-center rounded-full"
-                      :class="toneContainerClass(description.tone)"
-                      aria-hidden="true"
-                    >
-                      <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
-                    </span>
-                    <div class="min-w-0 flex-1 py-1">
-                      <p class="text-body-large [overflow-wrap:anywhere]">
+                </Card>
+                <List segmented v-else class="bg-surface-container">
+                  <ListItem v-for="{ entry, description } in auditItems" :key="entry.id">
+                    <template #leading>
+                      <span
+                        class="grid size-10 shrink-0 place-items-center rounded-full"
+                        :class="toneContainerClass(description.tone)"
+                        aria-hidden="true"
+                      >
+                        <span class="icon [--icon-size:20px]">{{ auditIcon(entry.action) }}</span>
+                      </span>
+                    </template>
+                    <span class="block py-1">
+                      <span class="block text-body-large [overflow-wrap:anywhere]">
                         <AuditSummary :parts="description.parts" />
-                      </p>
-                      <p class="text-body-medium text-on-surface-variant">
+                      </span>
+                      <span class="block text-body-medium text-on-surface-variant">
                         {{ description.label }} · {{ roleIn(entry) }}
-                      </p>
-                    </div>
-                    <time
-                      class="shrink-0 self-start pt-1 text-label-small text-on-surface-variant"
-                      :datetime="new Date(entry.createdAt).toISOString()"
-                      :title="absoluteTime(entry.createdAt)"
-                      >{{ dayLabel(entry.createdAt) }}</time
-                    >
-                  </li>
-                </ul>
+                      </span>
+                    </span>
+                    <template #trailing>
+                      <time
+                        class="shrink-0 self-start pt-1 text-label-small text-on-surface-variant"
+                        :datetime="new Date(entry.createdAt).toISOString()"
+                        :title="absoluteTime(entry.createdAt)"
+                        >{{ dayLabel(entry.createdAt) }}</time
+                      >
+                    </template>
+                  </ListItem>
+                </List>
               </section>
             </div>
           </StateBlock>

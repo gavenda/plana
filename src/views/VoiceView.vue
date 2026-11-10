@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Card, Chip, List, ListItem } from 'tailwind-material3'
 
-import FilterChip from '@/components/FilterChip.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
@@ -180,23 +180,29 @@ const plural = (count: number, one: string, many: string) =>
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap gap-2" role="group" aria-label="Period">
-      <FilterChip
+      <Chip
         v-for="period in PERIODS"
         :key="period.label"
-        :label="period.label"
-        :model-value="days === period.days"
-        @update:model-value="days = period.days"
-      />
+        type="filter"
+        :selected="days === period.days"
+        @update:selected="days = period.days"
+        >{{ period.label }}</Chip
+      >
     </div>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-      <div v-for="stat in stats" :key="stat.label" class="card flex flex-col gap-1 px-6 py-5">
+      <Card
+        :padded="false"
+        v-for="stat in stats"
+        :key="stat.label"
+        class="flex flex-col gap-1 px-6 py-5"
+      >
         <span class="text-display-small font-medium">
           <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
           <template v-else>{{ stat.value }}</template>
         </span>
         <span class="text-label-large opacity-80">{{ stat.label }}</span>
-      </div>
+      </Card>
     </div>
 
     <section aria-labelledby="voice-now">
@@ -206,7 +212,13 @@ const plural = (count: number, one: string, many: string) =>
           inVoice.length
         }}</span>
       </div>
-      <div :class="!loading && inVoice.length === 0 && 'card'">
+      <div
+        :class="
+          !loading &&
+          inVoice.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container-highest'
+        "
+      >
         <StateBlock
           :loading="loading"
           :error="overview.error.value"
@@ -215,13 +227,14 @@ const plural = (count: number, one: string, many: string) =>
           compact
         >
           <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
-          <ul class="segmented-list">
-            <li v-for="entry in inVoice" :key="entry.member.id" class="segmented-item p-0">
-              <button
-                type="button"
-                class="state-layer flex min-h-14 w-full min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left"
-                @click="chooseMember(entry.member.id)"
-              >
+          <List segmented class="bg-surface-container">
+            <ListItem
+              v-for="entry in inVoice"
+              :key="entry.member.id"
+              as="button"
+              @click="chooseMember(entry.member.id)"
+            >
+              <template #leading>
                 <img
                   class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
                   :src="entry.member.avatarUrl"
@@ -229,28 +242,28 @@ const plural = (count: number, one: string, many: string) =>
                   width="40"
                   height="40"
                 />
-                <div class="min-w-0 flex-1 py-1">
-                  <p
-                    class="truncate text-body-large"
-                    :style="{ color: discordTextColor(entry.member.color) }"
-                  >
-                    {{ entry.member.displayName }}
-                  </p>
-                  <p class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
-                    <span class="shrink-0 icon [--icon-size:16px]" aria-hidden="true"
-                      >volume_up</span
-                    >
-                    <span class="truncate">{{ entry.channel.name }}</span>
-                  </p>
-                </div>
+              </template>
+              <span class="block py-1">
+                <span
+                  :style="{ color: discordTextColor(entry.member.color) }"
+                  class="block truncate text-body-large"
+                >
+                  {{ entry.member.displayName }}
+                </span>
+                <span class="block items-center gap-1.5 text-body-medium text-on-surface-variant">
+                  <span class="shrink-0 icon [--icon-size:16px]" aria-hidden="true">volume_up</span>
+                  <span class="truncate">{{ entry.channel.name }}</span>
+                </span>
+              </span>
+              <template #trailing>
                 <span
                   class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
                   :title="`Since ${absoluteTime(entry.since)}`"
                   >{{ relativeTime(entry.since) }}</span
                 >
-              </button>
-            </li>
-          </ul>
+              </template>
+            </ListItem>
+          </List>
         </StateBlock>
       </div>
     </section>
@@ -270,7 +283,7 @@ const plural = (count: number, one: string, many: string) =>
         :error="heatmap.error.value"
         compact
       >
-        <template #skeleton><div class="skeleton h-56 rounded-md" /></template>
+        <template #skeleton><div class="skeleton h-56 rounded-medium" /></template>
         <ActivityHeatmap
           v-if="heatmap.data.value"
           kind="voice"
@@ -287,7 +300,13 @@ const plural = (count: number, one: string, many: string) =>
         <div class="section-header">
           <h2 id="voice-members" class="text-title-medium">Most time in voice</h2>
         </div>
-        <div :class="!loading && members.length === 0 && 'card'">
+        <div
+          :class="
+            !loading &&
+            members.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="loading"
             :error="overview.error.value"
@@ -298,41 +317,45 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" rank two-line trailing="text" />
             </template>
-            <ol class="segmented-list">
-              <li v-for="(member, index) in members" :key="member.id" class="segmented-item p-0">
-                <button
-                  type="button"
-                  class="state-layer flex min-h-14 w-full min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] px-4 py-2 text-left transition-colors duration-200 ease-effects-fast"
-                  :class="
-                    member.id === chosenMember &&
-                    'bg-secondary-container text-on-secondary-container'
-                  "
-                  :aria-current="member.id === chosenMember ? 'true' : undefined"
-                  @click="chooseMember(member.id)"
-                >
-                  <span
-                    class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                    :class="rankClass(index)"
-                    >#{{ index + 1 }}</span
-                  >
-                  <img
-                    class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                    :src="member.avatarUrl"
-                    alt=""
-                    width="40"
-                    height="40"
-                  />
-                  <div class="min-w-0 flex-1 py-1">
-                    <p
-                      class="truncate text-body-large"
-                      :style="{ color: discordTextColor(member.color) }"
+            <List segmented class="bg-surface-container">
+              <ListItem
+                v-for="(member, index) in members"
+                :key="member.id"
+                as="button"
+                :class="
+                  member.id === chosenMember && 'bg-secondary-container text-on-secondary-container'
+                "
+                :aria-current="member.id === chosenMember ? 'true' : undefined"
+                @click="chooseMember(member.id)"
+              >
+                <template #leading>
+                  <span class="flex items-center gap-4">
+                    <span
+                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
+                      :class="rankClass(index)"
+                      >#{{ index + 1 }}</span
                     >
-                      {{ member.displayName }}
-                    </p>
-                    <p class="truncate text-body-small text-on-surface-variant">
-                      {{ plural(member.sessions, 'session', 'sessions') }}
-                    </p>
-                  </div>
+                    <img
+                      class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                      :src="member.avatarUrl"
+                      alt=""
+                      width="40"
+                      height="40"
+                    />
+                  </span>
+                </template>
+                <span class="block py-1">
+                  <span
+                    :style="{ color: discordTextColor(member.color) }"
+                    class="block truncate text-body-large"
+                  >
+                    {{ member.displayName }}
+                  </span>
+                  <span class="block truncate text-body-small text-on-surface-variant">
+                    {{ plural(member.sessions, 'session', 'sessions') }}
+                  </span>
+                </span>
+                <template #trailing>
                   <div class="flex shrink-0 flex-col items-end">
                     <span class="text-body-large tabular-nums">{{
                       formatDuration(member.ms)
@@ -344,9 +367,9 @@ const plural = (count: number, one: string, many: string) =>
                       >In voice now</span
                     >
                   </div>
-                </button>
-              </li>
-            </ol>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -362,7 +385,13 @@ const plural = (count: number, one: string, many: string) =>
           </div>
         </div>
         <ChannelShare v-if="channels.length > 1" class="mb-2" :channels="channels" />
-        <div :class="!loading && channels.length === 0 && 'card'">
+        <div
+          :class="
+            !loading &&
+            channels.length === 0 &&
+            'overflow-hidden rounded-medium bg-surface-container-highest'
+          "
+        >
           <StateBlock
             :loading="loading"
             :error="overview.error.value"
@@ -373,16 +402,20 @@ const plural = (count: number, one: string, many: string) =>
             <template #skeleton>
               <SkeletonList :rows="5" leading="art" two-line trailing="text" />
             </template>
-            <ol class="segmented-list">
-              <li v-for="channel in channels" :key="channel.id" class="segmented-item">
-                <span
-                  class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                  aria-hidden="true"
-                  ><span class="icon [--icon-size:20px]">volume_up</span></span
-                >
-                <div class="min-w-0 flex-1 py-1">
-                  <p class="truncate text-body-large" :title="channel.name">{{ channel.name }}</p>
-                  <div class="flex items-center gap-2">
+            <List segmented class="bg-surface-container">
+              <ListItem v-for="channel in channels" :key="channel.id">
+                <template #leading>
+                  <span
+                    class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                    aria-hidden="true"
+                    ><span class="icon [--icon-size:20px]">volume_up</span></span
+                  >
+                </template>
+                <span class="block py-1">
+                  <span :title="channel.name" class="block truncate text-body-large">{{
+                    channel.name
+                  }}</span>
+                  <span class="block items-center gap-2">
                     <span class="flex -space-x-1.5">
                       <img
                         v-for="member in channel.top"
@@ -398,24 +431,26 @@ const plural = (count: number, one: string, many: string) =>
                     <span class="truncate text-body-small text-on-surface-variant">{{
                       plural(channel.members, 'member', 'members')
                     }}</span>
+                  </span>
+                </span>
+                <template #trailing>
+                  <div class="flex shrink-0 gap-4 text-right">
+                    <div class="flex flex-col items-end">
+                      <span class="text-body-large tabular-nums">{{
+                        formatDuration(channel.ms)
+                      }}</span>
+                      <span class="text-label-small text-on-surface-variant">Active</span>
+                    </div>
+                    <div class="flex flex-col items-end">
+                      <span class="text-body-large text-on-surface-variant tabular-nums">{{
+                        formatDuration(channel.combinedMs)
+                      }}</span>
+                      <span class="text-label-small text-on-surface-variant">Combined</span>
+                    </div>
                   </div>
-                </div>
-                <div class="flex shrink-0 gap-4 text-right">
-                  <div class="flex flex-col items-end">
-                    <span class="text-body-large tabular-nums">{{
-                      formatDuration(channel.ms)
-                    }}</span>
-                    <span class="text-label-small text-on-surface-variant">Active</span>
-                  </div>
-                  <div class="flex flex-col items-end">
-                    <span class="text-body-large text-on-surface-variant tabular-nums">{{
-                      formatDuration(channel.combinedMs)
-                    }}</span>
-                    <span class="text-label-small text-on-surface-variant">Combined</span>
-                  </div>
-                </div>
-              </li>
-            </ol>
+                </template>
+              </ListItem>
+            </List>
           </StateBlock>
         </div>
       </section>
@@ -443,9 +478,11 @@ const plural = (count: number, one: string, many: string) =>
         {{ periodLabel }}
       </template>
       <div class="flex flex-col gap-4">
-        <p
+        <Card
+          :padded="false"
+          as="p"
           v-if="detail?.now"
-          class="card flex items-center gap-3 bg-tertiary-container px-4 py-3 text-body-medium text-on-tertiary-container"
+          class="flex items-center gap-3 bg-tertiary-container px-4 py-3 text-body-medium text-on-tertiary-container"
         >
           <span class="icon [--icon-size:20px]" aria-hidden="true">volume_up</span>
           <span class="min-w-0 flex-1 truncate"
@@ -456,7 +493,7 @@ const plural = (count: number, one: string, many: string) =>
             :title="`Since ${absoluteTime(detail.now.since)}`"
             >{{ relativeTime(detail.now.since) }}</span
           >
-        </p>
+        </Card>
         <StateBlock
           :loading="memberVoice.loading.value && !detail"
           :error="memberVoice.error.value"
@@ -473,28 +510,34 @@ const plural = (count: number, one: string, many: string) =>
               item-class="bg-surface-container-high"
             />
           </template>
-          <ol class="segmented-list">
-            <li
+          <List segmented class="bg-surface-container">
+            <ListItem
               v-for="channel in detail?.channels"
               :key="channel.id"
-              class="segmented-item bg-surface-container-high"
+              class="bg-surface-container-high"
             >
-              <span
-                class="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-container-highest text-on-surface-variant"
-                aria-hidden="true"
-                ><span class="icon [--icon-size:20px]">volume_up</span></span
-              >
-              <div class="min-w-0 flex-1 py-1">
-                <p class="truncate text-body-large" :title="channel.name">{{ channel.name }}</p>
-                <p class="truncate text-body-small text-on-surface-variant">
+              <template #leading>
+                <span
+                  class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
+                  aria-hidden="true"
+                  ><span class="icon [--icon-size:20px]">volume_up</span></span
+                >
+              </template>
+              <span class="block py-1">
+                <span :title="channel.name" class="block truncate text-body-large">{{
+                  channel.name
+                }}</span>
+                <span class="block truncate text-body-small text-on-surface-variant">
                   {{ plural(channel.sessions, 'session', 'sessions') }}
-                </p>
-              </div>
-              <span class="shrink-0 text-body-large tabular-nums">{{
-                formatDuration(channel.ms)
-              }}</span>
-            </li>
-          </ol>
+                </span>
+              </span>
+              <template #trailing>
+                <span class="shrink-0 text-body-large tabular-nums">{{
+                  formatDuration(channel.ms)
+                }}</span>
+              </template>
+            </ListItem>
+          </List>
         </StateBlock>
       </div>
     </SupportingSheet>
