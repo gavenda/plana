@@ -560,7 +560,7 @@ const plural = (count: number, one: string, many: string) =>
               >
                 <button
                   type="button"
-                  class="relative -my-2.5 -ms-4 flex min-h-14 w-[calc(100%+1rem)] min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] py-2 ps-4 text-left before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-current before:opacity-0 before:transition-opacity hover:before:opacity-8 focus:outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-secondary focus-visible:outline-solid"
+                  class="relative -my-2.5 -ms-4 flex min-h-14 w-[calc(100%+1rem)] min-w-0 cursor-pointer items-center gap-4 rounded-[inherit] py-2.5 ps-4 text-left before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-current before:opacity-0 before:transition-opacity hover:before:opacity-8 focus:outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-secondary focus-visible:outline-solid"
                   :aria-current="track.id === chosenTrack ? 'true' : undefined"
                   @click="chooseTrack(track.id)"
                 >
