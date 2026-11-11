@@ -7,12 +7,11 @@ import { formatDuration, relativeTime } from '@/lib/format'
 import { loadMention, mentionEntry } from '@/lib/mentions'
 
 /**
- * A role, channel or user drawn like a Discord mention. With an `id`, hovering (or focusing) it
- * opens a tooltip with a few numbers about it.
+ * A role, channel or user drawn like a Discord mention. With an `id`, clicking it opens a tooltip with a few numbers about it.
  */
 const props = defineProps<{
   kind: 'role' | 'channel' | 'user'
-  /** Without the leading # or @; empty for a user the page can't name until it is hovered. */
+  /** Without the leading # or @; empty for a user the page can't name until it is clicked. */
   name: string
   /** A role's hex colour from Discord; ignored for channels. */
   color?: string | null
@@ -43,7 +42,7 @@ watch(open, (on) => {
 const entry = computed(() => (props.id ? mentionEntry(props.kind, props.id) : undefined))
 const brief = computed(() => (entry.value?.status === 'ready' ? entry.value.brief : null))
 
-/** A user the page has no name for is named by the brief once hovering has loaded it. */
+/** A user the page has no name for is named by the brief once clicking has loaded it. */
 const shownName = computed(() => {
   if (props.name) return props.name
   return brief.value?.kind === 'user' ? brief.value.member.displayName : 'unknown-user'
@@ -97,12 +96,20 @@ const rows = computed<[string, string][]>(() => {
 </script>
 
 <template>
-  <Tooltip v-if="id && ready" v-model:open="open" variant="rich" placement="bottom-start">
+  <Tooltip
+    v-if="id && ready"
+    v-model:open="open"
+    variant="rich"
+    placement="bottom-start"
+    persistent
+  >
     <span
-      class="rounded-extra-small px-1 font-medium whitespace-nowrap"
+      class="cursor-pointer rounded-extra-small px-1 font-medium whitespace-nowrap"
       :class="kind !== 'role' && 'mention-blurple'"
       :style="style"
+      role="button"
       tabindex="0"
+      @keydown.enter.prevent="($event.currentTarget as HTMLElement).click()"
       >{{ label }}</span
     >
     <template #subhead>{{ label }}</template>

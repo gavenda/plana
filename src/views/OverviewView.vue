@@ -304,7 +304,7 @@ const recent = computed(() =>
                   </span>
                 </template>
                 <span class="block py-1">
-                  <span :title="description.summary" class="block truncate text-body-large">
+                  <span class="block truncate text-body-large">
                     <AuditSummary :parts="description.parts" />
                   </span>
                   <span class="block text-body-medium text-on-surface-variant">{{
