@@ -274,7 +274,12 @@ async function send() {
                 >
                 <span class="text-body-medium text-on-surface-variant">
                   in
-                  <DiscordMention v-if="selected" kind="channel" :name="selected.name" />
+                  <DiscordMention
+                    v-if="selected"
+                    kind="channel"
+                    :name="selected.name"
+                    :id="selected.id"
+                  />
                   <template v-else>no channel selected</template>
                 </span>
               </div>

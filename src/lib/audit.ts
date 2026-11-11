@@ -81,7 +81,7 @@ export type SummaryPart =
   | string
   | { role: string | null; roleId: string | null }
   | { channel: string | null; channelId: string | null }
-  | { user: string }
+  | { user: string; userId?: string | null }
 
 export type AuditDescription = {
   label: string
@@ -125,8 +125,10 @@ function describe(
 }
 
 /** A member or administrator by name, or plain words when the entry has none. */
-function user(name: string | null, fallback: string): SummaryPart {
-  return name ? { user: name } : fallback
+function user(name: string | null, fallback: string, userId: string | null): SummaryPart {
+  return name
+    ? { user: name, userId: userId && /^\d{17,20}$/.test(userId) ? userId : null }
+    : fallback
 }
 
 /** Puts a separator between groups of parts: "a, b and c". */
@@ -264,8 +266,8 @@ function origin(detail: AuditEntry['detail']): string {
 
 /** Turns a stored audit row into something a human can read at a glance. */
 export function describeAudit(entry: AuditEntry): AuditDescription {
-  const actor = user(entry.actorName, 'Someone')
-  const target = user(entry.targetName, 'an unknown member')
+  const actor = user(entry.actorName, 'Someone', entry.actorId)
+  const target = user(entry.targetName, 'an unknown member', entry.targetId)
   const self = entry.actorId != null && entry.actorId === entry.targetId
   /** "their" for someone acting on themselves, else the target's name with 's. */
   const whose: SummaryPart[] = self ? ['their'] : [target, "'s"]

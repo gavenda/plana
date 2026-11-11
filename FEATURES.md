@@ -58,6 +58,8 @@ Plana is a Discord bot with a web dashboard for running one server.
 
 Members sign in with Discord. **Administrators** can use everything. **Moderators** (the moderator role) can use everything except Settings and Broadcast. **Viewers** (the stats role) can see only the stats: Overview without its triage and audit sections, Games & music, and Voice. Pages update live over a WebSocket.
 
+Hovering a role, channel or user mention (audit log entries, role chips, broadcast previews) opens a tooltip with a few numbers, fetched on first hover: for a user, when they joined and their voice, game and music activity over the last 30 days; for a role, how many members hold it; for a channel, its category and, for a voice channel, the last 30 days of time and top members. Mentions with no known ID (such as older audit entries) show no tooltip.
+
 | Page | What it shows |
 | --- | --- |
 | **Overview** | Charts of daily hours in voice, played and listened over the last 4 weeks (each with the last 7 days against the 7 before), recent activity, who's waiting in triage, and this week's top games and their players |

@@ -24,6 +24,11 @@ function roleName(part: RolePart): string {
   return findRole(part)?.name ?? part.role ?? 'deleted-role'
 }
 
+/** Only for a channel that still exists, since a deleted one has nothing to show. */
+function channelId(part: ChannelPart): string | undefined {
+  return guild.channels.find((candidate) => candidate.id === part.channelId)?.id
+}
+
 function channelName(part: ChannelPart): string {
   const channel = guild.channels.find((candidate) => candidate.id === part.channelId)
   return channel?.name ?? part.channel ?? 'unknown'
@@ -33,13 +38,14 @@ function channelName(part: ChannelPart): string {
 <template>
   <template v-for="(part, index) in parts" :key="index">
     <template v-if="typeof part === 'string'">{{ part }}</template>
-    <DiscordMention v-else-if="'user' in part" kind="user" :name="part.user" />
+    <DiscordMention v-else-if="'user' in part" kind="user" :name="part.user" :id="part.userId" />
     <DiscordMention
       v-else-if="'role' in part"
       kind="role"
       :name="roleName(part)"
       :color="findRole(part)?.color"
+      :id="findRole(part)?.id"
     />
-    <DiscordMention v-else kind="channel" :name="channelName(part)" />
+    <DiscordMention v-else kind="channel" :name="channelName(part)" :id="channelId(part)" />
   </template>
 </template>

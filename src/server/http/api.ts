@@ -31,6 +31,7 @@ import { getGuild } from '../discord/client'
 import { getGameRole, setGameRole } from '../db/game-nights'
 import { getGameNightHistory } from '../discord/game-nights'
 import { getMemberProfile, listMembers } from '../discord/members'
+import { getMentionBrief } from '../discord/mentions'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { getHeatmap } from '../discord/heatmaps'
 import { getVivyMusic, isVivyEnabled } from '../discord/vivy'
@@ -230,6 +231,19 @@ api.get('/members/:memberId/activity', (c) => {
   const memberId = snowflake.safeParse(c.req.param('memberId'))
   if (!memberId.success) return c.json({ error: 'Invalid member ID.' }, 400)
   return respond(c, getMemberActivity(memberId.data))
+})
+
+const mentionParamsSchema = z.object({
+  kind: z.enum(['user', 'role', 'channel']),
+  id: snowflake,
+})
+
+/** The few numbers shown in the tooltip on a user, role or channel mention. */
+api.get('/mentions/:kind/:id', async (c) => {
+  const parsed = mentionParamsSchema.safeParse(c.req.param())
+  if (!parsed.success)
+    return c.json({ error: 'A kind (user, role or channel) and ID are required.' }, 400)
+  return respond(c, await getMentionBrief(parsed.data.kind, parsed.data.id))
 })
 
 const assignSchema = z.object({ roleId: snowflake })

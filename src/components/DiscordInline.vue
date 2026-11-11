@@ -58,12 +58,15 @@ const channel = (id: string) => guild.channels.find((candidate) => candidate.id 
       v-else-if="node.kind === 'channel'"
       kind="channel"
       :name="channel(node.id)?.name ?? 'unknown'"
+      :id="channel(node.id)?.id"
     />
+    <DiscordMention v-else-if="node.kind === 'user'" kind="user" :name="''" :id="node.id" />
     <DiscordMention
       v-else-if="node.kind === 'role'"
       kind="role"
       :name="role(node.id)?.name ?? 'deleted-role'"
       :color="role(node.id)?.color"
+      :id="role(node.id)?.id"
     />
     <DiscordMention v-else-if="node.kind === 'everyone'" kind="user" :name="node.text.slice(1)" />
     <img

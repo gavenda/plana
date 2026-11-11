@@ -507,6 +507,7 @@ function roleIn(entry: MemberProfile['audit']['entries'][number]): string {
                       kind="role"
                       :name="role.name"
                       :color="role.color"
+                      :id="role.id"
                     />
                   </div>
                 </div>

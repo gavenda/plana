@@ -5,8 +5,8 @@
  * code blocks, and inline bold, italic, underline, strikethrough, spoilers, code and links,
  * with channel and role mentions, @everyone and @here, and custom emoji.
  *
- * User mentions (<@id>) stay as written, since the dashboard has no way to name an arbitrary
- * member.
+ * User mentions (<@id>) become a node with just the id; the dashboard names them as far as it
+ * can (see DiscordInline), since it holds no list of members.
  */
 
 export type Inline =
@@ -16,6 +16,7 @@ export type Inline =
   | { kind: 'link'; url: string; children: Inline[] }
   | { kind: 'channel'; id: string }
   | { kind: 'role'; id: string }
+  | { kind: 'user'; id: string }
   | { kind: 'everyone'; text: '@everyone' | '@here' }
   | { kind: 'emoji'; name: string; id: string; animated: boolean }
 
@@ -57,6 +58,7 @@ const RULES: Rule[] = [
   },
   { pattern: /<#(\d+)>/y, build: (match) => ({ kind: 'channel', id: match[1]! }) },
   { pattern: /<@&(\d+)>/y, build: (match) => ({ kind: 'role', id: match[1]! }) },
+  { pattern: /<@!?(\d+)>/y, build: (match) => ({ kind: 'user', id: match[1]! }) },
   {
     pattern: /@(everyone|here)/y,
     build: (match) => ({ kind: 'everyone', text: match[0] as '@everyone' | '@here' }),
