@@ -49,6 +49,9 @@ export type AuditAction =
   | 'music.remove'
   | 'music.move'
   | 'music.seek'
+  | 'music.volume'
+  | 'music.repeat'
+  | 'music.autoplay'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {

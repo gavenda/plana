@@ -14,10 +14,12 @@ import {
 import AppSearchBar from '@/components/AppSearchBar.vue'
 import ChannelChip from '@/components/ChannelChip.vue'
 import ChoiceGroup from '@/components/ChoiceGroup.vue'
+import DiscordMention from '@/components/DiscordMention.vue'
 import MusicStats from '@/components/MusicStats.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import VolumeButton from '@/components/VolumeButton.vue'
 import { ApiError, apiFetch } from '@/lib/api'
 import { useLive } from '@/lib/live'
 import {
@@ -28,6 +30,7 @@ import {
   type MusicPlayed,
   type MusicProgress,
   type MusicQueueType,
+  type MusicRepeat,
   type MusicSearch,
   type MusicSearchTrack,
   type MusicSource,
@@ -80,6 +83,8 @@ function showProgress(progress: MusicProgress) {
 }
 
 const REPEAT_LABELS = { off: null, track: 'Repeating the track', queue: 'Repeating the queue' }
+/** What the repeat button moves to: off, the queue, the track, and off again. */
+const NEXT_REPEAT: Record<MusicRepeat, MusicRepeat> = { off: 'queue', queue: 'track', track: 'off' }
 
 const loading = computed(() => view.value == null && music.error.value == null)
 const online = computed(() => view.value?.online ?? false)
@@ -338,6 +343,31 @@ async function seek(value: number | [number, number]) {
   }
 }
 
+async function setVolume(volume: number) {
+  try {
+    showView(await post<MusicView>('/api/music/volume', { volume }))
+  } catch (cause) {
+    snackbar.showError(cause, 'Could not change the volume.')
+  }
+}
+
+async function setRepeat(mode: MusicRepeat) {
+  try {
+    showView(await post<MusicView>('/api/music/repeat', { mode }))
+  } catch (cause) {
+    snackbar.showError(cause, 'Could not change what repeats.')
+  }
+}
+
+async function setAutoplay(enabled: boolean) {
+  try {
+    showView(await post<MusicView>('/api/music/autoplay', { enabled }))
+    snackbar.show(enabled ? 'Autoplay is on.' : 'Autoplay is off.')
+  } catch (cause) {
+    snackbar.showError(cause, 'Could not change autoplay.')
+  }
+}
+
 async function remove(track: MusicTrack, index: number) {
   try {
     showView(await post<MusicView>('/api/music/remove', { index, identifier: track.identifier }))
@@ -394,26 +424,28 @@ async function remove(track: MusicTrack, index: number) {
             <StateBlock :loading="loading" :error="music.error.value" :retry="music.run" compact>
               <template #skeleton><div class="skeleton h-16 rounded-medium" /></template>
 
-              <!-- Playing: art, the track and its progress, and the controls, biggest first. -->
+              <!-- Playing: art and the track on top; under them one row of the controls, the
+                   progress centred on them, and the volume. On a narrow page the controls take
+                   their own row and the progress and volume wrap beneath. -->
               <Card
                 v-if="current"
                 :padded="false"
-                class="flex flex-wrap items-center gap-x-6 gap-y-4 bg-surface-container! p-4"
+                class="flex flex-col gap-4 bg-surface-container! p-4"
               >
-                <div class="flex min-w-0 flex-[1_1_20rem] items-center gap-4">
+                <div class="flex min-w-0 items-center gap-4">
                   <img
                     v-if="current.artworkUrl"
-                    class="size-24 shrink-0 rounded-medium bg-surface-container-highest object-cover"
+                    class="size-18 shrink-0 rounded-medium bg-surface-container-highest object-cover"
                     :src="current.artworkUrl"
                     alt=""
-                    width="96"
-                    height="96"
+                    width="72"
+                    height="72"
                   />
                   <span
                     v-else
-                    class="flex size-24 shrink-0 items-center justify-center rounded-medium bg-surface-container-highest text-on-surface-variant"
+                    class="flex size-18 shrink-0 items-center justify-center rounded-medium bg-surface-container-highest text-on-surface-variant"
                   >
-                    <span class="icon [--icon-size:40px]" aria-hidden="true">music_note</span>
+                    <span class="icon [--icon-size:32px]" aria-hidden="true">music_note</span>
                   </span>
                   <div class="flex min-w-0 flex-1 flex-col gap-1">
                     <a
@@ -431,12 +463,107 @@ async function remove(track: MusicTrack, index: number) {
                     <span class="truncate text-body-medium text-on-surface-variant"
                       >{{ current.author
                       }}<template v-if="current.requester">
-                        · requested by {{ current.requester.name }}</template
-                      ></span
+                        · requested by
+                        <DiscordMention
+                          kind="user"
+                          :name="current.requester.name"
+                          :id="current.requester.id" /></template
+                    ></span>
+                  </div>
+                  <!-- Staff toggle autoplay and step through repeat; viewers see them when on. -->
+                  <span v-if="state && canControl" class="flex shrink-0 items-center gap-1">
+                    <IconButton
+                      v-if="state.autoplay != null"
+                      variant="standard"
+                      toggle
+                      :selected="state.autoplay"
+                      :label="state.autoplay ? 'Autoplay is on' : 'Autoplay is off'"
+                      :disabled="busy || !online"
+                      @click="setAutoplay(!state.autoplay)"
+                    >
+                      <span class="icon" aria-hidden="true">all_inclusive</span>
+                    </IconButton>
+                    <IconButton
+                      variant="standard"
+                      toggle
+                      :selected="state.repeat !== 'off'"
+                      :label="REPEAT_LABELS[state.repeat] ?? 'Repeat is off'"
+                      :disabled="busy || !online"
+                      @click="setRepeat(NEXT_REPEAT[state.repeat])"
+                    >
+                      <span class="icon" aria-hidden="true">{{
+                        state.repeat === 'track' ? 'repeat_one' : 'repeat'
+                      }}</span>
+                    </IconButton>
+                  </span>
+                  <span
+                    v-else-if="state"
+                    class="flex shrink-0 items-center gap-2 text-on-surface-variant"
+                  >
+                    <span v-if="state.autoplay" class="flex" title="Autoplay is on">
+                      <span class="icon [--icon-size:20px]" aria-hidden="true">all_inclusive</span>
+                      <span class="sr-only">Autoplay is on</span>
+                    </span>
+                    <span
+                      v-if="REPEAT_LABELS[state.repeat]"
+                      class="flex"
+                      :title="REPEAT_LABELS[state.repeat] ?? undefined"
+                    >
+                      <span class="icon [--icon-size:20px]" aria-hidden="true">{{
+                        state.repeat === 'track' ? 'repeat_one' : 'repeat'
+                      }}</span>
+                      <span class="sr-only">{{ REPEAT_LABELS[state.repeat] }}</span>
+                    </span>
+                  </span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <!-- M3 Expressive sizes: the main action large and filled, skip a wide tonal
+                       pill, and stop (which empties the queue) the quietest. -->
+                  <div
+                    v-if="canControl"
+                    class="flex w-full items-center justify-center gap-2 @2xl:w-auto"
+                  >
+                    <IconButton
+                      variant="tonal"
+                      size="m"
+                      width="wide"
+                      label="Skip"
+                      :disabled="busy || !online"
+                      @click="control('skip')"
+                    >
+                      <span class="icon" aria-hidden="true">skip_next</span>
+                    </IconButton>
+                    <IconButton
+                      variant="filled"
+                      size="l"
+                      :label="playing ? 'Pause' : 'Resume'"
+                      :disabled="busy || !online"
+                      @click="control(playing ? 'pause' : 'resume')"
+                    >
+                      <span class="icon [--icon-size:32px]" aria-hidden="true">{{
+                        playing ? 'pause' : 'play_arrow'
+                      }}</span>
+                    </IconButton>
+                    <IconButton
+                      variant="outlined"
+                      size="m"
+                      label="Stop and leave the channel"
+                      :disabled="busy || !online"
+                      @click="confirmOpen = 'stop'"
+                    >
+                      <span class="icon" aria-hidden="true">stop</span>
+                    </IconButton>
+                  </div>
+
+                  <div class="flex min-w-0 flex-1 items-center gap-3">
+                    <span
+                      class="w-10 shrink-0 text-right text-label-small text-on-surface-variant tabular-nums"
+                      >{{ formatDuration(seeking ?? positionMs) }}</span
                     >
                     <Slider
                       v-if="canSeek"
-                      class="-my-2"
+                      class="min-w-0 flex-1"
                       :min="0"
                       :max="current.lengthMs"
                       :step="1000"
@@ -452,74 +579,29 @@ async function remove(track: MusicTrack, index: number) {
                     />
                     <LinearProgressIndicator
                       v-else
-                      class="mt-1"
+                      class="min-w-0 flex-1"
                       :progress="progress ?? 0"
                       :wavy="playing"
                       :aria-label="`${formatDuration(positionMs)} of ${formatDuration(current.lengthMs)}`"
                     />
-                    <div
-                      class="flex flex-wrap justify-between gap-x-4 text-label-small text-on-surface-variant"
+                    <span
+                      class="w-10 shrink-0 text-label-small text-on-surface-variant tabular-nums"
+                      >{{ current.isStream ? 'Live' : formatDuration(current.lengthMs) }}</span
                     >
-                      <span>{{ formatDuration(seeking ?? positionMs) }}</span>
-                      <span class="flex items-center gap-3">
-                        <span
-                          v-if="state && REPEAT_LABELS[state.repeat]"
-                          class="flex items-center gap-1"
-                          :title="REPEAT_LABELS[state.repeat] ?? undefined"
-                        >
-                          <span class="icon [--icon-size:16px]" aria-hidden="true">{{
-                            state.repeat === 'track' ? 'repeat_one' : 'repeat'
-                          }}</span>
-                          <span class="sr-only">{{ REPEAT_LABELS[state.repeat] }}</span>
-                        </span>
-                        <span v-if="state" class="flex items-center gap-1">
-                          <span class="icon [--icon-size:16px]" aria-hidden="true">volume_up</span>
-                          {{ Math.round(state.volume * 100) }}%
-                        </span>
-                        <span>{{
-                          current.isStream ? 'Live' : formatDuration(current.lengthMs)
-                        }}</span>
-                      </span>
-                    </div>
+                    <VolumeButton
+                      v-if="canControl"
+                      :volume="state?.volume ?? 1"
+                      :disabled="busy || !online"
+                      @change="setVolume"
+                    />
+                    <span
+                      v-else-if="state"
+                      class="flex shrink-0 items-center gap-1 text-label-small text-on-surface-variant"
+                    >
+                      <span class="icon [--icon-size:16px]" aria-hidden="true">volume_up</span>
+                      {{ Math.round(state.volume * 100) }}%
+                    </span>
                   </div>
-                </div>
-
-                <!-- M3 Expressive sizes: the main action large and filled, skip a wide tonal
-                     pill, and stop (which empties the queue) the quietest. -->
-                <div
-                  v-if="canControl"
-                  class="flex w-full items-center justify-center gap-2 @2xl:ml-auto @2xl:w-auto"
-                >
-                  <IconButton
-                    variant="tonal"
-                    size="m"
-                    width="wide"
-                    label="Skip"
-                    :disabled="busy || !online"
-                    @click="control('skip')"
-                  >
-                    <span class="icon" aria-hidden="true">skip_next</span>
-                  </IconButton>
-                  <IconButton
-                    variant="filled"
-                    size="l"
-                    :label="playing ? 'Pause' : 'Resume'"
-                    :disabled="busy || !online"
-                    @click="control(playing ? 'pause' : 'resume')"
-                  >
-                    <span class="icon [--icon-size:32px]" aria-hidden="true">{{
-                      playing ? 'pause' : 'play_arrow'
-                    }}</span>
-                  </IconButton>
-                  <IconButton
-                    variant="outlined"
-                    size="m"
-                    label="Stop and leave the channel"
-                    :disabled="busy || !online"
-                    @click="confirmOpen = 'stop'"
-                  >
-                    <span class="icon" aria-hidden="true">stop</span>
-                  </IconButton>
                 </div>
               </Card>
 
@@ -583,8 +665,14 @@ async function remove(track: MusicTrack, index: number) {
               <span class="block truncate">{{ track.title }}</span>
               <template #supporting-text>
                 <span class="block truncate text-body-small"
-                  >{{ track.author }}{{ track.requester ? ` · ${track.requester.name}` : '' }}</span
-                >
+                  >{{ track.author
+                  }}<template v-if="track.requester">
+                    ·
+                    <DiscordMention
+                      kind="user"
+                      :name="track.requester.name"
+                      :id="track.requester.id" /></template
+                ></span>
               </template>
               <template #trailing>
                 <span class="flex items-center gap-4">

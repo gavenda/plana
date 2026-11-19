@@ -583,6 +583,7 @@ Plana's own components, built on the library where M3 needs more than it gives:
 | [`ChoiceGroup`](src/components/ChoiceGroup.vue)       | A single choice of 2 to 4 as the library's connected `ButtonGroup` of tonal buttons                                                     |
 | `LinkButton`, `LinkIconButton`                        | A link drawn as the library's text/tonal button or standard icon button, since those only render `<button>`                             |
 | `RichTooltip`                                         | An info or action icon button with the library's `Tooltip`                                                                              |
+| `VolumeButton`                                        | A standard icon button opening the library's vertical `Slider` in a popover (the library's `Menu` takes arrow keys for its items)       |
 | `SupportingSheet`                                     | The library's modal `SideSheet`, floating, with a leading image beside its content                                                     |
 | `AppSearchBar`                                        | A search bar that filters in place (the library's `Search` opens a separate view)                                                       |
 | `AppSnackbar`                                         | The library's `Snackbar`, drawing `useSnackbar()`'s message (see [Snackbar](#snackbar))                                                  |

@@ -41,6 +41,9 @@ import {
   listVoiceChannels,
   moveMusic,
   seekMusic,
+  setMusicAutoplay,
+  setMusicRepeat,
+  setMusicVolume,
   playMusic,
   removeMusic,
   searchMusic,
@@ -631,6 +634,28 @@ api.post('/music/seek', async (c) => {
     .safeParse(await c.req.json().catch(() => null))
   if (!parsed.success) return c.json({ error: 'A position in the track is required.' }, 400)
   return respond(c, await seekMusic(parsed.data.positionMs, actorOf(c)))
+})
+
+api.post('/music/volume', async (c) => {
+  const parsed = z
+    .object({ volume: z.number().min(0).max(1) })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A volume from 0 to 1 is required.' }, 400)
+  return respond(c, await setMusicVolume(parsed.data.volume, actorOf(c)))
+})
+
+api.post('/music/repeat', async (c) => {
+  const parsed = z
+    .object({ mode: z.enum(['off', 'track', 'queue']) })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A repeat mode is required.' }, 400)
+  return respond(c, await setMusicRepeat(parsed.data.mode, actorOf(c)))
+})
+
+api.post('/music/autoplay', async (c) => {
+  const parsed = z.object({ enabled: z.boolean() }).safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Whether autoplay is on is required.' }, 400)
+  return respond(c, await setMusicAutoplay(parsed.data.enabled, actorOf(c)))
 })
 
 api.post('/music/move', async (c) => {

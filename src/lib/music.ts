@@ -5,6 +5,7 @@
 
 export type MusicQueueType = 'now' | 'next' | 'later'
 export type MusicSource = 'ytmsearch' | 'ytsearch'
+export type MusicRepeat = 'off' | 'track' | 'queue'
 
 export type MusicTrack = {
   identifier: string
@@ -38,7 +39,9 @@ export type MusicState = {
   queueSize: number
   durationMs: number
   volume: number
-  repeat: 'off' | 'track' | 'queue'
+  repeat: MusicRepeat
+  /** Whether Vivy queues similar tracks once the queue runs out; missing from a Vivy older than 2.6.0. */
+  autoplay?: boolean
 }
 
 /** `state` is null while Vivy is offline. */

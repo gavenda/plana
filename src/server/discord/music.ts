@@ -13,6 +13,7 @@ import {
   type RemoteOp,
   type RemoteOps,
   type RemoteQueueType,
+  type RemoteRepeat,
   type RemoteResponse,
   type RemoteSource,
 } from '../vivy-contract'
@@ -437,6 +438,23 @@ export function seekMusic(positionMs: number, actor: Actor) {
       fromMs: latest?.current ? Math.round(progress(latest).positionMs) : null,
     },
   }))
+}
+
+/** Sets Vivy's volume, 0 to 1, which she clamps. */
+export function setMusicVolume(volume: number, actor: Actor) {
+  return change('volume', { volume }, actor, () => ({
+    detail: { volume, from: latest?.volume ?? null },
+  }))
+}
+
+export function setMusicRepeat(mode: RemoteRepeat, actor: Actor) {
+  return change('repeat', { mode }, actor, () => ({
+    detail: { mode, from: latest?.repeat ?? null },
+  }))
+}
+
+export function setMusicAutoplay(enabled: boolean, actor: Actor) {
+  return change('autoplay', { enabled }, actor, () => ({ detail: { enabled } }))
 }
 
 export function moveMusic(voiceChannelId: string, actor: Actor) {

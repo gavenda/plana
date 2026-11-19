@@ -49,6 +49,9 @@ export type AuditAction =
   | 'music.remove'
   | 'music.move'
   | 'music.seek'
+  | 'music.volume'
+  | 'music.repeat'
+  | 'music.autoplay'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -668,6 +671,36 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       )
     }
 
+    case 'music.volume': {
+      const to = entry.detail?.volume
+      return describe(
+        'Music',
+        'neutral',
+        actor,
+        ' set the volume',
+        ...(typeof to === 'number' ? [` to ${Math.round(to * 100)}%`] : []),
+      )
+    }
+
+    case 'music.repeat': {
+      const mode = entry.detail?.mode
+      const what =
+        mode === 'track'
+          ? ' set Vivy to repeat the track'
+          : mode === 'queue'
+            ? ' set Vivy to repeat the queue'
+            : ' turned off repeat'
+      return describe('Music', 'neutral', actor, what)
+    }
+
+    case 'music.autoplay':
+      return describe(
+        'Music',
+        'neutral',
+        actor,
+        entry.detail?.enabled === true ? ' turned on autoplay' : ' turned off autoplay',
+      )
+
     case 'music.move': {
       const from = entry.detail?.fromChannelName
       return describe(
@@ -785,6 +818,9 @@ export function auditIcon(action: AuditAction): string {
     case 'music.remove':
     case 'music.move':
     case 'music.seek':
+    case 'music.volume':
+    case 'music.repeat':
+    case 'music.autoplay':
       return 'queue_music'
     default:
       return 'history'
