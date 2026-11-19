@@ -15,6 +15,7 @@ import AppSearchBar from '@/components/AppSearchBar.vue'
 import ChannelChip from '@/components/ChannelChip.vue'
 import ChoiceGroup from '@/components/ChoiceGroup.vue'
 import DiscordMention from '@/components/DiscordMention.vue'
+import MusicQueueList from '@/components/MusicQueueList.vue'
 import MusicStats from '@/components/MusicStats.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
@@ -92,6 +93,16 @@ const state = computed(() => view.value?.state ?? null)
 const current = computed(() => state.value?.current ?? null)
 const queue = computed(() => state.value?.queue ?? [])
 const playing = computed(() => current.value != null && !state.value?.paused)
+
+/** Beside the player, only as many upcoming tracks as line up with it; the rest are in a dialog. */
+const QUEUE_PREVIEW = 3
+const queuePreview = computed(() => queue.value.slice(0, QUEUE_PREVIEW))
+/** The whole queue's dialog, where tracks are removed. */
+const queueOpen = ref(false)
+watch(
+  () => queue.value.length,
+  (length) => length === 0 && (queueOpen.value = false),
+)
 
 /** Ticks while a track plays, so the position moves between Vivy's updates. */
 const now = ref(Date.now())
@@ -630,6 +641,14 @@ async function remove(track: MusicTrack, index: number) {
                 class="pr-2 text-label-large text-on-surface-variant"
                 >{{ state.queueSize }} · {{ formatDuration(state.durationMs) }}</span
               >
+              <!-- Only the first few show here, so they end level with the player. -->
+              <Button
+                v-if="canControl || queue.length > QUEUE_PREVIEW"
+                variant="text"
+                size="s"
+                @click="queueOpen = true"
+                >See all</Button
+              >
               <template v-if="canControl">
                 <IconButton
                   variant="standard"
@@ -651,55 +670,7 @@ async function remove(track: MusicTrack, index: number) {
             </span>
           </div>
 
-          <List segmented>
-            <ListItem
-              v-for="(track, index) in queue"
-              :key="`${index}:${track.identifier}`"
-              class="bg-surface-container!"
-            >
-              <template #leading>
-                <span class="w-6 shrink-0 text-center text-label-large text-on-surface-variant">{{
-                  index + 1
-                }}</span>
-              </template>
-              <span class="block truncate">{{ track.title }}</span>
-              <template #supporting-text>
-                <span class="block truncate text-body-small"
-                  >{{ track.author
-                  }}<template v-if="track.requester">
-                    ·
-                    <DiscordMention
-                      kind="user"
-                      :name="track.requester.name"
-                      :id="track.requester.id" /></template
-                ></span>
-              </template>
-              <template #trailing>
-                <span class="flex items-center gap-4">
-                  <span class="text-label-medium text-on-surface-variant">{{
-                    track.isStream ? 'Live' : formatDuration(track.lengthMs)
-                  }}</span>
-                  <IconButton
-                    v-if="canControl"
-                    variant="tonal"
-                    width="narrow"
-                    class="bg-error-container! text-on-error-container!"
-                    :label="`Remove ${track.title}`"
-                    :disabled="busy || !online"
-                    @click="remove(track, index)"
-                  >
-                    <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
-                  </IconButton>
-                </span>
-              </template>
-            </ListItem>
-          </List>
-          <p
-            v-if="state && state.queueSize > queue.length"
-            class="px-4 pt-3 text-body-small text-on-surface-variant"
-          >
-            And {{ state.queueSize - queue.length }} more.
-          </p>
+          <MusicQueueList :tracks="queuePreview" />
         </section>
       </div>
     </template>
@@ -855,6 +826,35 @@ async function remove(track: MusicTrack, index: number) {
       </div>
       <template #actions>
         <Button variant="text" @click="addOpen = false">Close</Button>
+      </template>
+    </Dialog>
+
+    <!-- The whole queue, the place to remove a track from. A list in a dialog has no face. -->
+    <Dialog v-if="player" v-model:open="queueOpen" aria-labelledby="music-queue-all">
+      <template #headline>
+        <span class="flex flex-wrap items-baseline justify-between gap-x-4">
+          <span id="music-queue-all">Up next</span>
+          <span v-if="state" class="text-label-large text-on-surface-variant"
+            >{{ state.queueSize }} · {{ formatDuration(state.durationMs) }}</span
+          >
+        </span>
+      </template>
+      <div class="flex w-[512px] max-w-full flex-col pt-2">
+        <MusicQueueList
+          :tracks="queue"
+          :removable="canControl"
+          :disabled="busy || !online"
+          @remove="remove"
+        />
+        <p
+          v-if="state && state.queueSize > queue.length"
+          class="px-4 pt-3 text-body-small text-on-surface-variant"
+        >
+          And {{ state.queueSize - queue.length }} more.
+        </p>
+      </div>
+      <template #actions>
+        <Button variant="text" @click="queueOpen = false">Close</Button>
       </template>
     </Dialog>
 
