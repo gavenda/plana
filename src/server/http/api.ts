@@ -34,6 +34,17 @@ import { getMemberProfile, listMembers } from '../discord/members'
 import { getMentionBrief } from '../discord/mentions'
 import { getMemberVoice, getVoiceOverview } from '../discord/voice'
 import { getHeatmap } from '../discord/heatmaps'
+import {
+  controlMusic,
+  getMusicState,
+  isMusicEnabled,
+  listVoiceChannels,
+  moveMusic,
+  playMusic,
+  removeMusic,
+  searchMusic,
+  type MusicControl,
+} from '../discord/music'
 import { getVivyMusic, isVivyEnabled } from '../discord/vivy'
 import { postWeeklyRecap } from '../discord/recap'
 import { getDailyTrends, getMemberActivity } from '../discord/trends'
@@ -67,12 +78,25 @@ const STATUS_BY_CODE: Record<ErrorCode, ContentfulStatusCode> = {
   invalid_input: 400,
   limit_reached: 409,
   discord_error: 502,
+  music_disabled: 404,
+  music_idle: 409,
+  no_results: 404,
+  queue_changed: 409,
+  voice_conflict: 409,
+  vivy_offline: 503,
+  vivy_timeout: 504,
+  vivy_unavailable: 503,
+  vivy_error: 502,
 }
 
-/** Unwraps a service Result into a JSON response, mapping domain errors onto status codes. */
+/**
+ * Unwraps a service Result into a JSON response, mapping domain errors onto status codes.
+ * A failure's params go along as `details`, for a page that acts on them (a voice conflict's channel).
+ */
 function respond<T>(c: Context, result: Result<T>): Response {
   if (result.ok) return c.json(result.data)
-  return c.json({ error: result.message, code: result.code }, STATUS_BY_CODE[result.code])
+  const { message, code, params } = result
+  return c.json({ error: message, code, ...(params && { details: params }) }, STATUS_BY_CODE[code])
 }
 
 export const api = new Hono<AppEnv>()
@@ -505,4 +529,105 @@ api.get('/voice/member', async (c) => {
   const parsed = memberVoiceQuerySchema.safeParse(c.req.query())
   if (!parsed.success) return c.json({ error: 'A member ID and a valid period are required.' }, 400)
   return respond(c, await getMemberVoice(parsed.data.id, parsed.data.days))
+})
+
+// ---------------------------------------------------------------------------
+// Music: controlling Vivy, the music bot (see discord/music.ts)
+// ---------------------------------------------------------------------------
+
+api.use('/music/*', async (c, next) => {
+  if (!isMusicEnabled())
+    return c.json({ error: 'Music control is switched off.', code: 'music_disabled' }, 404)
+  await next()
+})
+
+const musicSource = z.enum(['ytmsearch', 'ytsearch']).default('ytmsearch')
+
+/** The signed-in member, as who Vivy is commanded by. */
+const actorOf = (c: Context<AppEnv>) => ({ id: c.get('user').id, name: c.get('user').username })
+
+/** Now playing and the queue; viewers may read it. */
+api.get('/music/state', async (c) => respond(c, await getMusicState()))
+
+api.get('/music/channels', async (c) => respond(c, await listVoiceChannels(c.get('user').id)))
+
+const musicSearchSchema = z.object({
+  q: z.string().trim().min(1).max(200),
+  source: musicSource,
+})
+
+api.get('/music/search', async (c) => {
+  const parsed = musicSearchSchema.safeParse(c.req.query())
+  if (!parsed.success)
+    return c.json({ error: 'A search of up to 200 characters is required.' }, 400)
+  return respond(c, await searchMusic(parsed.data.q, parsed.data.source))
+})
+
+const musicPlaySchema = z.object({
+  voiceChannelId: snowflake,
+  queueType: z.enum(['now', 'next', 'later']),
+  target: z.union([
+    z.object({
+      encoded: z.string().min(1).max(4000),
+      /** Only for the audit log. */
+      title: z.string().max(200).optional(),
+    }),
+    z.object({ query: z.string().trim().min(1).max(500), source: musicSource }),
+  ]),
+})
+
+api.post('/music/play', async (c) => {
+  const parsed = musicPlaySchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) {
+    return c.json(
+      { error: 'A voice channel, a queue position and a track or search are required.' },
+      400,
+    )
+  }
+
+  const { voiceChannelId, queueType, target } = parsed.data
+  return respond(
+    c,
+    await playMusic({
+      target: 'encoded' in target ? { encoded: target.encoded } : target,
+      title: 'encoded' in target ? (target.title ?? null) : target.query,
+      queueType,
+      voiceChannelId,
+      actor: actorOf(c),
+    }),
+  )
+})
+
+const MUSIC_CONTROLS = [
+  'pause',
+  'resume',
+  'skip',
+  'stop',
+  'clear',
+  'shuffle',
+] as const satisfies MusicControl[]
+
+for (const op of MUSIC_CONTROLS) {
+  api.post(`/music/${op}`, async (c) => respond(c, await controlMusic(op, actorOf(c))))
+}
+
+const musicRemoveSchema = z.object({
+  index: z.number().int().min(0),
+  /** The track the page showed there, so a queue that moved on isn't cut in the wrong place. */
+  identifier: z.string().max(200).optional(),
+})
+
+api.post('/music/remove', async (c) => {
+  const parsed = musicRemoveSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A queue position is required.' }, 400)
+  const { index, identifier } = parsed.data
+  return respond(c, await removeMusic(index, identifier, actorOf(c)))
+})
+
+api.post('/music/move', async (c) => {
+  const parsed = z
+    .object({ voiceChannelId: snowflake })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A voice channel is required.' }, 400)
+  return respond(c, await moveMusic(parsed.data.voiceChannelId, actorOf(c)))
 })

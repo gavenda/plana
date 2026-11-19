@@ -38,6 +38,15 @@ export type AuditAction =
   | 'auth.login'
   | 'auth.denied'
   | 'auth.logout'
+  | 'music.play'
+  | 'music.pause'
+  | 'music.resume'
+  | 'music.skip'
+  | 'music.stop'
+  | 'music.clear'
+  | 'music.shuffle'
+  | 'music.remove'
+  | 'music.move'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -60,6 +69,7 @@ export const AUDIT_CATEGORIES = [
   { id: 'messages', label: 'Messages' },
   { id: 'birthdays', label: 'Birthdays' },
   { id: 'broadcasts', label: 'Broadcasts' },
+  { id: 'music', label: 'Music' },
   { id: 'settings', label: 'Settings' },
   { id: 'access', label: 'Sign-ins' },
 ] as const
@@ -221,6 +231,19 @@ const MODERATION: Record<string, { label: string; verb: string; undo?: boolean }
   'moderation.deafen': { label: 'Voice', verb: ' server-deafened ' },
   'moderation.undeafen': { label: 'Voice', verb: ' undeafened ', undo: true },
 }
+
+/** Music controls that read "<member> <verb>" and maybe the track it was done to. */
+const MUSIC: Record<string, { verb: string; track?: boolean; tone?: AuditDescription['tone'] }> = {
+  'music.pause': { verb: ' paused ', track: true },
+  'music.resume': { verb: ' resumed ', track: true },
+  'music.skip': { verb: ' skipped ', track: true },
+  'music.stop': { verb: ' stopped the music', tone: 'warn' },
+  'music.clear': { verb: ' cleared the queue', tone: 'warn' },
+  'music.shuffle': { verb: ' shuffled the queue' },
+  'music.remove': { verb: ' removed ', track: true },
+}
+
+const QUEUE_PLACES: Record<string, string> = { now: ' to play now', next: ' to play next' }
 
 /** A voice channel kept on an entry, drawn like a channel mention. */
 function voiceChannel(name: unknown, channelId: unknown): SummaryPart {
@@ -604,6 +627,47 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       }
     }
 
+    case 'music.play': {
+      const added = typeof entry.detail?.added === 'number' ? entry.detail.added : 1
+      const what = entry.detail?.playlist
+        ? `${added} tracks from “${truncate(text(entry.targetName, 'a playlist'))}”`
+        : `“${truncate(text(entry.targetName, 'a track'))}”`
+      return describe(
+        'Music',
+        'accent',
+        actor,
+        ` queued ${what}`,
+        QUEUE_PLACES[text(entry.detail?.queueType, '')] ?? '',
+        ' in ',
+        voiceChannel(entry.detail?.channelName, entry.detail?.channelId),
+      )
+    }
+
+    case 'music.pause':
+    case 'music.resume':
+    case 'music.skip':
+    case 'music.stop':
+    case 'music.clear':
+    case 'music.shuffle':
+    case 'music.remove': {
+      const music = MUSIC[entry.action]!
+      const track = music.track ? `“${truncate(text(entry.targetName, 'a track'))}”` : ''
+      return describe('Music', music.tone ?? 'neutral', actor, music.verb + track)
+    }
+
+    case 'music.move': {
+      const from = entry.detail?.fromChannelName
+      return describe(
+        'Music',
+        'neutral',
+        actor,
+        ' moved Vivy',
+        ...(from ? [' from ', voiceChannel(from, entry.detail?.fromChannelId)] : []),
+        ' to ',
+        voiceChannel(entry.detail?.channelName, entry.detail?.channelId),
+      )
+    }
+
     // Dashboard sign-ins, from the Discord account that made them (also the entry's actor).
     case 'auth.login':
       return describe(
@@ -698,6 +762,16 @@ export function auditIcon(action: AuditAction): string {
       return 'block'
     case 'auth.logout':
       return 'logout'
+    case 'music.play':
+    case 'music.pause':
+    case 'music.resume':
+    case 'music.skip':
+    case 'music.stop':
+    case 'music.clear':
+    case 'music.shuffle':
+    case 'music.remove':
+    case 'music.move':
+      return 'queue_music'
     default:
       return 'history'
   }

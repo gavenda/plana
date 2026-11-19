@@ -105,6 +105,7 @@ const VIEWER_ROUTES: RegExp[] = [
   /^\/api\/voice$/,
   /^\/api\/voice\/member$/,
   /^\/api\/birthdays\/upcoming$/,
+  /^\/api\/music\/state$/,
 ]
 
 /** Keeps viewers to `VIEWER_ROUTES`, read-only. Runs after `requireAccess`. */

@@ -2,8 +2,9 @@ import type { Server } from 'bun'
 
 /**
  * What open dashboard pages can follow over `/ws`. Most topics are a bare "this changed":
- * the page refetches through the endpoint it already loads from. `audit`, `presence` and
- * `logs` carry their data, an entry being cheap to send and the others too frequent to refetch for.
+ * the page refetches through the endpoint it already loads from. `audit`, `presence`, `logs`
+ * and `music` carry their data, an entry being cheap to send and the others too frequent to
+ * refetch for.
  */
 export const LIVE_TOPICS = [
   'triage',
@@ -16,6 +17,7 @@ export const LIVE_TOPICS = [
   'settings',
   'backup',
   'logs',
+  'music',
 ] as const
 
 export type LiveTopic = (typeof LIVE_TOPICS)[number]
@@ -29,6 +31,7 @@ export const VIEWER_TOPICS: ReadonlySet<LiveTopic> = new Set([
   'voice',
   'guild',
   'birthdays',
+  'music',
 ])
 
 /** Bursts of the same notice (a role edit touches many members) go out as one. */

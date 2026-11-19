@@ -40,6 +40,15 @@ export type ErrorCode =
   | 'invalid_input'
   | 'limit_reached'
   | 'discord_error'
+  | 'music_disabled'
+  | 'music_idle'
+  | 'no_results'
+  | 'queue_changed'
+  | 'voice_conflict'
+  | 'vivy_offline'
+  | 'vivy_timeout'
+  | 'vivy_unavailable'
+  | 'vivy_error'
 
 export type Failure = {
   ok: false

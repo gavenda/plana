@@ -7,6 +7,7 @@ import {
 } from 'vue-router'
 
 import { pageSwapped } from '@/lib/page-transition'
+import { useBotStore } from '@/stores/bot'
 import { useSessionStore } from '@/stores/session'
 
 declare module 'vue-router' {
@@ -18,6 +19,8 @@ declare module 'vue-router' {
     adminOnly?: boolean
     /** Open to viewers (the stats role) too; every other page is staff-only. */
     stats?: boolean
+    /** Only when the server switched it on (see the bot store); otherwise sent to the overview. */
+    feature?: 'music'
     /** Fills the left of the window with art and moves the page to a column on the right. */
     scene?: boolean
     /** Fits the window above the footer and scrolls its own panes, rather than the page scrolling. */
@@ -93,6 +96,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Voice', stats: true },
   },
   {
+    path: '/music',
+    name: 'music',
+    component: () => import('@/views/MusicView.vue'),
+    meta: { title: 'Music', stats: true, feature: 'music' },
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('@/views/SettingsView.vue'),
@@ -139,6 +148,9 @@ export function createAppRouter(history?: RouterHistory): Router {
       return { name: 'overview' }
     }
     if (session.isViewer && !to.meta.public && !to.meta.stats) {
+      return { name: 'overview' }
+    }
+    if (to.meta.feature && !useBotStore()[to.meta.feature]) {
       return { name: 'overview' }
     }
     return true

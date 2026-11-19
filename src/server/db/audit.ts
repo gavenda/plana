@@ -39,6 +39,15 @@ export type AuditAction =
   | 'auth.login'
   | 'auth.denied'
   | 'auth.logout'
+  | 'music.play'
+  | 'music.pause'
+  | 'music.resume'
+  | 'music.skip'
+  | 'music.stop'
+  | 'music.clear'
+  | 'music.shuffle'
+  | 'music.remove'
+  | 'music.move'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -93,6 +102,7 @@ export const AUDIT_CATEGORY_ACTIONS = {
   messages: ['message.%'],
   birthdays: ['birthday.%'],
   broadcasts: ['broadcast.%', 'recap.%', 'gamenight.%'],
+  music: ['music.%'],
   settings: ['settings.%', 'backup.%'],
   access: ['auth.%'],
 } as const satisfies Record<string, readonly string[]>

@@ -40,7 +40,7 @@ const schema = z
     /**
      * Plana keeps only a cache here (keys under `plana:`, each with an expiry), never a source
      * of truth. Set to an empty string to run without it; the bot then serves everything live.
-     * It can be the Redis Vivy uses, which VIVY_STATS needs.
+     * It can be the Redis Vivy uses, which VIVY_STATS and VIVY_CONTROL need.
      */
     REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
 
@@ -50,6 +50,12 @@ const schema = z
      * count the same days.
      */
     VIVY_STATS: z.stringbool().default(false),
+
+    /**
+     * Lets staff control Vivy from the Music page: search, queue, pause, skip. Sends requests
+     * over REDIS_URL, which must be the Redis Vivy uses, and relays Vivy's player state live.
+     */
+    VIVY_CONTROL: z.stringbool().default(false),
 
     /**
      * IANA time zone the server's day runs on, e.g. `Europe/Dublin`: when birthdays post and
@@ -103,6 +109,10 @@ const schema = z
     MODERATOR_ROLE_ID: snowflake.optional(),
   })
   .superRefine((value, ctx) => {
+    if (value.VIVY_CONTROL && !value.REDIS_URL) {
+      ctx.addIssue({ code: 'custom', path: ['VIVY_CONTROL'], message: 'needs REDIS_URL' })
+    }
+
     const r2 = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const
     const set = r2.filter((key) => value[key])
     if (set.length === 0 || set.length === r2.length) return

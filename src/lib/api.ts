@@ -3,6 +3,8 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    /** What the server added to act on, such as the channel in a voice conflict. */
+    readonly details?: Record<string, unknown>,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -38,8 +40,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const detail = payload as { error?: string; code?: string } | null
-    throw new ApiError(detail?.error ?? response.statusText, response.status, detail?.code)
+    const detail = payload as {
+      error?: string
+      code?: string
+      details?: Record<string, unknown>
+    } | null
+    throw new ApiError(
+      detail?.error ?? response.statusText,
+      response.status,
+      detail?.code,
+      detail?.details,
+    )
   }
 
   return payload as T

@@ -5,6 +5,7 @@ import type { Context } from 'hono'
 
 import { readSession } from './session'
 import { client, isReady } from '../discord/client'
+import { isMusicEnabled } from '../discord/music'
 import { getAccessLevel } from '../discord/service'
 import { isProduction } from '../env'
 import { logger } from '../logging'
@@ -20,6 +21,7 @@ export type SSRContext = {
   url: string
   user: unknown
   botAvatarUrl: string | null
+  features: { music: boolean }
 }
 
 export type RenderResult = {
@@ -69,6 +71,7 @@ async function renderPage(c: Context, template: string, render: RenderFn): Promi
     url: c.req.path + (new URL(c.req.url).search || ''),
     user,
     botAvatarUrl,
+    features: { music: isMusicEnabled() },
   })
 
   if (result.redirect) return c.redirect(result.redirect, 302)

@@ -51,12 +51,13 @@ Plana is a Discord bot with a web dashboard for running one server.
 ### Tracking
 - Game playtime and Spotify listening, from member presence.
 - What Vivy, the server's music bot, played and who asked for it, read from the Redis both bots share when `VIVY_STATS` is on. Read only; Plana never writes Vivy's data.
+- With `VIVY_CONTROL` on, the Music page sends Vivy requests over that Redis (pub/sub, never Vivy's keys) and shows her player as it changes. Every change made from it is in the audit log.
 - Time in voice, per member and per channel. The AFK channel and time spent deafened don't count.
 - Game icons are fetched from Discord or Steam and cached.
 
 ## Dashboard
 
-Members sign in with Discord. **Administrators** can use everything. **Moderators** (the moderator role) can use everything except Settings and Broadcast. **Viewers** (the stats role) can see only the stats: Overview without its triage and audit sections, Games & music, and Voice. Pages update live over a WebSocket.
+Members sign in with Discord. **Administrators** can use everything. **Moderators** (the moderator role) can use everything except Settings and Broadcast. **Viewers** (the stats role) can see only the stats: Overview without its triage and audit sections, Games & music, Voice, and Music read-only. Pages update live over a WebSocket.
 
 Clicking a role, channel or user mention (audit log entries, role chips, broadcast previews) opens a tooltip with a few numbers, fetched on first click: for a user, when they joined and their voice, game and music activity over the last 30 days; for a role, how many members hold it; for a channel, its category and, for a voice channel, the last 30 days of time and top members. Mentions with no known ID (such as older audit entries) show no tooltip.
 
@@ -70,7 +71,8 @@ Clicking a role, channel or user mention (audit log entries, role chips, broadca
 | **Games & music** | Who's playing or listening right now, weekday-by-hour heatmaps of when people play and when they listen, most-played games, and most-played tracks; with Vivy connected, a Vivy plays tile, Vivy's most-played tracks and its top requesters (periods only reach back to when Vivy began counting by day) |
 | **Game nights** | Opened from Games & music: every game night so far, planned, going on or ended, with who said they're in and who came; for administrators, every game played, each with the role its game nights ping |
 | **Voice** | Who's in voice now, a weekday-by-hour heatmap of when people are in voice, members with the most voice time, and the busiest channels with each one's share of the time |
-| **Audit log** | Searchable, filterable log covering joins and leaves, triage, moderation, deleted and edited messages, birthdays, broadcasts, settings and sign-ins |
+| **Music** | With `VIVY_CONTROL` on: what Vivy is playing (progress, requester, repeat, volume) and what's up next, live. Staff search YouTube Music or YouTube, or paste a link or playlist, and play it now, next or later in a voice channel they pick (the one they're in by default; moving Vivy out of a channel she's playing in asks first). They can pause, resume, skip, stop (Vivy leaves the channel), shuffle, remove a track and clear the queue. Viewers see it without the controls. Spotify links aren't accepted |
+| **Audit log** | Searchable, filterable log covering joins and leaves, triage, moderation, deleted and edited messages, birthdays, broadcasts, music control, settings and sign-ins |
 | **Settings** | Roles and channels grouped by feature, triage reminder days, game night minimum players, backups, live server logs, and an About pane |
 
 ## Operations

@@ -37,7 +37,21 @@
       "announce_failed": "Could not post the announcement message.",
       "assign_rejected": "Discord rejected the role change.",
       "broadcast_rejected": "Discord rejected the message.",
-      "invalid_birthday": "That is not a real date."
+      "invalid_birthday": "That is not a real date.",
+      "music_disabled": "Music control is switched off.",
+      "music_idle": "Vivy isn't playing anything.",
+      "no_results": "Nothing was found for that.",
+      "music_unsupported": "Spotify links can't be queued from the dashboard. Search for the song instead.",
+      "music_invalid_track": "That track can no longer be played. Search for it again.",
+      "music_load_failed": "Vivy couldn't load that.",
+      "unknown_voice_channel": "That voice channel no longer exists.",
+      "voice_not_joinable": "Vivy can't join that voice channel.",
+      "queue_changed": "The queue changed. Try again.",
+      "voice_conflict": "Vivy is already playing in {{channel}}.",
+      "vivy_offline": "Vivy isn't connected right now.",
+      "vivy_timeout": "Vivy didn't answer in time.",
+      "vivy_unavailable": "Vivy can't reach her audio server right now.",
+      "vivy_error": "Vivy couldn't do that."
     },
     "announcement": {
       "welcome": "-# Welcome Announcement\n### Welcome, {{member}}",

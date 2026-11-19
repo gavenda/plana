@@ -10,6 +10,8 @@ export type SSRContext = {
   user: SessionUser | null
   /** The bot's custom Discord avatar, for the rail's mark; null falls back to the logo. */
   botAvatarUrl: string | null
+  /** Optional parts of the dashboard switched on in the server's environment. */
+  features: { music: boolean }
 }
 
 export type RenderResult = {
@@ -32,6 +34,7 @@ export async function render(context: SSRContext): Promise<RenderResult> {
 
   useSessionStore(pinia).setUser(context.user)
   useBotStore(pinia).setAvatarUrl(context.botAvatarUrl)
+  useBotStore(pinia).setFeatures(context.features)
 
   await router.push(context.url)
   await router.isReady()

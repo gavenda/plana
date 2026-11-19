@@ -27,6 +27,8 @@ type Destination = {
   stats?: boolean
   /** Shown in the slim rail too. The rest appear only once it opens, as in Yuuka's. */
   slim?: boolean
+  /** Only when the server switched it on; match the route's `feature`. */
+  feature?: 'music'
 }
 
 /** Icon names are Material Symbols; add new ones to the icon_names list in index.html. */
@@ -38,6 +40,7 @@ const allDestinations: Destination[] = [
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
   { to: '/activity', label: 'Games & music', icon: 'sports_esports', stats: true },
   { to: '/voice', label: 'Voice', icon: 'headset_mic', stats: true },
+  { to: '/music', label: 'Music', icon: 'queue_music', stats: true, feature: 'music' },
   { to: '/audit', label: 'Audit log', icon: 'history', slim: true },
   { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
@@ -52,12 +55,15 @@ const session = useSessionStore()
  * them fit the slim rail.
  */
 const destinations = computed(() => {
+  const available = allDestinations.filter(
+    (destination) => !destination.feature || bot[destination.feature],
+  )
   if (session.isViewer) {
-    return allDestinations
+    return available
       .filter((destination) => destination.stats)
       .map((destination) => ({ ...destination, slim: true }))
   }
-  return allDestinations.filter((destination) => !destination.adminOnly || session.isAdmin)
+  return available.filter((destination) => !destination.adminOnly || session.isAdmin)
 })
 
 /**

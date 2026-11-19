@@ -72,6 +72,15 @@ see the Components section of BRANDING.md for which to use and Plana's own wrapp
   (`placeholder="https://"`, `href="https://…"`), reporting "Cannot find name" on later lines.
   Put the URL in a script constant and bind it.
 
+## Vivy music control
+
+The Music page commands Vivy, the music bot, over Redis pub/sub (`src/server/discord/music.ts`).
+The messages are in `src/server/vivy-contract.ts`, a copy of Vivy's `src/remote/contract.ts`:
+change both repos together, never one alone. A Redis connection that has subscribed can run
+no other command, so the subscriber is its own client. Server code may import nothing from
+`src/lib` except `components-v2.ts`, which is all the container ships, so the page's types are
+repeated in `src/lib/music.ts`.
+
 ## Charts
 
 Use the `charts` skill (`.claude/skills/charts/SKILL.md`) before adding or changing a chart.

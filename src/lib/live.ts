@@ -3,11 +3,12 @@ import { onBeforeUnmount, onMounted, readonly, ref } from 'vue'
 import type { RightNow } from './activity'
 import type { AuditEntry } from './audit'
 import type { LogEntry } from './logs'
+import type { MusicView } from './music'
 
 /**
  * Live updates over `/ws` (see src/server/live.ts). Most topics are a bare "this changed",
  * and the page reloads through the endpoint it already uses, so every page still works
- * without the socket. `audit`, `presence` and `logs` carry their data.
+ * without the socket. `audit`, `presence`, `logs` and `music` carry their data.
  */
 export type LiveMessages = {
   triage: object
@@ -20,6 +21,7 @@ export type LiveMessages = {
   settings: object
   backup: object
   logs: { entry: LogEntry }
+  music: MusicView
 }
 
 export type LiveTopic = keyof LiveMessages
