@@ -7,7 +7,6 @@ import LinkButton from '@/components/LinkButton.vue'
 import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
 import PeriodChips from '@/components/PeriodChips.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
-import ShareBar from '@/components/ShareBar.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -73,7 +72,6 @@ const games = computed(() => data.value?.games ?? [])
 const LIST_LIMIT = 10
 const showAll = ref(false)
 const shownGames = computed(() => (showAll.value ? games.value : games.value.slice(0, LIST_LIMIT)))
-const topMs = computed(() => games.value[0]?.ms ?? 0)
 
 /** Who's playing now, one row per game: its players, and when the first of them started. */
 const playing = computed(() => {
@@ -354,7 +352,6 @@ const sheetIcon = computed(
                       plural(game.players, 'player', 'players')
                     }}</span>
                   </span>
-                  <ShareBar :value="game.ms" :max="topMs" />
                 </span>
                 <template #trailing>
                   <span class="shrink-0 text-body-large tabular-nums">{{

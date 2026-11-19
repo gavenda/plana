@@ -6,7 +6,6 @@ import { Button, Card, List, ListItem } from 'tailwind-material3'
 import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
 import PeriodChips from '@/components/PeriodChips.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
-import ShareBar from '@/components/ShareBar.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -82,9 +81,6 @@ const shownTracks = computed(() =>
 const shownVivyTracks = computed(() =>
   showAllVivy.value ? vivyTracks.value : vivyTracks.value.slice(0, LIST_LIMIT),
 )
-const topPlays = computed(() => tracks.value[0]?.plays ?? 0)
-const topVivyPlays = computed(() => vivyTracks.value[0]?.plays ?? 0)
-const topRequests = computed(() => vivyRequesters.value[0]?.requests ?? 0)
 
 const topTrack = computed(() => {
   const track = tracks.value[0]
@@ -381,7 +377,6 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                     <p class="truncate text-body-small text-on-surface-variant">
                       {{ track.artist ?? 'Unknown artist' }}
                     </p>
-                    <ShareBar :value="track.plays" :max="topPlays" />
                   </div>
                   <div class="flex shrink-0 flex-col items-end">
                     <span class="text-body-large tabular-nums">{{
@@ -481,7 +476,6 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                   <span class="block truncate text-body-small text-on-surface-variant">
                     {{ track.artist ?? 'Unknown artist' }}
                   </span>
-                  <ShareBar :value="track.plays" :max="topVivyPlays" />
                 </span>
                 <template #trailing>
                   <span class="flex items-center gap-4">
@@ -569,7 +563,6 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                   <span class="block truncate font-mono text-body-small text-on-surface-variant">
                     {{ requester.username }}
                   </span>
-                  <ShareBar :value="requester.requests" :max="topRequests" />
                 </span>
                 <template #trailing>
                   <span class="shrink-0 text-body-large tabular-nums">{{
