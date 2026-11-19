@@ -89,12 +89,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/GameNightsView.vue'),
     meta: { title: 'Game nights', depth: 1 },
   },
-  // Games & music was one page until the music half moved to Music; old links still land.
-  {
-    path: '/activity',
-    redirect: (to) => ({ path: 'track' in to.query ? '/music' : '/games', query: to.query }),
-  },
-  { path: '/activity/game-nights', redirect: '/games/nights' },
   {
     path: '/voice',
     name: 'voice',
