@@ -29,6 +29,8 @@ export type MusicState = {
   /** Position in `current` when the server sent this, to count forward from its arrival while playing. */
   positionMs: number
   positionAt: number
+  /** How fast the position moves: 1, or faster under a speed filter such as nightcore. */
+  rate: number
   /** Upcoming tracks, the first hundred; `queueSize` counts them all. */
   queue: MusicTrack[]
   queueSize: number
@@ -39,6 +41,12 @@ export type MusicState = {
 
 /** `state` is null while Vivy is offline. */
 export type MusicView = { online: boolean; state: MusicState | null }
+
+/** A playing track's position, sent every few seconds to correct the one counted forward. */
+export type MusicProgress = Pick<MusicState, 'paused' | 'positionMs' | 'positionAt' | 'rate'>
+
+/** What the `music` topic carries: the whole view on a change, else a position. */
+export type MusicLive = MusicView | { progress: MusicProgress }
 
 export type MusicSearch = { tracks: MusicSearchTrack[]; playlistName: string | null }
 

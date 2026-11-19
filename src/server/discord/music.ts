@@ -22,8 +22,8 @@ import { err, ok, type Actor, type ErrorCode, type Result } from './service'
 /**
  * Controls Vivy, the server's music bot, from the dashboard. Requests go over the Redis both
  * bots share (REDIS_URL, with VIVY_CONTROL on) and Vivy answers on another channel; it also
- * publishes its player's state whenever it changes, which is relayed to open pages on the
- * `music` topic. The messages are in `vivy-contract.ts`, a copy of Vivy's `src/remote/contract.ts`.
+ * publishes its player's state whenever it changes, and a playing track's position every few
+ * seconds, which are relayed to open pages on the `music` topic. The messages are in `vivy-contract.ts`, a copy of Vivy's `src/remote/contract.ts`.
  */
 
 const log = logger('music')
@@ -38,8 +38,14 @@ const RECONNECT_MAX_MS = 30_000
 
 type MusicState = RemoteGuildState & { voiceChannelName: string | null }
 
-/** What the Music page shows, and what the `music` topic carries. */
+/** What the Music page shows, and what the `music` topic carries on a change. */
 export type MusicView = { online: boolean; state: MusicState | null }
+
+/**
+ * What the `music` topic carries every few seconds while a track plays, to correct the
+ * position the page counts forward.
+ */
+export type MusicProgress = Pick<RemoteGuildState, 'paused' | 'positionMs' | 'positionAt' | 'rate'>
 
 type VoiceChannelOption = { id: string; name: string; category: string | null }
 
@@ -158,6 +164,18 @@ function onEvent(event: RemoteEvent): void {
       setState(event.state)
       return
     }
+    case 'progress': {
+      if (event.guildId !== env.DISCORD_GUILD_ID) return
+      if (event.instanceId === lastInstance && event.seq <= lastSeq) return
+      // A report for the track before the state's current one, or one no state has shown yet.
+      if (!latest || latest.current?.identifier !== event.identifier) return
+      lastInstance = event.instanceId
+      lastSeq = event.seq
+      const { paused, positionMs, positionAt, rate } = event
+      latest = { ...latest, paused, positionMs, positionAt, rate }
+      publish('music', { progress: progress(latest) })
+      return
+    }
     case 'ready':
       void refresh()
       return
@@ -177,19 +195,24 @@ function onEvent(event: RemoteEvent): void {
  */
 function view(): MusicView {
   if (!online || !latest) return { online, state: null }
-  const now = Date.now()
-  const { current, paused, positionMs, positionAt, voiceChannelId } = latest
-  const elapsed = current && !paused ? Math.max(0, now - positionAt) : 0
-  const length = current && !current.isStream ? current.lengthMs : Infinity
+  const { voiceChannelId } = latest
   return {
     online,
     state: {
       ...latest,
-      positionMs: Math.min(positionMs + elapsed, length),
-      positionAt: now,
+      ...progress(latest),
       voiceChannelName: voiceChannelId ? channelName(voiceChannelId) : null,
     },
   }
+}
+
+/** The position in `state` carried forward to now, at the speed the track plays. */
+function progress(state: RemoteGuildState): MusicProgress {
+  const now = Date.now()
+  const { current, paused, positionMs, positionAt, rate } = state
+  const elapsed = current && !paused ? Math.max(0, now - positionAt) * rate : 0
+  const length = current && !current.isStream ? current.lengthMs : Infinity
+  return { paused, positionMs: Math.min(positionMs + elapsed, length), positionAt: now, rate }
 }
 
 /** From the cache, so relaying a state never waits on Discord. */

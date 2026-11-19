@@ -24,6 +24,7 @@ import {
   QUEUE_PLACES,
   type MusicChannels,
   type MusicPlayed,
+  type MusicProgress,
   type MusicQueueType,
   type MusicSearch,
   type MusicSearchTrack,
@@ -58,9 +59,18 @@ function showView(next: MusicView) {
 watch(music.data, (value) => value && showView(value))
 
 useLive('music', (message) => {
-  if (message) showView({ online: message.online, state: message.state })
-  else void music.run()
+  if (!message) void music.run()
+  else if ('progress' in message) showProgress(message.progress)
+  else showView({ online: message.online, state: message.state })
 })
+
+/** Vivy's position report, correcting the one counted forward since the last view. */
+function showProgress(progress: MusicProgress) {
+  const shown = view.value
+  if (!shown?.state?.current) return
+  view.value = { ...shown, state: { ...shown.state, ...progress } }
+  receivedAt.value = Date.now()
+}
 
 const REPEAT_LABELS = { off: null, track: 'Repeating the track', queue: 'Repeating the queue' }
 
@@ -84,7 +94,7 @@ onBeforeUnmount(() => clearInterval(ticker))
 const positionMs = computed(() => {
   const value = state.value
   if (!value?.current) return 0
-  const elapsed = playing.value ? Math.max(0, now.value - receivedAt.value) : 0
+  const elapsed = playing.value ? Math.max(0, now.value - receivedAt.value) * value.rate : 0
   const position = value.positionMs + elapsed
   return value.current.isStream ? position : Math.min(position, value.current.lengthMs)
 })

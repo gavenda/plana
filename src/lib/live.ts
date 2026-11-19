@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, readonly, ref } from 'vue'
 import type { RightNow } from './activity'
 import type { AuditEntry } from './audit'
 import type { LogEntry } from './logs'
-import type { MusicView } from './music'
+import type { MusicLive } from './music'
 
 /**
  * Live updates over `/ws` (see src/server/live.ts). Most topics are a bare "this changed",
@@ -21,7 +21,7 @@ export type LiveMessages = {
   settings: object
   backup: object
   logs: { entry: LogEntry }
-  music: MusicView
+  music: MusicLive
 }
 
 export type LiveTopic = keyof LiveMessages
