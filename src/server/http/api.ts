@@ -40,6 +40,7 @@ import {
   isMusicEnabled,
   listVoiceChannels,
   moveMusic,
+  seekMusic,
   playMusic,
   removeMusic,
   searchMusic,
@@ -622,6 +623,14 @@ api.post('/music/remove', async (c) => {
   if (!parsed.success) return c.json({ error: 'A queue position is required.' }, 400)
   const { index, identifier } = parsed.data
   return respond(c, await removeMusic(index, identifier, actorOf(c)))
+})
+
+api.post('/music/seek', async (c) => {
+  const parsed = z
+    .object({ positionMs: z.number().int().min(0).max(86_400_000) })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'A position in the track is required.' }, 400)
+  return respond(c, await seekMusic(parsed.data.positionMs, actorOf(c)))
 })
 
 api.post('/music/move', async (c) => {

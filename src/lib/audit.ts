@@ -1,4 +1,5 @@
 import { absoluteTime } from './format'
+import { formatDuration as trackTime } from './music'
 
 export type AuditAction =
   | 'member.join'
@@ -47,6 +48,7 @@ export type AuditAction =
   | 'music.shuffle'
   | 'music.remove'
   | 'music.move'
+  | 'music.seek'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {
@@ -655,6 +657,17 @@ export function describeAudit(entry: AuditEntry): AuditDescription {
       return describe('Music', music.tone ?? 'neutral', actor, music.verb + track)
     }
 
+    case 'music.seek': {
+      const to = entry.detail?.positionMs
+      return describe(
+        'Music',
+        'neutral',
+        actor,
+        ` moved “${truncate(text(entry.targetName, 'a track'))}”`,
+        ...(typeof to === 'number' ? [` to ${trackTime(to)}`] : []),
+      )
+    }
+
     case 'music.move': {
       const from = entry.detail?.fromChannelName
       return describe(
@@ -771,6 +784,7 @@ export function auditIcon(action: AuditAction): string {
     case 'music.shuffle':
     case 'music.remove':
     case 'music.move':
+    case 'music.seek':
       return 'queue_music'
     default:
       return 'history'

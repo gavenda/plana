@@ -257,6 +257,7 @@ const ERROR_BY_CODE: Partial<Record<RemoteError['code'], { code: ErrorCode; key:
   INDEX_OUT_OF_RANGE: { code: 'queue_changed', key: 'error.queue_changed' },
   STALE_INDEX: { code: 'queue_changed', key: 'error.queue_changed' },
   LOAD_FAILED: { code: 'vivy_error', key: 'error.music_load_failed' },
+  NOT_SEEKABLE: { code: 'invalid_input', key: 'error.music_not_seekable' },
 }
 
 function toFailure(error: RemoteError) {
@@ -267,6 +268,10 @@ function toFailure(error: RemoteError) {
       channelId,
       channel: channel ?? 'another channel',
     })
+  }
+  // A Vivy from before an op existed refuses it like a malformed request.
+  if (error.code === 'BAD_REQUEST' && error.message.startsWith('Unknown op')) {
+    return err('vivy_error', 'error.vivy_outdated')
   }
   const mapped = ERROR_BY_CODE[error.code]
   if (mapped) return err(mapped.code, mapped.key)
@@ -420,6 +425,17 @@ export function removeMusic(index: number, identifier: string | undefined, actor
   return change('remove', { index, identifier }, actor, () => ({
     targetName: latest?.queue[index]?.title ?? null,
     detail: { index },
+  }))
+}
+
+/** Moves the playing track to a position, which Vivy clamps to its length. */
+export function seekMusic(positionMs: number, actor: Actor) {
+  return change('seek', { positionMs }, actor, () => ({
+    targetName: latest?.current?.title ?? null,
+    detail: {
+      positionMs,
+      fromMs: latest?.current ? Math.round(progress(latest).positionMs) : null,
+    },
   }))
 }
 

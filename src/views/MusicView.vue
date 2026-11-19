@@ -7,6 +7,7 @@ import {
   IconButton,
   LinearProgressIndicator,
   List,
+  Slider,
   ListItem,
 } from 'tailwind-material3'
 
@@ -319,6 +320,24 @@ function confirmed() {
   if (op) void control(op)
 }
 
+/** Where the slider is while it's dragged; the live position shows otherwise. */
+const seeking = ref<number | null>(null)
+/** Staff drag through a track Vivy can seek; anything else shows the plain progress. */
+const canSeek = computed(
+  () => canControl.value && online.value && current.value?.isSeekable === true,
+)
+
+async function seek(value: number | [number, number]) {
+  const positionMs = Math.round(Array.isArray(value) ? value[0] : value)
+  try {
+    showView(await post<MusicView>('/api/music/seek', { positionMs }))
+  } catch (cause) {
+    snackbar.showError(cause, 'Could not move through the track.')
+  } finally {
+    seeking.value = null
+  }
+}
+
 async function remove(track: MusicTrack, index: number) {
   try {
     showView(await post<MusicView>('/api/music/remove', { index, identifier: track.identifier }))
@@ -330,15 +349,8 @@ async function remove(track: MusicTrack, index: number) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="@container flex flex-col gap-4">
     <template v-if="player">
-      <div v-if="canControl" class="flex justify-end">
-        <Button variant="tonal" :disabled="!online" @click="addOpen = true">
-          <span class="icon [--icon-size:18px]" aria-hidden="true">playlist_add</span>
-          Queue
-        </Button>
-      </div>
-
       <div
         v-if="view && !online"
         class="flex items-center gap-4 overflow-hidden rounded-medium bg-warning-container py-3 pr-3 pl-6 text-on-warning-container"
@@ -349,145 +361,185 @@ async function remove(track: MusicTrack, index: number) {
         <Button variant="text" class="text-inherit!" @click="music.run()">Try again</Button>
       </div>
 
-      <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-        <div class="flex flex-col gap-4">
-          <section aria-labelledby="music-now">
-            <div class="section-header">
-              <h2 id="music-now" class="text-title-medium">Now playing</h2>
+      <!-- Up next sits beside the player only while there's something in it. -->
+      <div
+        class="grid gap-4"
+        :class="queue.length > 0 && '@5xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @5xl:items-start'"
+      >
+        <section aria-labelledby="music-now">
+          <div class="section-header">
+            <h2 id="music-now" class="text-title-medium">Now playing</h2>
+            <span class="flex items-center gap-3 pr-1">
               <span
                 v-if="state?.voiceChannelName"
-                class="flex items-center gap-1 pr-4 text-label-large text-on-surface-variant"
+                class="flex items-center gap-1 text-label-large text-on-surface-variant"
               >
                 <span class="icon [--icon-size:18px]" aria-hidden="true">headset_mic</span>
                 {{ state.voiceChannelName }}
               </span>
-            </div>
-
-            <div
-              :class="!current && 'overflow-hidden rounded-medium bg-surface-container'"
-              aria-live="polite"
-            >
-              <StateBlock
-                :loading="loading"
-                :error="music.error.value"
-                :empty="!current"
-                :empty-text="online ? 'Nothing playing. Standing by.' : 'Nothing to report.'"
-                empty-mood="curious"
-                :retry="music.run"
+              <Button
+                v-if="canControl"
+                variant="tonal"
+                size="s"
+                :disabled="!online"
+                @click="addOpen = true"
               >
-                <template #empty>
-                  <template v-if="online && canControl">Queue something to start it.</template>
-                </template>
-                <template #skeleton><SkeletonList :rows="1" two-line /></template>
+                <span class="icon [--icon-size:18px]" aria-hidden="true">playlist_add</span>
+                Queue
+              </Button>
+            </span>
+          </div>
 
-                <Card
-                  v-if="current"
-                  :padded="false"
-                  class="flex flex-col gap-4 bg-surface-container! p-4"
-                >
-                  <div class="flex items-center gap-4">
-                    <img
-                      v-if="current.artworkUrl"
-                      class="size-24 shrink-0 rounded-medium bg-surface-container-highest object-cover"
-                      :src="current.artworkUrl"
-                      alt=""
-                      width="96"
-                      height="96"
-                    />
-                    <span
-                      v-else
-                      class="flex size-24 shrink-0 items-center justify-center rounded-medium bg-surface-container-highest text-on-surface-variant"
+          <div aria-live="polite">
+            <StateBlock :loading="loading" :error="music.error.value" :retry="music.run" compact>
+              <template #skeleton><div class="skeleton h-16 rounded-medium" /></template>
+
+              <!-- Playing: art, the track and its progress, and the controls, biggest first. -->
+              <Card
+                v-if="current"
+                :padded="false"
+                class="flex flex-wrap items-center gap-x-6 gap-y-4 bg-surface-container! p-4"
+              >
+                <div class="flex min-w-0 flex-[1_1_20rem] items-center gap-4">
+                  <img
+                    v-if="current.artworkUrl"
+                    class="size-24 shrink-0 rounded-medium bg-surface-container-highest object-cover"
+                    :src="current.artworkUrl"
+                    alt=""
+                    width="96"
+                    height="96"
+                  />
+                  <span
+                    v-else
+                    class="flex size-24 shrink-0 items-center justify-center rounded-medium bg-surface-container-highest text-on-surface-variant"
+                  >
+                    <span class="icon [--icon-size:40px]" aria-hidden="true">music_note</span>
+                  </span>
+                  <div class="flex min-w-0 flex-1 flex-col gap-1">
+                    <a
+                      v-if="current.uri"
+                      class="truncate text-title-medium hover:underline"
+                      :href="current.uri"
+                      :title="current.title"
+                      target="_blank"
+                      rel="noopener"
+                      >{{ current.title }}</a
                     >
-                      <span class="icon [--icon-size:40px]" aria-hidden="true">music_note</span>
-                    </span>
-                    <div class="flex min-w-0 flex-1 flex-col gap-1">
-                      <a
-                        v-if="current.uri"
-                        class="line-clamp-2 text-title-medium hover:underline"
-                        :href="current.uri"
-                        target="_blank"
-                        rel="noopener"
-                        >{{ current.title }}</a
-                      >
-                      <span v-else class="line-clamp-2 text-title-medium">{{ current.title }}</span>
-                      <span class="truncate text-body-medium text-on-surface-variant">{{
-                        current.author
-                      }}</span>
-                      <span
-                        v-if="current.requester"
-                        class="truncate text-label-medium text-on-surface-variant"
-                        >Requested by {{ current.requester.name }}</span
-                      >
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col gap-1">
+                    <span v-else class="truncate text-title-medium" :title="current.title">{{
+                      current.title
+                    }}</span>
+                    <span class="truncate text-body-medium text-on-surface-variant"
+                      >{{ current.author
+                      }}<template v-if="current.requester">
+                        · requested by {{ current.requester.name }}</template
+                      ></span
+                    >
+                    <Slider
+                      v-if="canSeek"
+                      class="-my-2"
+                      :min="0"
+                      :max="current.lengthMs"
+                      :step="1000"
+                      :model-value="seeking ?? positionMs"
+                      label="Position in the track"
+                      :format="formatDuration"
+                      value-indicator
+                      :disabled="busy"
+                      @update:model-value="
+                        (value) => (seeking = Array.isArray(value) ? value[0] : (value ?? 0))
+                      "
+                      @change="seek"
+                    />
                     <LinearProgressIndicator
+                      v-else
+                      class="mt-1"
                       :progress="progress ?? 0"
                       :wavy="playing"
                       :aria-label="`${formatDuration(positionMs)} of ${formatDuration(current.lengthMs)}`"
                     />
-                    <div class="flex justify-between text-label-small text-on-surface-variant">
-                      <span>{{ formatDuration(positionMs) }}</span>
-                      <span>{{
-                        current.isStream ? 'Live' : formatDuration(current.lengthMs)
-                      }}</span>
+                    <div
+                      class="flex flex-wrap justify-between gap-x-4 text-label-small text-on-surface-variant"
+                    >
+                      <span>{{ formatDuration(seeking ?? positionMs) }}</span>
+                      <span class="flex items-center gap-3">
+                        <span
+                          v-if="state && REPEAT_LABELS[state.repeat]"
+                          class="flex items-center gap-1"
+                          :title="REPEAT_LABELS[state.repeat] ?? undefined"
+                        >
+                          <span class="icon [--icon-size:16px]" aria-hidden="true">{{
+                            state.repeat === 'track' ? 'repeat_one' : 'repeat'
+                          }}</span>
+                          <span class="sr-only">{{ REPEAT_LABELS[state.repeat] }}</span>
+                        </span>
+                        <span v-if="state" class="flex items-center gap-1">
+                          <span class="icon [--icon-size:16px]" aria-hidden="true">volume_up</span>
+                          {{ Math.round(state.volume * 100) }}%
+                        </span>
+                        <span>{{
+                          current.isStream ? 'Live' : formatDuration(current.lengthMs)
+                        }}</span>
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div class="flex flex-wrap items-center gap-2">
-                    <template v-if="canControl">
-                      <IconButton
-                        variant="filled"
-                        :label="playing ? 'Pause' : 'Resume'"
-                        :disabled="busy || !online"
-                        @click="control(playing ? 'pause' : 'resume')"
-                      >
-                        <span class="icon" aria-hidden="true">{{
-                          playing ? 'pause' : 'play_arrow'
-                        }}</span>
-                      </IconButton>
-                      <IconButton
-                        variant="tonal"
-                        label="Skip"
-                        :disabled="busy || !online"
-                        @click="control('skip')"
-                      >
-                        <span class="icon" aria-hidden="true">skip_next</span>
-                      </IconButton>
-                      <IconButton
-                        variant="tonal"
-                        label="Stop and leave the channel"
-                        :disabled="busy || !online"
-                        @click="confirmOpen = 'stop'"
-                      >
-                        <span class="icon" aria-hidden="true">stop</span>
-                      </IconButton>
-                    </template>
-                    <span
-                      v-if="state && REPEAT_LABELS[state.repeat]"
-                      class="flex items-center gap-1 px-2 text-label-medium text-on-surface-variant"
-                    >
-                      <span class="icon [--icon-size:18px]" aria-hidden="true">{{
-                        state.repeat === 'track' ? 'repeat_one' : 'repeat'
-                      }}</span>
-                      {{ REPEAT_LABELS[state.repeat] }}
-                    </span>
-                    <span
-                      v-if="state"
-                      class="ml-auto flex items-center gap-1 pr-2 text-label-medium text-on-surface-variant"
-                    >
-                      <span class="icon [--icon-size:18px]" aria-hidden="true">volume_up</span>
-                      {{ Math.round(state.volume * 100) }}%
-                    </span>
-                  </div>
-                </Card>
-              </StateBlock>
-            </div>
-          </section>
-        </div>
+                <!-- M3 Expressive sizes: the main action large and filled, skip a wide tonal
+                     pill, and stop (which empties the queue) the quietest. -->
+                <div
+                  v-if="canControl"
+                  class="flex w-full items-center justify-center gap-2 @2xl:ml-auto @2xl:w-auto"
+                >
+                  <IconButton
+                    variant="tonal"
+                    size="m"
+                    width="wide"
+                    label="Skip"
+                    :disabled="busy || !online"
+                    @click="control('skip')"
+                  >
+                    <span class="icon" aria-hidden="true">skip_next</span>
+                  </IconButton>
+                  <IconButton
+                    variant="filled"
+                    size="l"
+                    :label="playing ? 'Pause' : 'Resume'"
+                    :disabled="busy || !online"
+                    @click="control(playing ? 'pause' : 'resume')"
+                  >
+                    <span class="icon [--icon-size:32px]" aria-hidden="true">{{
+                      playing ? 'pause' : 'play_arrow'
+                    }}</span>
+                  </IconButton>
+                  <IconButton
+                    variant="outlined"
+                    size="m"
+                    label="Stop and leave the channel"
+                    :disabled="busy || !online"
+                    @click="confirmOpen = 'stop'"
+                  >
+                    <span class="icon" aria-hidden="true">stop</span>
+                  </IconButton>
+                </div>
+              </Card>
 
-        <section aria-labelledby="music-queue">
+              <!-- Idle: one line, so the stats below aren't pushed off the screen. -->
+              <Card
+                v-else
+                :padded="false"
+                class="flex items-center gap-3 bg-surface-container! px-5 py-4 text-body-medium text-on-surface-variant"
+              >
+                <span class="icon [--icon-size:20px]" aria-hidden="true">music_off</span>
+                <span>
+                  {{ online ? 'Nothing playing. Standing by.' : 'Nothing to report.' }}
+                  <template v-if="online && canControl">Queue something to start it.</template>
+                </span>
+              </Card>
+            </StateBlock>
+          </div>
+        </section>
+
+        <section v-if="queue.length > 0" aria-labelledby="music-queue">
           <div class="section-header">
             <h2 id="music-queue" class="text-title-medium">Up next</h2>
             <span class="flex items-center gap-2 pr-2">
@@ -496,7 +548,7 @@ async function remove(track: MusicTrack, index: number) {
                 class="pr-2 text-label-large text-on-surface-variant"
                 >{{ state.queueSize }} · {{ formatDuration(state.durationMs) }}</span
               >
-              <template v-if="canControl && queue.length > 0">
+              <template v-if="canControl">
                 <IconButton
                   variant="standard"
                   label="Shuffle the queue"
@@ -517,71 +569,54 @@ async function remove(track: MusicTrack, index: number) {
             </span>
           </div>
 
-          <div
-            :class="
-              !loading &&
-              queue.length === 0 &&
-              'overflow-hidden rounded-medium bg-surface-container'
-            "
-          >
-            <StateBlock
-              :loading="loading"
-              :empty="queue.length === 0"
-              empty-text="The queue is empty."
+          <List segmented>
+            <ListItem
+              v-for="(track, index) in queue"
+              :key="`${index}:${track.identifier}`"
+              class="bg-surface-container!"
             >
-              <template #skeleton><SkeletonList :rows="5" two-line /></template>
-              <List segmented>
-                <ListItem
-                  v-for="(track, index) in queue"
-                  :key="`${index}:${track.identifier}`"
-                  class="bg-surface-container!"
+              <template #leading>
+                <span class="w-6 shrink-0 text-center text-label-large text-on-surface-variant">{{
+                  index + 1
+                }}</span>
+              </template>
+              <span class="block truncate">{{ track.title }}</span>
+              <template #supporting-text>
+                <span class="block truncate text-body-small"
+                  >{{ track.author }}{{ track.requester ? ` · ${track.requester.name}` : '' }}</span
                 >
-                  <template #leading>
-                    <span
-                      class="w-6 shrink-0 text-center text-label-large text-on-surface-variant"
-                      >{{ index + 1 }}</span
-                    >
-                  </template>
-                  <span class="block truncate">{{ track.title }}</span>
-                  <template #supporting-text>
-                    <span class="block truncate text-body-small"
-                      >{{ track.author
-                      }}{{ track.requester ? ` · ${track.requester.name}` : '' }}</span
-                    >
-                  </template>
-                  <template #trailing>
-                    <span class="flex items-center gap-4">
-                      <span class="text-label-medium text-on-surface-variant">{{
-                        track.isStream ? 'Live' : formatDuration(track.lengthMs)
-                      }}</span>
-                      <IconButton
-                        v-if="canControl"
-                        variant="tonal"
-                        width="narrow"
-                        class="bg-error-container! text-on-error-container!"
-                        :label="`Remove ${track.title}`"
-                        :disabled="busy || !online"
-                        @click="remove(track, index)"
-                      >
-                        <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
-                      </IconButton>
-                    </span>
-                  </template>
-                </ListItem>
-              </List>
-              <p
-                v-if="state && state.queueSize > queue.length"
-                class="px-4 pt-3 text-body-small text-on-surface-variant"
-              >
-                And {{ state.queueSize - queue.length }} more.
-              </p>
-            </StateBlock>
-          </div>
+              </template>
+              <template #trailing>
+                <span class="flex items-center gap-4">
+                  <span class="text-label-medium text-on-surface-variant">{{
+                    track.isStream ? 'Live' : formatDuration(track.lengthMs)
+                  }}</span>
+                  <IconButton
+                    v-if="canControl"
+                    variant="tonal"
+                    width="narrow"
+                    class="bg-error-container! text-on-error-container!"
+                    :label="`Remove ${track.title}`"
+                    :disabled="busy || !online"
+                    @click="remove(track, index)"
+                  >
+                    <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
+                  </IconButton>
+                </span>
+              </template>
+            </ListItem>
+          </List>
+          <p
+            v-if="state && state.queueSize > queue.length"
+            class="px-4 pt-3 text-body-small text-on-surface-variant"
+          >
+            And {{ state.queueSize - queue.length }} more.
+          </p>
         </section>
       </div>
     </template>
 
-    <MusicStats :class="player && 'mt-4'" />
+    <MusicStats :class="player && 'mt-2'" />
 
     <!-- A form in a dialog has no hero and no face (see "Dialogs" in BRANDING.md). Playing
          closes it, so the snackbar or the move confirmation can be reached; reopening keeps the

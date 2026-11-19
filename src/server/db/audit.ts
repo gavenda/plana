@@ -48,6 +48,7 @@ export type AuditAction =
   | 'music.shuffle'
   | 'music.remove'
   | 'music.move'
+  | 'music.seek'
 export type AuditSource = 'discord' | 'dashboard' | 'system'
 
 export type AuditEntry = {

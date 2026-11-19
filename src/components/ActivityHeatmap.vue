@@ -142,9 +142,11 @@ async function draw() {
           offset: false,
           grid: { display: false },
           border: { display: false },
-          // A label every 3 hours, on the hour rather than at the axis's half-hour edge.
+          // A label every hour once the cells are wide enough to hold one (a full-width grid),
+          // else every 3; on the hour rather than at the axis's half-hour edge.
           afterBuildTicks: (scale) => {
-            scale.ticks = HOURS.filter((hour) => hour % 3 === 0).map((value) => ({ value }))
+            const step = scale.width / 24 >= 32 ? 1 : 3
+            scale.ticks = HOURS.filter((hour) => hour % step === 0).map((value) => ({ value }))
           },
           ticks: {
             padding: 2,

@@ -44,6 +44,8 @@
       "music_unsupported": "Spotify links can't be queued from the dashboard. Search for the song instead.",
       "music_invalid_track": "That track can no longer be played. Search for it again.",
       "music_load_failed": "Vivy couldn't load that.",
+      "music_not_seekable": "This track can't be skipped through.",
+      "vivy_outdated": "Vivy needs an update for that.",
       "unknown_voice_channel": "That voice channel no longer exists.",
       "voice_not_joinable": "Vivy can't join that voice channel.",
       "queue_changed": "The queue changed. Try again.",

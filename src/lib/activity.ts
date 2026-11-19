@@ -134,3 +134,17 @@ export type VivyMusic =
       tracks: VivyTrack[]
       requesters: (ActivityMember & { requests: number })[]
     }
+
+const SHORT_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+/** A heatmap's busiest hour as "Fri 23:00", or null when nobody did it at all. */
+export function busiestHour(grid: number[][]): string | null {
+  let best = { weekday: 0, hour: 0, value: 0 }
+  grid.forEach((hours, weekday) =>
+    hours.forEach((value, hour) => {
+      if (value > best.value) best = { weekday, hour, value }
+    }),
+  )
+  if (best.value === 0) return null
+  return `${SHORT_WEEKDAYS[best.weekday]} ${String(best.hour).padStart(2, '0')}:00`
+}

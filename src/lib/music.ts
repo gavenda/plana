@@ -12,6 +12,8 @@ export type MusicTrack = {
   author: string
   lengthMs: number
   isStream: boolean
+  /** Whether it can be seeked; missing from a Vivy older than 2.5.0, which can't seek. */
+  isSeekable?: boolean
   uri: string | null
   artworkUrl: string | null
   /** Who asked for it; null when Vivy queued it on her own. */

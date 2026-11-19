@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Card, List, ListItem } from 'tailwind-material3'
+import { Button, Card, List, ListItem } from 'tailwind-material3'
 
 import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
 import PeriodChips from '@/components/PeriodChips.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
+import ShareBar from '@/components/ShareBar.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import type { ActivityOverview, Heatmap, TrackListeners, VivyMusic } from '@/lib/activity'
+import TopItemCard from '@/components/TopItemCard.vue'
+import {
+  busiestHour,
+  type ActivityOverview,
+  type Heatmap,
+  type TrackListeners,
+  type VivyMusic,
+} from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
@@ -64,18 +72,51 @@ const vivyLoading = computed(() => !vivyData.value && !vivy.error.value)
 const vivyTracks = computed(() => vivyData.value?.tracks ?? [])
 const vivyRequesters = computed(() => vivyData.value?.requesters ?? [])
 
-/** Plain surface tiles, as on Overview. */
+/** Each list shows its top 10 until asked for the rest. */
+const LIST_LIMIT = 10
+const showAllTracks = ref(false)
+const showAllVivy = ref(false)
+const shownTracks = computed(() =>
+  showAllTracks.value ? tracks.value : tracks.value.slice(0, LIST_LIMIT),
+)
+const shownVivyTracks = computed(() =>
+  showAllVivy.value ? vivyTracks.value : vivyTracks.value.slice(0, LIST_LIMIT),
+)
+const topPlays = computed(() => tracks.value[0]?.plays ?? 0)
+const topVivyPlays = computed(() => vivyTracks.value[0]?.plays ?? 0)
+const topRequests = computed(() => vivyRequesters.value[0]?.requests ?? 0)
+
+const topTrack = computed(() => {
+  const track = tracks.value[0]
+  if (!track) return null
+  return {
+    title: track.title,
+    artUrl: track.artUrl,
+    supporting: `${track.artist ?? 'Unknown artist'} · ${plural(track.plays, 'play', 'plays')}`,
+  }
+})
+
+/** Plain surface tiles after the top track, as on Overview. */
 const stats = computed(() => {
   const totals = data.value?.totals
   return [
-    { label: 'Spotify plays', value: totals?.trackPlays.toLocaleString() ?? '—' },
+    {
+      label: 'Spotify plays',
+      value: totals?.trackPlays.toLocaleString() ?? '—',
+      loading: loading.value,
+    },
     {
       label: totals?.tracks === 1 ? 'Track played' : 'Tracks played',
       value: totals?.tracks.toLocaleString() ?? '—',
+      loading: loading.value,
     },
-    ...(vivyData.value
-      ? [{ label: 'Vivy plays', value: vivyData.value.totals.plays.toLocaleString() }]
-      : []),
+    vivyData.value
+      ? { label: 'Vivy plays', value: vivyData.value.totals.plays.toLocaleString(), loading: false }
+      : {
+          label: 'Busiest hour',
+          value: heatmap.data.value ? (busiestHour(heatmap.data.value.grid) ?? '—') : '—',
+          loading: !heatmap.data.value && !heatmap.error.value,
+        },
   ]
 })
 
@@ -156,132 +197,133 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <PeriodChips v-model="days" />
-
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-      <Card
-        :padded="false"
-        v-for="stat in stats"
-        :key="stat.label"
-        class="flex flex-col gap-1 bg-surface-container! px-6 py-5"
+  <div class="@container flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <PeriodChips v-model="days" />
+      <span
+        v-if="!loading && listening.length === 0"
+        class="pr-2 text-label-large text-on-surface-variant"
+        >Nobody is listening right now</span
       >
-        <span class="text-display-small font-medium">
-          <span v-if="loading" class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle" />
-          <template v-else>{{ stat.value }}</template>
-        </span>
-        <span class="text-label-large opacity-80">{{ stat.label }}</span>
-      </Card>
     </div>
 
-    <section aria-labelledby="music-listening">
+    <!-- Only while someone is: an empty panel would say less than the line above. -->
+    <section v-if="listening.length > 0" aria-labelledby="music-listening">
       <div class="section-header">
         <h2 id="music-listening" class="text-title-medium">Listening now</h2>
-        <span v-if="listening.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
-          listening.length
-        }}</span>
+        <span class="pr-4 text-label-large text-on-surface-variant">{{ listening.length }}</span>
       </div>
-      <div
-        :class="
-          !loading &&
-          listening.length === 0 &&
-          'overflow-hidden rounded-medium bg-surface-container'
-        "
-      >
-        <StateBlock
-          :loading="loading"
-          :error="overview.error.value"
-          :empty="listening.length === 0"
-          empty-text="Nobody is listening on Spotify right now."
-          compact
-        >
-          <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
-          <List segmented>
-            <ListItem
-              v-for="entry in listening"
-              :key="entry.member.id"
-              class="bg-surface-container!"
+      <List segmented>
+        <ListItem v-for="entry in listening" :key="entry.member.id" class="bg-surface-container!">
+          <template #leading>
+            <img
+              class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
+              :src="entry.member.avatarUrl"
+              alt=""
+              width="40"
+              height="40"
+            />
+          </template>
+          <span class="block py-1">
+            <span
+              :style="{ color: discordTextColor(entry.member.color) }"
+              class="block truncate text-body-large"
             >
-              <template #leading>
-                <img
-                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                  :src="entry.member.avatarUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-              </template>
-              <span class="block py-1">
-                <span
-                  :style="{ color: discordTextColor(entry.member.color) }"
-                  class="block truncate text-body-large"
-                >
-                  {{ entry.member.displayName }}
-                </span>
-                <span class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
-                  <img
-                    v-if="entry.track.artUrl"
-                    class="size-4 shrink-0 rounded-extra-small object-cover"
-                    :src="entry.track.artUrl"
-                    alt=""
-                    width="16"
-                    height="16"
-                  />
-                  <span v-else class="shrink-0 icon [--icon-size:16px]" aria-hidden="true"
-                    >music_note</span
-                  >
-                  <span class="truncate"
-                    >{{ entry.track.title
-                    }}<template v-if="entry.track.artist">
-                      · {{ entry.track.artist }}</template
-                    ></span
-                  >
-                </span>
-              </span>
-              <template #trailing>
-                <span
-                  class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
-                  :title="`Since ${absoluteTime(entry.since)}`"
-                  >{{ relativeTime(entry.since) }}</span
-                >
-              </template>
-            </ListItem>
-          </List>
-        </StateBlock>
-      </div>
+              {{ entry.member.displayName }}
+            </span>
+            <span class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
+              <img
+                v-if="entry.track.artUrl"
+                class="size-4 shrink-0 rounded-extra-small object-cover"
+                :src="entry.track.artUrl"
+                alt=""
+                width="16"
+                height="16"
+              />
+              <span v-else class="shrink-0 icon [--icon-size:16px]" aria-hidden="true"
+                >music_note</span
+              >
+              <span class="truncate"
+                >{{ entry.track.title
+                }}<template v-if="entry.track.artist"> · {{ entry.track.artist }}</template></span
+              >
+            </span>
+          </span>
+          <template #trailing>
+            <span
+              class="shrink-0 self-start pt-1 text-label-small whitespace-nowrap text-on-surface-variant"
+              :title="`Since ${absoluteTime(entry.since)}`"
+              >{{ relativeTime(entry.since) }}</span
+            >
+          </template>
+        </ListItem>
+      </List>
     </section>
 
-    <!-- Two columns from the expanded class however narrow a docked sheet makes them, so opening
-         a track never moves the heatmap. -->
-    <div class="grid items-start gap-6 expanded:grid-cols-2">
-      <section aria-labelledby="music-heatmap">
-        <div class="section-header">
-          <div class="flex items-center gap-1">
-            <h2 id="music-heatmap" class="text-title-medium">When people listen</h2>
-            <RichTooltip
-              title="When people listen"
-              text="Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier."
-            />
-          </div>
-        </div>
-        <StateBlock
-          :loading="!heatmap.data.value && !heatmap.error.value"
-          :error="heatmap.error.value"
-          compact
+    <!-- The top track leads; the plain tiles share the rest of the row. -->
+    <div class="grid gap-4 @5xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+      <TopItemCard
+        label="Top track"
+        :title="topTrack?.title ?? null"
+        :supporting="topTrack?.supporting ?? 'Nothing played on Spotify in this period.'"
+        :image="topTrack?.artUrl ?? null"
+        icon="music_note"
+        :loading="loading"
+      />
+      <div class="grid grid-cols-3 gap-4 @5xl:contents">
+        <Card
+          :padded="false"
+          v-for="stat in stats"
+          :key="stat.label"
+          class="flex flex-col justify-center gap-1 bg-surface-container! px-6 py-5"
         >
-          <template #skeleton><div class="skeleton h-56 rounded-medium" /></template>
-          <ActivityHeatmap
-            v-if="heatmap.data.value"
-            kind="music"
-            :grid="heatmap.data.value.grid"
-            :time-zone="heatmap.data.value.timeZone"
-          />
-        </StateBlock>
-      </section>
+          <span class="text-display-small font-medium whitespace-nowrap">
+            <span
+              v-if="stat.loading"
+              class="skeleton inline-block h-[0.8em] w-[1.6em] align-middle"
+            />
+            <template v-else>{{ stat.value }}</template>
+          </span>
+          <span class="text-label-large opacity-80">{{ stat.label }}</span>
+        </Card>
+      </div>
+    </div>
 
+    <!-- A row of its own, so the 24 hours read across the page. -->
+    <section aria-labelledby="music-heatmap">
+      <div class="section-header">
+        <div class="flex items-center gap-1">
+          <h2 id="music-heatmap" class="text-title-medium">When people listen</h2>
+          <RichTooltip
+            title="When people listen"
+            text="Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier."
+          />
+        </div>
+      </div>
+      <StateBlock
+        :loading="!heatmap.data.value && !heatmap.error.value"
+        :error="heatmap.error.value"
+        compact
+      >
+        <template #skeleton><div class="skeleton h-56 rounded-medium" /></template>
+        <ActivityHeatmap
+          v-if="heatmap.data.value"
+          kind="music"
+          :grid="heatmap.data.value.grid"
+          :time-zone="heatmap.data.value.timeZone"
+        />
+      </StateBlock>
+    </section>
+
+    <!-- Spotify, then Vivy's tracks and requesters; with Vivy's stats off, Spotify alone. The
+         columns follow the page's own width, so the open rail narrows them too. -->
+    <div class="grid items-start gap-6" :class="vivyShown && '@3xl:grid-cols-2 @6xl:grid-cols-3'">
       <section aria-labelledby="music-tracks">
         <div class="section-header">
           <h2 id="music-tracks" class="text-title-medium">Most played on Spotify</h2>
+          <span v-if="tracks.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
+            tracks.length
+          }}</span>
         </div>
         <div
           :class="
@@ -301,7 +343,7 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
             <List segmented>
               <!-- The row picks the track; the Spotify link beside it is its own control. -->
               <ListItem
-                v-for="(track, index) in tracks"
+                v-for="(track, index) in shownTracks"
                 :key="track.id"
                 :selected="track.id === chosenTrack"
                 :class="
@@ -339,6 +381,7 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                     <p class="truncate text-body-small text-on-surface-variant">
                       {{ track.artist ?? 'Unknown artist' }}
                     </p>
+                    <ShareBar :value="track.plays" :max="topPlays" />
                   </div>
                   <div class="flex shrink-0 flex-col items-end">
                     <span class="text-body-large tabular-nums">{{
@@ -359,14 +402,17 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                 </template>
               </ListItem>
             </List>
+            <div v-if="tracks.length > LIST_LIMIT" class="flex justify-center pt-2">
+              <Button variant="text" @click="showAllTracks = !showAllTracks">{{
+                showAllTracks ? 'Show the top 10' : `Show all ${tracks.length}`
+              }}</Button>
+            </div>
           </StateBlock>
         </div>
       </section>
-    </div>
 
-    <!-- Vivy, the music bot: only with VIVY_STATS on, reading the Redis both bots share. -->
-    <div v-if="vivyShown" class="grid items-start gap-6 expanded:grid-cols-2">
-      <section aria-labelledby="music-vivy-tracks">
+      <!-- Vivy, the music bot: only with VIVY_STATS on, reading the Redis both bots share. -->
+      <section v-if="vivyShown" aria-labelledby="music-vivy-tracks">
         <div class="section-header">
           <div class="flex items-center gap-1">
             <h2 id="music-vivy-tracks" class="text-title-medium">Most played with Vivy</h2>
@@ -375,6 +421,11 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
               text="Tracks the music bot played in this server, most played first. Tracks Vivy picked on its own with autoplay aren’t counted."
             />
           </div>
+          <span
+            v-if="vivyTracks.length > 0"
+            class="pr-4 text-label-large text-on-surface-variant"
+            >{{ vivyTracks.length }}</span
+          >
         </div>
         <div
           :class="
@@ -395,7 +446,7 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
             </template>
             <List segmented>
               <ListItem
-                v-for="(track, index) in vivyTracks"
+                v-for="(track, index) in shownVivyTracks"
                 :key="track.id"
                 :class="track.url && 'pr-2'"
                 class="bg-surface-container!"
@@ -430,6 +481,7 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                   <span class="block truncate text-body-small text-on-surface-variant">
                     {{ track.artist ?? 'Unknown artist' }}
                   </span>
+                  <ShareBar :value="track.plays" :max="topVivyPlays" />
                 </span>
                 <template #trailing>
                   <span class="flex items-center gap-4">
@@ -452,11 +504,16 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                 </template>
               </ListItem>
             </List>
+            <div v-if="vivyTracks.length > LIST_LIMIT" class="flex justify-center pt-2">
+              <Button variant="text" @click="showAllVivy = !showAllVivy">{{
+                showAllVivy ? 'Show the top 10' : `Show all ${vivyTracks.length}`
+              }}</Button>
+            </div>
           </StateBlock>
         </div>
       </section>
 
-      <section aria-labelledby="music-vivy-requesters">
+      <section v-if="vivyShown" aria-labelledby="music-vivy-requesters">
         <div class="section-header">
           <h2 id="music-vivy-requesters" class="text-title-medium">Top Vivy requesters</h2>
           <span
@@ -512,6 +569,7 @@ const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
                   <span class="block truncate font-mono text-body-small text-on-surface-variant">
                     {{ requester.username }}
                   </span>
+                  <ShareBar :value="requester.requests" :max="topRequests" />
                 </span>
                 <template #trailing>
                   <span class="shrink-0 text-body-large tabular-nums">{{
