@@ -38,9 +38,9 @@ const allDestinations: Destination[] = [
   { to: '/broadcast', label: 'Broadcast', icon: 'campaign', adminOnly: true },
   { to: '/members', label: 'Members', icon: 'group' },
   { to: '/birthdays', label: 'Birthdays', icon: 'cake' },
-  { to: '/activity', label: 'Games & music', icon: 'sports_esports', stats: true },
+  { to: '/games', label: 'Games', icon: 'sports_esports', stats: true },
   { to: '/voice', label: 'Voice', icon: 'headset_mic', stats: true },
-  { to: '/music', label: 'Music', icon: 'queue_music', stats: true, feature: 'music' },
+  { to: '/music', label: 'Music', icon: 'queue_music', stats: true },
   { to: '/audit', label: 'Audit log', icon: 'history', slim: true },
   { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]

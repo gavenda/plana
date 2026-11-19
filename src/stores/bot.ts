@@ -5,7 +5,7 @@ import { defineStore } from 'pinia'
 export const useBotStore = defineStore('bot', () => {
   /** Its custom avatar; null when it has none or was not connected yet. */
   const avatarUrl = ref<string | null>(null)
-  /** Whether it controls Vivy, the music bot (VIVY_CONTROL), which shows the Music page. */
+  /** Whether it controls Vivy, the music bot (VIVY_CONTROL), which adds the player to the Music page. */
   const music = ref(false)
 
   function setAvatarUrl(next: string | null) {

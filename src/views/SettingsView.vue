@@ -163,7 +163,7 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         kind: 'channel',
         key: 'gameNightChannelId',
         label: 'Channel',
-        hint: 'Where a game night is announced once enough people in one voice channel have played the same game together for 5 minutes. Each game is announced at most once every 4 hours per voice channel. Pick who to ping for each game under Games & music → Game nights. Optional.',
+        hint: 'Where a game night is announced once enough people in one voice channel have played the same game together for 5 minutes. Each game is announced at most once every 4 hours per voice channel. Pick who to ping for each game under Games → Game nights. Optional.',
         empty: 'Off',
       },
       {
@@ -190,7 +190,7 @@ const GROUPS: { id: string; title: string; fields: Field[] }[] = [
         kind: 'role',
         key: 'statsRoleId',
         label: 'Stats role',
-        hint: 'Can sign in here to see Overview’s stats, Games & music and Voice, and nothing else: no triage, members, birthdays, audit log or settings.',
+        hint: 'Can sign in here to see Overview’s stats, Games, Voice and Music, and nothing else: no triage, members, birthdays, audit log or settings.',
         empty: 'Off',
         readOnly: true,
       },

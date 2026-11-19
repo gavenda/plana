@@ -78,17 +78,23 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Birthdays', fab: { label: 'Add birthday', icon: 'add' } },
   },
   {
-    path: '/activity',
-    name: 'activity',
-    component: () => import('@/views/ActivityView.vue'),
-    meta: { title: 'Games & music', stats: true },
+    path: '/games',
+    name: 'games',
+    component: () => import('@/views/GamesView.vue'),
+    meta: { title: 'Games', stats: true },
   },
   {
-    path: '/activity/game-nights',
+    path: '/games/nights',
     name: 'game-nights',
     component: () => import('@/views/GameNightsView.vue'),
     meta: { title: 'Game nights', depth: 1 },
   },
+  // Games & music was one page until the music half moved to Music; old links still land.
+  {
+    path: '/activity',
+    redirect: (to) => ({ path: 'track' in to.query ? '/music' : '/games', query: to.query }),
+  },
+  { path: '/activity/game-nights', redirect: '/games/nights' },
   {
     path: '/voice',
     name: 'voice',
@@ -99,7 +105,7 @@ const routes: RouteRecordRaw[] = [
     path: '/music',
     name: 'music',
     component: () => import('@/views/MusicView.vue'),
-    meta: { title: 'Music', stats: true, feature: 'music' },
+    meta: { title: 'Music', stats: true },
   },
   {
     path: '/settings',

@@ -11,8 +11,9 @@ import {
 } from 'tailwind-material3'
 
 import AppSearchBar from '@/components/AppSearchBar.vue'
-import AppSelect from '@/components/AppSelect.vue'
+import ChannelChip from '@/components/ChannelChip.vue'
 import ChoiceGroup from '@/components/ChoiceGroup.vue'
+import MusicStats from '@/components/MusicStats.vue'
 import PlanaPortrait from '@/components/PlanaPortrait.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -35,10 +36,14 @@ import {
 import { groupOptions, type SelectOption } from '@/lib/select'
 import { useSnackbar } from '@/lib/snackbar'
 import { useAsync } from '@/lib/useAsync'
+import { useBotStore } from '@/stores/bot'
 import { useSessionStore } from '@/stores/session'
 
+const bot = useBotStore()
 const session = useSessionStore()
 const snackbar = useSnackbar()
+/** The player shows only with VIVY_CONTROL on; the stats below it show either way. */
+const player = computed(() => bot.music)
 /** Viewers (the stats role) see what's playing; staff control it. */
 const canControl = computed(() => !session.isViewer)
 
@@ -59,6 +64,7 @@ function showView(next: MusicView) {
 watch(music.data, (value) => value && showView(value))
 
 useLive('music', (message) => {
+  if (!player.value) return
   if (!message) void music.run()
   else if ('progress' in message) showProgress(message.progress)
   else showView({ online: message.online, state: message.state })
@@ -85,6 +91,7 @@ const playing = computed(() => current.value != null && !state.value?.paused)
 const now = ref(Date.now())
 let ticker: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
+  if (!player.value) return
   void music.run()
   if (canControl.value) void channels.run()
   ticker = setInterval(() => (now.value = Date.now()), 1000)
@@ -117,7 +124,7 @@ watch([() => channels.data.value, () => state.value?.voiceChannelId], ([list, vi
   channelId.value = list.userChannelId ?? vivyChannel ?? null
 })
 
-const channelOptions = computed<SelectOption<string | null>[]>(() => {
+const channelOptions = computed<SelectOption<string>[]>(() => {
   const list = channels.data.value
   if (!list) return []
   return groupOptions(
@@ -200,6 +207,9 @@ async function search(text: string) {
 
 type PlayTarget = { encoded: string; title: string } | { query: string; source: MusicSource }
 
+/** The Queue dialog, opened from the page's top right. */
+const addOpen = ref(false)
+
 const busy = ref(false)
 
 /** Posts a change, one at a time: the controls are disabled until it's answered. */
@@ -251,10 +261,12 @@ function playedText(played: MusicPlayed, queueType: MusicQueueType): string {
 }
 
 function playResult(track: MusicSearchTrack, queueType: MusicQueueType) {
+  addOpen.value = false
   void play({ encoded: track.encoded, title: track.title }, queueType)
 }
 
 function playLink(queueType: MusicQueueType) {
+  addOpen.value = false
   void play({ query: query.value.trim(), source: source.value }, queueType)
 }
 
@@ -319,369 +331,409 @@ async function remove(track: MusicTrack, index: number) {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div
-      v-if="view && !online"
-      class="flex items-center gap-4 overflow-hidden rounded-medium bg-warning-container py-3 pr-3 pl-6 text-on-warning-container"
-    >
-      <p class="min-w-0 flex-1 text-body-medium">
-        Vivy is offline. I'll update this page when she's back.
-      </p>
-      <Button variant="text" class="text-inherit!" @click="music.run()">Try again</Button>
-    </div>
+    <template v-if="player">
+      <div v-if="canControl" class="flex justify-end">
+        <Button variant="tonal" :disabled="!online" @click="addOpen = true">
+          <span class="icon [--icon-size:18px]" aria-hidden="true">playlist_add</span>
+          Queue
+        </Button>
+      </div>
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-      <div class="flex flex-col gap-4">
-        <section aria-labelledby="music-now">
-          <div class="section-header">
-            <h2 id="music-now" class="text-title-medium">Now playing</h2>
-            <span
-              v-if="state?.voiceChannelName"
-              class="flex items-center gap-1 pr-4 text-label-large text-on-surface-variant"
+      <div
+        v-if="view && !online"
+        class="flex items-center gap-4 overflow-hidden rounded-medium bg-warning-container py-3 pr-3 pl-6 text-on-warning-container"
+      >
+        <p class="min-w-0 flex-1 text-body-medium">
+          Vivy is offline. I'll update this page when she's back.
+        </p>
+        <Button variant="text" class="text-inherit!" @click="music.run()">Try again</Button>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+        <div class="flex flex-col gap-4">
+          <section aria-labelledby="music-now">
+            <div class="section-header">
+              <h2 id="music-now" class="text-title-medium">Now playing</h2>
+              <span
+                v-if="state?.voiceChannelName"
+                class="flex items-center gap-1 pr-4 text-label-large text-on-surface-variant"
+              >
+                <span class="icon [--icon-size:18px]" aria-hidden="true">headset_mic</span>
+                {{ state.voiceChannelName }}
+              </span>
+            </div>
+
+            <div
+              :class="!current && 'overflow-hidden rounded-medium bg-surface-container'"
+              aria-live="polite"
             >
-              <span class="icon [--icon-size:18px]" aria-hidden="true">headset_mic</span>
-              {{ state.voiceChannelName }}
+              <StateBlock
+                :loading="loading"
+                :error="music.error.value"
+                :empty="!current"
+                :empty-text="online ? 'Nothing playing. Standing by.' : 'Nothing to report.'"
+                empty-mood="curious"
+                :retry="music.run"
+              >
+                <template #empty>
+                  <template v-if="online && canControl">Queue something to start it.</template>
+                </template>
+                <template #skeleton><SkeletonList :rows="1" two-line /></template>
+
+                <Card
+                  v-if="current"
+                  :padded="false"
+                  class="flex flex-col gap-4 bg-surface-container! p-4"
+                >
+                  <div class="flex items-center gap-4">
+                    <img
+                      v-if="current.artworkUrl"
+                      class="size-24 shrink-0 rounded-medium bg-surface-container-highest object-cover"
+                      :src="current.artworkUrl"
+                      alt=""
+                      width="96"
+                      height="96"
+                    />
+                    <span
+                      v-else
+                      class="flex size-24 shrink-0 items-center justify-center rounded-medium bg-surface-container-highest text-on-surface-variant"
+                    >
+                      <span class="icon [--icon-size:40px]" aria-hidden="true">music_note</span>
+                    </span>
+                    <div class="flex min-w-0 flex-1 flex-col gap-1">
+                      <a
+                        v-if="current.uri"
+                        class="line-clamp-2 text-title-medium hover:underline"
+                        :href="current.uri"
+                        target="_blank"
+                        rel="noopener"
+                        >{{ current.title }}</a
+                      >
+                      <span v-else class="line-clamp-2 text-title-medium">{{ current.title }}</span>
+                      <span class="truncate text-body-medium text-on-surface-variant">{{
+                        current.author
+                      }}</span>
+                      <span
+                        v-if="current.requester"
+                        class="truncate text-label-medium text-on-surface-variant"
+                        >Requested by {{ current.requester.name }}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <LinearProgressIndicator
+                      :progress="progress ?? 0"
+                      :wavy="playing"
+                      :aria-label="`${formatDuration(positionMs)} of ${formatDuration(current.lengthMs)}`"
+                    />
+                    <div class="flex justify-between text-label-small text-on-surface-variant">
+                      <span>{{ formatDuration(positionMs) }}</span>
+                      <span>{{
+                        current.isStream ? 'Live' : formatDuration(current.lengthMs)
+                      }}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2">
+                    <template v-if="canControl">
+                      <IconButton
+                        variant="filled"
+                        :label="playing ? 'Pause' : 'Resume'"
+                        :disabled="busy || !online"
+                        @click="control(playing ? 'pause' : 'resume')"
+                      >
+                        <span class="icon" aria-hidden="true">{{
+                          playing ? 'pause' : 'play_arrow'
+                        }}</span>
+                      </IconButton>
+                      <IconButton
+                        variant="tonal"
+                        label="Skip"
+                        :disabled="busy || !online"
+                        @click="control('skip')"
+                      >
+                        <span class="icon" aria-hidden="true">skip_next</span>
+                      </IconButton>
+                      <IconButton
+                        variant="tonal"
+                        label="Stop and leave the channel"
+                        :disabled="busy || !online"
+                        @click="confirmOpen = 'stop'"
+                      >
+                        <span class="icon" aria-hidden="true">stop</span>
+                      </IconButton>
+                    </template>
+                    <span
+                      v-if="state && REPEAT_LABELS[state.repeat]"
+                      class="flex items-center gap-1 px-2 text-label-medium text-on-surface-variant"
+                    >
+                      <span class="icon [--icon-size:18px]" aria-hidden="true">{{
+                        state.repeat === 'track' ? 'repeat_one' : 'repeat'
+                      }}</span>
+                      {{ REPEAT_LABELS[state.repeat] }}
+                    </span>
+                    <span
+                      v-if="state"
+                      class="ml-auto flex items-center gap-1 pr-2 text-label-medium text-on-surface-variant"
+                    >
+                      <span class="icon [--icon-size:18px]" aria-hidden="true">volume_up</span>
+                      {{ Math.round(state.volume * 100) }}%
+                    </span>
+                  </div>
+                </Card>
+              </StateBlock>
+            </div>
+          </section>
+        </div>
+
+        <section aria-labelledby="music-queue">
+          <div class="section-header">
+            <h2 id="music-queue" class="text-title-medium">Up next</h2>
+            <span class="flex items-center gap-2 pr-2">
+              <span
+                v-if="state && state.queueSize > 0"
+                class="pr-2 text-label-large text-on-surface-variant"
+                >{{ state.queueSize }} · {{ formatDuration(state.durationMs) }}</span
+              >
+              <template v-if="canControl && queue.length > 0">
+                <IconButton
+                  variant="standard"
+                  label="Shuffle the queue"
+                  :disabled="busy || !online"
+                  @click="control('shuffle')"
+                >
+                  <span class="icon" aria-hidden="true">shuffle</span>
+                </IconButton>
+                <IconButton
+                  variant="standard"
+                  label="Clear the queue"
+                  :disabled="busy || !online"
+                  @click="confirmOpen = 'clear'"
+                >
+                  <span class="icon" aria-hidden="true">delete_sweep</span>
+                </IconButton>
+              </template>
             </span>
           </div>
 
           <div
-            :class="!current && 'overflow-hidden rounded-medium bg-surface-container'"
-            aria-live="polite"
+            :class="
+              !loading &&
+              queue.length === 0 &&
+              'overflow-hidden rounded-medium bg-surface-container'
+            "
           >
             <StateBlock
               :loading="loading"
-              :error="music.error.value"
-              :empty="!current"
-              :empty-text="online ? 'Nothing playing. Standing by.' : 'Nothing to report.'"
-              empty-mood="curious"
-              :retry="music.run"
+              :empty="queue.length === 0"
+              empty-text="The queue is empty."
             >
-              <template #empty>
-                <template v-if="online && canControl">Search below to start the music.</template>
-              </template>
-              <template #skeleton><SkeletonList :rows="1" two-line /></template>
-
-              <Card
-                v-if="current"
-                :padded="false"
-                class="flex flex-col gap-4 bg-surface-container! p-4"
-              >
-                <div class="flex items-center gap-4">
-                  <img
-                    v-if="current.artworkUrl"
-                    class="size-24 shrink-0 rounded-medium bg-surface-container-highest object-cover"
-                    :src="current.artworkUrl"
-                    alt=""
-                    width="96"
-                    height="96"
-                  />
-                  <span
-                    v-else
-                    class="flex size-24 shrink-0 items-center justify-center rounded-medium bg-surface-container-highest text-on-surface-variant"
-                  >
-                    <span class="icon [--icon-size:40px]" aria-hidden="true">music_note</span>
-                  </span>
-                  <div class="flex min-w-0 flex-1 flex-col gap-1">
-                    <a
-                      v-if="current.uri"
-                      class="line-clamp-2 text-title-medium hover:underline"
-                      :href="current.uri"
-                      target="_blank"
-                      rel="noopener"
-                      >{{ current.title }}</a
-                    >
-                    <span v-else class="line-clamp-2 text-title-medium">{{ current.title }}</span>
-                    <span class="truncate text-body-medium text-on-surface-variant">{{
-                      current.author
-                    }}</span>
-                    <span
-                      v-if="current.requester"
-                      class="truncate text-label-medium text-on-surface-variant"
-                      >Requested by {{ current.requester.name }}</span
-                    >
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-1">
-                  <LinearProgressIndicator
-                    :progress="progress ?? 0"
-                    :wavy="playing"
-                    :aria-label="`${formatDuration(positionMs)} of ${formatDuration(current.lengthMs)}`"
-                  />
-                  <div class="flex justify-between text-label-small text-on-surface-variant">
-                    <span>{{ formatDuration(positionMs) }}</span>
-                    <span>{{ current.isStream ? 'Live' : formatDuration(current.lengthMs) }}</span>
-                  </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                  <template v-if="canControl">
-                    <IconButton
-                      variant="filled"
-                      :label="playing ? 'Pause' : 'Resume'"
-                      :disabled="busy || !online"
-                      @click="control(playing ? 'pause' : 'resume')"
-                    >
-                      <span class="icon" aria-hidden="true">{{
-                        playing ? 'pause' : 'play_arrow'
-                      }}</span>
-                    </IconButton>
-                    <IconButton
-                      variant="tonal"
-                      label="Skip"
-                      :disabled="busy || !online"
-                      @click="control('skip')"
-                    >
-                      <span class="icon" aria-hidden="true">skip_next</span>
-                    </IconButton>
-                    <IconButton
-                      variant="tonal"
-                      label="Stop and leave the channel"
-                      :disabled="busy || !online"
-                      @click="confirmOpen = 'stop'"
-                    >
-                      <span class="icon" aria-hidden="true">stop</span>
-                    </IconButton>
-                  </template>
-                  <span
-                    v-if="state && REPEAT_LABELS[state.repeat]"
-                    class="flex items-center gap-1 px-2 text-label-medium text-on-surface-variant"
-                  >
-                    <span class="icon [--icon-size:18px]" aria-hidden="true">{{
-                      state.repeat === 'track' ? 'repeat_one' : 'repeat'
-                    }}</span>
-                    {{ REPEAT_LABELS[state.repeat] }}
-                  </span>
-                  <span
-                    v-if="state"
-                    class="ml-auto flex items-center gap-1 pr-2 text-label-medium text-on-surface-variant"
-                  >
-                    <span class="icon [--icon-size:18px]" aria-hidden="true">volume_up</span>
-                    {{ Math.round(state.volume * 100) }}%
-                  </span>
-                </div>
-              </Card>
-            </StateBlock>
-          </div>
-        </section>
-
-        <section v-if="canControl" aria-labelledby="music-add">
-          <div class="section-header">
-            <h2 id="music-add" class="text-title-medium">Add music</h2>
-          </div>
-          <div class="flex flex-col gap-4">
-            <AppSelect
-              v-model="channelId"
-              label="Voice channel"
-              :options="channelOptions"
-              :disabled="!channels.data.value"
-              :supporting-text="
-                channels.error.value ??
-                (elsewhere
-                  ? `Vivy is playing in ${state?.voiceChannelName ?? 'another channel'}. Queueing here moves her.`
-                  : undefined)
-              "
-            />
-            <AppSearchBar
-              v-model="query"
-              placeholder="Search, or paste a link or playlist"
-              label="Search for music"
-            >
-              <template v-if="results" #trailing>{{ results.tracks.length }}</template>
-            </AppSearchBar>
-            <ChoiceGroup v-model="source" label="Search on" :options="SOURCES" />
-
-            <div
-              v-if="query.trim()"
-              :class="
-                (searching || searchError || (results && results.tracks.length === 0)) &&
-                'overflow-hidden rounded-medium bg-surface-container'
-              "
-            >
-              <List v-if="link" segmented>
-                <ListItem class="bg-surface-container!">
+              <template #skeleton><SkeletonList :rows="5" two-line /></template>
+              <List segmented>
+                <ListItem
+                  v-for="(track, index) in queue"
+                  :key="`${index}:${track.identifier}`"
+                  class="bg-surface-container!"
+                >
                   <template #leading>
                     <span
-                      class="flex size-10 shrink-0 items-center justify-center rounded-small bg-surface-container-highest"
+                      class="w-6 shrink-0 text-center text-label-large text-on-surface-variant"
+                      >{{ index + 1 }}</span
                     >
-                      <span class="icon [--icon-size:20px]" aria-hidden="true">link</span>
-                    </span>
                   </template>
-                  <span class="block truncate">Play this link</span>
+                  <span class="block truncate">{{ track.title }}</span>
                   <template #supporting-text>
-                    <span class="block truncate text-body-small">{{ query.trim() }}</span>
+                    <span class="block truncate text-body-small"
+                      >{{ track.author
+                      }}{{ track.requester ? ` · ${track.requester.name}` : '' }}</span
+                    >
                   </template>
                   <template #trailing>
-                    <span class="flex gap-2">
+                    <span class="flex items-center gap-4">
+                      <span class="text-label-medium text-on-surface-variant">{{
+                        track.isStream ? 'Live' : formatDuration(track.lengthMs)
+                      }}</span>
                       <IconButton
-                        v-for="place in QUEUE_PLACES"
-                        :key="place.type"
+                        v-if="canControl"
                         variant="tonal"
                         width="narrow"
-                        :label="place.label"
+                        class="bg-error-container! text-on-error-container!"
+                        :label="`Remove ${track.title}`"
                         :disabled="busy || !online"
-                        @click="playLink(place.type)"
+                        @click="remove(track, index)"
                       >
-                        <span class="icon [--icon-size:20px]" aria-hidden="true">{{
-                          place.icon
-                        }}</span>
+                        <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
                       </IconButton>
                     </span>
                   </template>
                 </ListItem>
               </List>
-
-              <StateBlock
-                v-else
-                :loading="searching"
-                :error="searchError"
-                :empty="results != null && results.tracks.length === 0"
-                empty-text="No results for that."
+              <p
+                v-if="state && state.queueSize > queue.length"
+                class="px-4 pt-3 text-body-small text-on-surface-variant"
               >
-                <template #skeleton><SkeletonList :rows="4" two-line trailing="stack" /></template>
-                <List v-if="results" segmented>
-                  <ListItem
-                    v-for="track in results.tracks"
-                    :key="track.encoded"
-                    class="bg-surface-container!"
-                  >
-                    <template #leading>
-                      <img
-                        v-if="track.artworkUrl"
-                        class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
-                        :src="track.artworkUrl"
-                        alt=""
-                        width="40"
-                        height="40"
-                        loading="lazy"
-                      />
-                      <span
-                        v-else
-                        class="flex size-10 shrink-0 items-center justify-center rounded-small bg-surface-container-highest"
-                      >
-                        <span class="icon [--icon-size:20px]" aria-hidden="true">music_note</span>
-                      </span>
-                    </template>
-                    <span class="block truncate">{{ track.title }}</span>
-                    <template #supporting-text>
-                      <span class="block truncate text-body-small"
-                        >{{ track.author }} ·
-                        {{ track.isStream ? 'Live' : formatDuration(track.lengthMs) }}</span
-                      >
-                    </template>
-                    <template #trailing>
-                      <span class="flex gap-2">
-                        <IconButton
-                          v-for="place in QUEUE_PLACES"
-                          :key="place.type"
-                          variant="tonal"
-                          width="narrow"
-                          :label="`${place.label}: ${track.title}`"
-                          :disabled="busy || !online"
-                          @click="playResult(track, place.type)"
-                        >
-                          <span class="icon [--icon-size:20px]" aria-hidden="true">{{
-                            place.icon
-                          }}</span>
-                        </IconButton>
-                      </span>
-                    </template>
-                  </ListItem>
-                </List>
-              </StateBlock>
-            </div>
+                And {{ state.queueSize - queue.length }} more.
+              </p>
+            </StateBlock>
           </div>
         </section>
       </div>
+    </template>
 
-      <section aria-labelledby="music-queue">
-        <div class="section-header">
-          <h2 id="music-queue" class="text-title-medium">Up next</h2>
-          <span class="flex items-center gap-2 pr-2">
-            <span
-              v-if="state && state.queueSize > 0"
-              class="pr-2 text-label-large text-on-surface-variant"
-              >{{ state.queueSize }} · {{ formatDuration(state.durationMs) }}</span
-            >
-            <template v-if="canControl && queue.length > 0">
-              <IconButton
-                variant="standard"
-                label="Shuffle the queue"
-                :disabled="busy || !online"
-                @click="control('shuffle')"
-              >
-                <span class="icon" aria-hidden="true">shuffle</span>
-              </IconButton>
-              <IconButton
-                variant="standard"
-                label="Clear the queue"
-                :disabled="busy || !online"
-                @click="confirmOpen = 'clear'"
-              >
-                <span class="icon" aria-hidden="true">delete_sweep</span>
-              </IconButton>
-            </template>
+    <MusicStats :class="player && 'mt-4'" />
+
+    <!-- A form in a dialog has no hero and no face (see "Dialogs" in BRANDING.md). Playing
+         closes it, so the snackbar or the move confirmation can be reached; reopening keeps the
+         search. Wider and taller than the library's 560dp basic dialog, which has no size
+         prop, so its panel (the root's last child's child) is sized here; a fixed height keeps
+         it still as results load. -->
+    <Dialog
+      v-if="player && canControl"
+      v-model:open="addOpen"
+      aria-labelledby="music-queue-title"
+      class="[&>div:last-child>div]:h-[min(720px,100%)] [&>div:last-child>div]:max-h-[min(720px,100%)] [&>div:last-child>div]:max-w-[min(840px,100%)]"
+    >
+      <!-- The title row is the channel and, on the right, where to search; the dialog is named
+           "Queue" by a title only screen readers get. -->
+      <template #headline>
+        <span class="flex flex-wrap items-center justify-between gap-4">
+          <span class="flex items-center">
+            <span id="music-queue-title" class="sr-only">Queue</span>
+            <ChannelChip
+              v-model="channelId"
+              label="Voice channel"
+              :options="channelOptions"
+              :disabled="!channels.data.value"
+            />
           </span>
-        </div>
+          <span class="flex"
+            ><ChoiceGroup v-model="source" label="Search on" :options="SOURCES"
+          /></span>
+        </span>
+      </template>
+      <div class="flex w-[792px] max-w-full flex-col gap-4 pt-2">
+        <p v-if="channels.error.value" class="text-body-small text-error">
+          {{ channels.error.value }}
+        </p>
+        <p v-else-if="elsewhere" class="text-body-small text-on-surface-variant">
+          Vivy is playing in {{ state?.voiceChannelName ?? 'another channel' }}. Queueing here moves
+          her.
+        </p>
+        <!-- The bar's own surface-container-high is the dialog's, so it and the results drop to
+             surface-container. -->
+        <AppSearchBar
+          v-model="query"
+          placeholder="Search, or paste a link or playlist"
+          label="Search for music"
+          class="bg-surface-container!"
+        >
+          <template v-if="results" #trailing>{{ results.tracks.length }}</template>
+        </AppSearchBar>
 
         <div
+          v-if="query.trim()"
           :class="
-            !loading && queue.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
+            (searching || searchError || (results && results.tracks.length === 0)) &&
+            'overflow-hidden rounded-medium bg-surface-container'
           "
         >
+          <List v-if="link" segmented>
+            <ListItem class="bg-surface-container!">
+              <template #leading>
+                <span
+                  class="flex size-10 shrink-0 items-center justify-center rounded-small bg-surface-container-highest"
+                >
+                  <span class="icon [--icon-size:20px]" aria-hidden="true">link</span>
+                </span>
+              </template>
+              <span class="block truncate">Play this link</span>
+              <template #supporting-text>
+                <span class="block truncate text-body-small">{{ query.trim() }}</span>
+              </template>
+              <template #trailing>
+                <span class="flex gap-2">
+                  <IconButton
+                    v-for="place in QUEUE_PLACES"
+                    :key="place.type"
+                    variant="tonal"
+                    width="narrow"
+                    :label="place.label"
+                    :disabled="busy || !online"
+                    @click="playLink(place.type)"
+                  >
+                    <span class="icon [--icon-size:20px]" aria-hidden="true">{{ place.icon }}</span>
+                  </IconButton>
+                </span>
+              </template>
+            </ListItem>
+          </List>
+
           <StateBlock
-            :loading="loading"
-            :empty="queue.length === 0"
-            empty-text="The queue is empty."
+            v-else
+            :loading="searching"
+            :error="searchError"
+            :empty="results != null && results.tracks.length === 0"
+            empty-text="No results for that."
+            compact
           >
-            <template #skeleton><SkeletonList :rows="5" two-line /></template>
-            <List segmented>
+            <template #skeleton><SkeletonList :rows="4" two-line trailing="stack" /></template>
+            <List v-if="results" segmented>
               <ListItem
-                v-for="(track, index) in queue"
-                :key="`${index}:${track.identifier}`"
+                v-for="track in results.tracks"
+                :key="track.encoded"
                 class="bg-surface-container!"
               >
                 <template #leading>
-                  <span class="w-6 shrink-0 text-center text-label-large text-on-surface-variant">{{
-                    index + 1
-                  }}</span>
+                  <img
+                    v-if="track.artworkUrl"
+                    class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
+                    :src="track.artworkUrl"
+                    alt=""
+                    width="40"
+                    height="40"
+                    loading="lazy"
+                  />
+                  <span
+                    v-else
+                    class="flex size-10 shrink-0 items-center justify-center rounded-small bg-surface-container-highest"
+                  >
+                    <span class="icon [--icon-size:20px]" aria-hidden="true">music_note</span>
+                  </span>
                 </template>
                 <span class="block truncate">{{ track.title }}</span>
                 <template #supporting-text>
                   <span class="block truncate text-body-small"
-                    >{{ track.author
-                    }}{{ track.requester ? ` · ${track.requester.name}` : '' }}</span
+                    >{{ track.author }} ·
+                    {{ track.isStream ? 'Live' : formatDuration(track.lengthMs) }}</span
                   >
                 </template>
                 <template #trailing>
-                  <span class="flex items-center gap-4">
-                    <span class="text-label-medium text-on-surface-variant">{{
-                      track.isStream ? 'Live' : formatDuration(track.lengthMs)
-                    }}</span>
+                  <span class="flex gap-2">
                     <IconButton
-                      v-if="canControl"
+                      v-for="place in QUEUE_PLACES"
+                      :key="place.type"
                       variant="tonal"
                       width="narrow"
-                      class="bg-error-container! text-on-error-container!"
-                      :label="`Remove ${track.title}`"
+                      :label="`${place.label}: ${track.title}`"
                       :disabled="busy || !online"
-                      @click="remove(track, index)"
+                      @click="playResult(track, place.type)"
                     >
-                      <span class="icon [--icon-size:20px]" aria-hidden="true">delete</span>
+                      <span class="icon [--icon-size:20px]" aria-hidden="true">{{
+                        place.icon
+                      }}</span>
                     </IconButton>
                   </span>
                 </template>
               </ListItem>
             </List>
-            <p
-              v-if="state && state.queueSize > queue.length"
-              class="px-4 pt-3 text-body-small text-on-surface-variant"
-            >
-              And {{ state.queueSize - queue.length }} more.
-            </p>
           </StateBlock>
         </div>
-      </section>
-    </div>
+      </div>
+      <template #actions>
+        <Button variant="text" @click="addOpen = false">Close</Button>
+      </template>
+    </Dialog>
 
     <Dialog v-model:open="conflictOpen">
       <template #headline>Move Vivy?</template>

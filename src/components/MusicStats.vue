@@ -1,88 +1,48 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Card, Chip, List, ListItem } from 'tailwind-material3'
+import { Card, List, ListItem } from 'tailwind-material3'
 
-import LinkButton from '@/components/LinkButton.vue'
 import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
+import PeriodChips from '@/components/PeriodChips.vue'
 import RichTooltip from '@/components/RichTooltip.vue'
 import SupportingSheet from '@/components/SupportingSheet.vue'
 import SkeletonList from '@/components/SkeletonList.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import type {
-  ActivityOverview,
-  GamePlayers,
-  Heatmap,
-  TrackListeners,
-  VivyMusic,
-} from '@/lib/activity'
+import type { ActivityOverview, Heatmap, TrackListeners, VivyMusic } from '@/lib/activity'
 import { apiFetch } from '@/lib/api'
 import { discordTextColor } from '@/lib/discord'
 import { absoluteTime, formatDuration, relativeTime } from '@/lib/format'
 import { useLive } from '@/lib/live'
+import { plural, usePeriod } from '@/lib/period'
 import { rankClass } from '@/lib/rank'
 import { useAsync } from '@/lib/useAsync'
-import { useSessionStore } from '@/stores/session'
 
-/** `days` null is all time; in the URL and the API it is `all`. */
-const PERIODS: { days: number | null; label: string }[] = [
-  { days: 7, label: '7 days' },
-  { days: 30, label: '30 days' },
-  { days: 90, label: '90 days' },
-  { days: null, label: 'All time' },
-]
-const DEFAULT_DAYS = 7
-
-const daysParam = (days: number | null) => (days == null ? 'all' : String(days))
+/**
+ * The Music page's stats: what members listen to on Spotify (from their Discord presence) and,
+ * with VIVY_STATS on, what Vivy played. Neither needs VIVY_CONTROL, so this shows without it.
+ */
 
 const route = useRoute()
 const router = useRouter()
-const session = useSessionStore()
+const { days, param, label: periodLabel } = usePeriod()
 
-function daysFromQuery(): number | null {
-  const raw = route.query.days
-  if (raw === 'all') return null
-  const days = Number(raw)
-  return PERIODS.some((period) => period.days === days) ? days : DEFAULT_DAYS
+const overview = useAsync(() => apiFetch<ActivityOverview>(`/api/activity?days=${param.value}`))
+/** Averages over weeks barely move with one play, so the heatmap follows the period only. */
+const heatmap = useAsync(() =>
+  apiFetch<Heatmap>(`/api/activity/heatmap?kind=music&days=${param.value}`),
+)
+/** What Vivy, the music bot, played; its section only shows once Plana is connected to Vivy. */
+const vivy = useAsync(() => apiFetch<VivyMusic>(`/api/activity/vivy?days=${param.value}`))
+
+function load() {
+  void overview.run()
+  void heatmap.run()
+  void vivy.run()
 }
 
-const days = ref(daysFromQuery())
-const overview = useAsync(() =>
-  apiFetch<ActivityOverview>(`/api/activity?days=${daysParam(days.value)}`),
-)
-
-/** Averages over weeks barely move with one play, so the heatmaps follow the period only. */
-const heatmapFor = (kind: Heatmap['kind']) =>
-  useAsync(() =>
-    apiFetch<Heatmap>(`/api/activity/heatmap?kind=${kind}&days=${daysParam(days.value)}`),
-  )
-const heatmaps = [
-  {
-    kind: 'games' as const,
-    id: 'activity-heatmap-games',
-    title: 'When people play',
-    tooltip:
-      'Each square is how many members were playing a game at that hour on average over the period. Brighter squares are busier.',
-    state: heatmapFor('games'),
-  },
-  {
-    kind: 'music' as const,
-    id: 'activity-heatmap-music',
-    title: 'When people listen',
-    tooltip:
-      'Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier.',
-    state: heatmapFor('music'),
-  },
-]
-
-/** What Vivy, the music bot, played; its section only shows once Plana is connected to Vivy. */
-const vivy = useAsync(() => apiFetch<VivyMusic>(`/api/activity/vivy?days=${daysParam(days.value)}`))
-
-onMounted(() => {
-  void overview.run()
-  void vivy.run()
-  for (const heatmap of heatmaps) void heatmap.state.run()
-})
+onMounted(load)
+watch(days, load)
 
 /** "Right now" follows along; the totals wait for a change of period or a reload. */
 useLive('presence', (message) => {
@@ -91,45 +51,11 @@ useLive('presence', (message) => {
   else void overview.run()
 })
 
-watch(days, (value) => {
-  void router.replace({
-    query: { ...route.query, days: value === DEFAULT_DAYS ? undefined : daysParam(value) },
-  })
-  void overview.run()
-  void vivy.run()
-  for (const heatmap of heatmaps) void heatmap.state.run()
-})
-
 const data = computed(() => overview.data.value)
 /** Nothing to show yet; a change of period keeps the last answer up until the next lands. */
 const loading = computed(() => !data.value && !overview.error.value)
-const games = computed(() => data.value?.games ?? [])
 const tracks = computed(() => data.value?.tracks ?? [])
-
-/** Who is playing and listening right now, games first. */
-const live = computed(() => [
-  ...(data.value?.playing ?? []).map((entry) => ({
-    key: `game:${entry.member.id}:${entry.game}`,
-    member: entry.member,
-    icon: 'sports_esports',
-    image: entry.iconUrl,
-    title: entry.game,
-    subtitle: null as string | null,
-    since: entry.since,
-  })),
-  ...(data.value?.listening ?? []).map((entry) => ({
-    key: `track:${entry.member.id}`,
-    member: entry.member,
-    icon: 'music_note',
-    image: entry.track.artUrl,
-    title: entry.track.title,
-    subtitle: entry.track.artist,
-    since: entry.since,
-  })),
-])
-
-const hours = (ms: number) =>
-  (ms / 3_600_000).toLocaleString('en', { maximumFractionDigits: ms < 36_000_000 ? 1 : 0 })
+const listening = computed(() => data.value?.listening ?? [])
 
 const vivyData = computed(() => (vivy.data.value?.enabled ? vivy.data.value : null))
 /** Hidden when Vivy isn't connected; an error only comes back when it is. */
@@ -142,17 +68,10 @@ const vivyRequesters = computed(() => vivyData.value?.requesters ?? [])
 const stats = computed(() => {
   const totals = data.value?.totals
   return [
+    { label: 'Spotify plays', value: totals?.trackPlays.toLocaleString() ?? '—' },
     {
-      label: 'Hours played',
-      value: totals ? hours(totals.gameMs) : '—',
-    },
-    {
-      label: totals?.games === 1 ? 'Game played' : 'Games played',
-      value: totals?.games ?? '—',
-    },
-    {
-      label: 'Spotify plays',
-      value: totals?.trackPlays.toLocaleString() ?? '—',
+      label: totals?.tracks === 1 ? 'Track played' : 'Tracks played',
+      value: totals?.tracks.toLocaleString() ?? '—',
     },
     ...(vivyData.value
       ? [{ label: 'Vivy plays', value: vivyData.value.totals.plays.toLocaleString() }]
@@ -160,66 +79,7 @@ const stats = computed(() => {
   ]
 })
 
-/** The game whose players the supporting sheet shows. It lives in the URL, so a link opens it. */
-const chosenGame = computed(() =>
-  typeof route.query.game === 'string' && route.query.game ? route.query.game : null,
-)
-
-/** The name stays while the sheet animates closed. */
-const sheetGame = ref(chosenGame.value)
-watch(chosenGame, (game) => {
-  if (game) sheetGame.value = game
-})
-
-const sheetOpen = computed({
-  get: () => chosenGame.value != null,
-  set: (open) => {
-    if (!open) closeGame()
-  },
-})
-
-/** Whether opening the sheet pushed a history entry, so closing it can pop that instead. */
-let pushedChoice = false
-
-// Leaving by the browser's own Back leaves nothing to pop.
-watch(chosenGame, (game) => {
-  if (!game) pushedChoice = false
-})
-
-/** Opening is a step Back undoes; switching games while open just swaps what it shows. */
-function chooseGame(name: string) {
-  const query = { ...route.query, game: name, track: undefined }
-  if (chosenGame.value || chosenTrack.value) {
-    void router.replace({ query })
-  } else {
-    pushedChoice = true
-    void router.push({ query })
-  }
-}
-
-function closeGame() {
-  if (pushedChoice) {
-    pushedChoice = false
-    router.back()
-  } else {
-    void router.replace({ query: { ...route.query, game: undefined } })
-  }
-}
-
-const gamePlayers = useAsync(() => {
-  const query = new URLSearchParams({ name: chosenGame.value ?? '', days: daysParam(days.value) })
-  return apiFetch<GamePlayers>(`/api/activity/game?${query}`)
-})
-
-watch([chosenGame, days], () => {
-  if (chosenGame.value) void gamePlayers.run()
-})
-
-onMounted(() => {
-  if (chosenGame.value) void gamePlayers.run()
-})
-
-/** The track whose listeners the second sheet shows; like the game, it lives in the URL. */
+/** The track whose listeners the supporting sheet shows. It lives in the URL, so a link opens it. */
 const chosenTrack = computed(() =>
   typeof route.query.track === 'string' && route.query.track ? route.query.track : null,
 )
@@ -230,32 +90,35 @@ watch(chosenTrack, (id) => {
   if (id) sheetTrackId.value = id
 })
 
-const trackSheetOpen = computed({
+const sheetOpen = computed({
   get: () => chosenTrack.value != null,
   set: (open) => {
     if (!open) closeTrack()
   },
 })
 
-let pushedTrackChoice = false
+/** Whether opening the sheet pushed a history entry, so closing it can pop that instead. */
+let pushedChoice = false
 
+// Leaving by the browser's own Back leaves nothing to pop.
 watch(chosenTrack, (id) => {
-  if (!id) pushedTrackChoice = false
+  if (!id) pushedChoice = false
 })
 
+/** Opening is a step Back undoes; switching tracks while open just swaps what it shows. */
 function chooseTrack(id: string) {
-  const query = { ...route.query, track: id, game: undefined }
-  if (chosenTrack.value || chosenGame.value) {
+  const query = { ...route.query, track: id }
+  if (chosenTrack.value) {
     void router.replace({ query })
   } else {
-    pushedTrackChoice = true
+    pushedChoice = true
     void router.push({ query })
   }
 }
 
 function closeTrack() {
-  if (pushedTrackChoice) {
-    pushedTrackChoice = false
+  if (pushedChoice) {
+    pushedChoice = false
     router.back()
   } else {
     void router.replace({ query: { ...route.query, track: undefined } })
@@ -263,7 +126,7 @@ function closeTrack() {
 }
 
 const trackListeners = useAsync(() => {
-  const query = new URLSearchParams({ id: chosenTrack.value ?? '', days: daysParam(days.value) })
+  const query = new URLSearchParams({ id: chosenTrack.value ?? '', days: param.value })
   return apiFetch<TrackListeners>(`/api/activity/track?${query}`)
 })
 
@@ -275,6 +138,11 @@ onMounted(() => {
   if (chosenTrack.value) void trackListeners.run()
 })
 
+/** The answer for the track in the sheet only, so a slow earlier one never shows under a later id. */
+const trackDetail = computed(() =>
+  trackListeners.data.value?.id === sheetTrackId.value ? trackListeners.data.value : null,
+)
+
 /** The overview's row for the track, which already has its title and art before the answer lands. */
 const sheetTrack = computed(
   () =>
@@ -283,50 +151,13 @@ const sheetTrack = computed(
     null,
 )
 
-/** The answer for the track in the sheet only. */
-const trackDetail = computed(() =>
-  trackListeners.data.value?.id === sheetTrackId.value ? trackListeners.data.value : null,
-)
-
-/** The answer for the game in the sheet only, so a slow earlier one never shows under a later name. */
-const detail = computed(() =>
-  gamePlayers.data.value?.name === sheetGame.value ? gamePlayers.data.value : null,
-)
-
-const sheetIcon = computed(
-  () =>
-    detail.value?.iconUrl ??
-    games.value.find((game) => game.name === sheetGame.value)?.iconUrl ??
-    null,
-)
-
-const periodLabel = computed(() => PERIODS.find((period) => period.days === days.value)?.label)
-
 /** The track's page on Spotify; a presence's sync id is its Spotify track id. */
 const spotifyUrl = (id: string) => `https://open.spotify.com/track/${id}`
-
-const plural = (count: number, one: string, many: string) =>
-  `${count.toLocaleString()} ${count === 1 ? one : many}`
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex items-start gap-4">
-      <div class="flex flex-1 flex-wrap gap-2" role="group" aria-label="Period">
-        <Chip
-          v-for="period in PERIODS"
-          :key="period.label"
-          type="filter"
-          :selected="days === period.days"
-          @update:selected="days = period.days"
-          >{{ period.label }}</Chip
-        >
-      </div>
-      <LinkButton v-if="!session.isViewer" to="/activity/game-nights" variant="tonal">
-        <span class="icon [--icon-size:18px]" aria-hidden="true">celebration</span>
-        Game nights
-      </LinkButton>
-    </div>
+    <PeriodChips v-model="days" />
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
       <Card
@@ -343,28 +174,34 @@ const plural = (count: number, one: string, many: string) =>
       </Card>
     </div>
 
-    <section aria-labelledby="activity-live">
+    <section aria-labelledby="music-listening">
       <div class="section-header">
-        <h2 id="activity-live" class="text-title-medium">Right now</h2>
-        <span v-if="live.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
-          live.length
+        <h2 id="music-listening" class="text-title-medium">Listening now</h2>
+        <span v-if="listening.length > 0" class="pr-4 text-label-large text-on-surface-variant">{{
+          listening.length
         }}</span>
       </div>
       <div
         :class="
-          !loading && live.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
+          !loading &&
+          listening.length === 0 &&
+          'overflow-hidden rounded-medium bg-surface-container'
         "
       >
         <StateBlock
           :loading="loading"
           :error="overview.error.value"
-          :empty="live.length === 0"
-          empty-text="Nobody is playing or listening right now."
+          :empty="listening.length === 0"
+          empty-text="Nobody is listening on Spotify right now."
           compact
         >
           <template #skeleton><SkeletonList :rows="2" two-line trailing="text" /></template>
           <List segmented>
-            <ListItem v-for="entry in live" :key="entry.key" class="bg-surface-container!">
+            <ListItem
+              v-for="entry in listening"
+              :key="entry.member.id"
+              class="bg-surface-container!"
+            >
               <template #leading>
                 <img
                   class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
@@ -383,19 +220,21 @@ const plural = (count: number, one: string, many: string) =>
                 </span>
                 <span class="flex items-center gap-1.5 text-body-medium text-on-surface-variant">
                   <img
-                    v-if="entry.image"
+                    v-if="entry.track.artUrl"
                     class="size-4 shrink-0 rounded-extra-small object-cover"
-                    :src="entry.image"
+                    :src="entry.track.artUrl"
                     alt=""
                     width="16"
                     height="16"
                   />
-                  <span v-else class="shrink-0 icon [--icon-size:16px]" aria-hidden="true">{{
-                    entry.icon
-                  }}</span>
+                  <span v-else class="shrink-0 icon [--icon-size:16px]" aria-hidden="true"
+                    >music_note</span
+                  >
                   <span class="truncate"
-                    >{{ entry.title
-                    }}<template v-if="entry.subtitle"> · {{ entry.subtitle }}</template></span
+                    >{{ entry.track.title
+                    }}<template v-if="entry.track.artist">
+                      · {{ entry.track.artist }}</template
+                    ></span
                   >
                 </span>
               </span>
@@ -412,126 +251,37 @@ const plural = (count: number, one: string, many: string) =>
       </div>
     </section>
 
-    <!-- Playing, then listening, side by side from the expanded class like the lists below. -->
+    <!-- Two columns from the expanded class however narrow a docked sheet makes them, so opening
+         a track never moves the heatmap. -->
     <div class="grid items-start gap-6 expanded:grid-cols-2">
-      <section v-for="heatmap in heatmaps" :key="heatmap.kind" :aria-labelledby="heatmap.id">
+      <section aria-labelledby="music-heatmap">
         <div class="section-header">
           <div class="flex items-center gap-1">
-            <h2 :id="heatmap.id" class="text-title-medium">{{ heatmap.title }}</h2>
-            <RichTooltip :title="heatmap.title" :text="heatmap.tooltip" />
+            <h2 id="music-heatmap" class="text-title-medium">When people listen</h2>
+            <RichTooltip
+              title="When people listen"
+              text="Each square is how many members were listening on Spotify at that hour on average over the period. Brighter squares are busier."
+            />
           </div>
         </div>
         <StateBlock
-          :loading="!heatmap.state.data.value && !heatmap.state.error.value"
-          :error="heatmap.state.error.value"
+          :loading="!heatmap.data.value && !heatmap.error.value"
+          :error="heatmap.error.value"
           compact
         >
           <template #skeleton><div class="skeleton h-56 rounded-medium" /></template>
           <ActivityHeatmap
-            v-if="heatmap.state.data.value"
-            :kind="heatmap.kind"
-            :grid="heatmap.state.data.value.grid"
-            :time-zone="heatmap.state.data.value.timeZone"
+            v-if="heatmap.data.value"
+            kind="music"
+            :grid="heatmap.data.value.grid"
+            :time-zone="heatmap.data.value.timeZone"
           />
         </StateBlock>
       </section>
-    </div>
 
-    <!-- Two columns from the expanded class however narrow a docked sheet makes them, so opening
-         a game never moves Spotify. -->
-    <div class="grid items-start gap-6 expanded:grid-cols-2">
-      <section aria-labelledby="activity-games">
+      <section aria-labelledby="music-tracks">
         <div class="section-header">
-          <h2 id="activity-games" class="text-title-medium">Most played games</h2>
-        </div>
-        <div
-          :class="
-            !loading && games.length === 0 && 'overflow-hidden rounded-medium bg-surface-container'
-          "
-        >
-          <StateBlock
-            :loading="loading"
-            :error="overview.error.value"
-            :empty="games.length === 0"
-            empty-text="No games played in this period."
-            compact
-          >
-            <template #skeleton>
-              <SkeletonList :rows="5" leading="art" rank two-line trailing="text" />
-            </template>
-            <List segmented>
-              <ListItem
-                v-for="(game, index) in games"
-                :key="game.name"
-                as="button"
-                :selected="game.name === chosenGame"
-                :class="
-                  game.name === chosenGame ? 'bg-secondary-container!' : 'bg-surface-container!'
-                "
-                :aria-current="game.name === chosenGame ? 'true' : undefined"
-                @click="chooseGame(game.name)"
-              >
-                <template #leading>
-                  <span class="flex items-center gap-4">
-                    <span
-                      class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                      :class="rankClass(index)"
-                      >#{{ index + 1 }}</span
-                    >
-                    <img
-                      v-if="game.iconUrl"
-                      class="size-10 shrink-0 rounded-small bg-surface-container-highest object-cover"
-                      :src="game.iconUrl"
-                      alt=""
-                      width="40"
-                      height="40"
-                    />
-                    <span
-                      v-else
-                      class="grid size-10 shrink-0 place-items-center rounded-small bg-surface-container-highest text-on-surface-variant"
-                      aria-hidden="true"
-                      ><span class="icon [--icon-size:20px]">sports_esports</span></span
-                    >
-                  </span>
-                </template>
-                <span class="block py-1">
-                  <span :title="game.name" class="block truncate text-body-large">{{
-                    game.name
-                  }}</span>
-                  <!-- As tall as a line of body-small (16px), like a track's artist line, so
-                                         both lists' rows match; the 20px avatars overhang it by 2px each way. -->
-                  <span class="flex h-4 items-center gap-2">
-                    <span class="flex -space-x-1.5">
-                      <img
-                        v-for="player in game.top"
-                        :key="player.id"
-                        class="size-5 rounded-full bg-surface-container-highest object-cover ring-2 ring-surface-container"
-                        :src="player.avatarUrl"
-                        :alt="player.displayName"
-                        :title="`${player.displayName} · ${formatDuration(player.ms)}`"
-                        width="20"
-                        height="20"
-                      />
-                    </span>
-                    <span class="truncate text-body-small text-on-surface-variant">{{
-                      plural(game.players, 'player', 'players')
-                    }}</span>
-                  </span>
-                </span>
-                <template #trailing>
-                  <span class="shrink-0 text-body-large tabular-nums">{{
-                    formatDuration(game.ms)
-                  }}</span>
-                </template>
-              </ListItem>
-            </List>
-          </StateBlock>
-        </div>
-      </section>
-
-      <section aria-labelledby="activity-tracks">
-        <div class="section-header">
-          <h2 id="activity-tracks" class="text-title-medium">Most played on Spotify</h2>
+          <h2 id="music-tracks" class="text-title-medium">Most played on Spotify</h2>
         </div>
         <div
           :class="
@@ -616,10 +366,10 @@ const plural = (count: number, one: string, many: string) =>
 
     <!-- Vivy, the music bot: only with VIVY_STATS on, reading the Redis both bots share. -->
     <div v-if="vivyShown" class="grid items-start gap-6 expanded:grid-cols-2">
-      <section aria-labelledby="activity-vivy-tracks">
+      <section aria-labelledby="music-vivy-tracks">
         <div class="section-header">
           <div class="flex items-center gap-1">
-            <h2 id="activity-vivy-tracks" class="text-title-medium">Most played with Vivy</h2>
+            <h2 id="music-vivy-tracks" class="text-title-medium">Most played with Vivy</h2>
             <RichTooltip
               title="Most played with Vivy"
               text="Tracks the music bot played in this server, most played first. Tracks Vivy picked on its own with autoplay aren’t counted."
@@ -706,9 +456,9 @@ const plural = (count: number, one: string, many: string) =>
         </div>
       </section>
 
-      <section aria-labelledby="activity-vivy-requesters">
+      <section aria-labelledby="music-vivy-requesters">
         <div class="section-header">
-          <h2 id="activity-vivy-requesters" class="text-title-medium">Top Vivy requesters</h2>
+          <h2 id="music-vivy-requesters" class="text-title-medium">Top Vivy requesters</h2>
           <span
             v-if="vivyData && vivyData.totals.requesters > 0"
             class="pr-4 text-label-large text-on-surface-variant"
@@ -775,93 +525,7 @@ const plural = (count: number, one: string, many: string) =>
       </section>
     </div>
 
-    <SupportingSheet v-model:open="sheetOpen" :headline="sheetGame ?? ''">
-      <template #leading>
-        <img
-          v-if="sheetIcon"
-          class="size-14 shrink-0 rounded-medium bg-surface-container object-cover"
-          :src="sheetIcon"
-          alt=""
-          width="56"
-          height="56"
-        />
-        <span
-          v-else
-          class="grid size-14 shrink-0 place-items-center rounded-medium bg-surface-container text-on-surface-variant"
-          aria-hidden="true"
-          ><span class="icon">sports_esports</span></span
-        >
-      </template>
-      <template v-if="detail" #supporting>
-        {{ formatDuration(detail.ms) }} · {{ plural(detail.players.length, 'player', 'players') }} ·
-        {{ periodLabel }}
-      </template>
-      <StateBlock
-        :loading="gamePlayers.loading.value && !detail"
-        :error="gamePlayers.error.value"
-        :empty="detail?.players.length === 0"
-        empty-text="Nobody played this in this period."
-        compact
-      >
-        <template #skeleton>
-          <SkeletonList
-            :rows="4"
-            rank
-            two-line
-            trailing="text"
-            item-class="bg-surface-container-high"
-          />
-        </template>
-        <List segmented>
-          <ListItem
-            v-for="(player, index) in detail?.players"
-            :key="player.id"
-            class="bg-surface-container-high!"
-          >
-            <template #leading>
-              <span class="flex items-center gap-4">
-                <span
-                  class="w-7 shrink-0 text-center text-label-large tabular-nums"
-                  :class="rankClass(index)"
-                  >#{{ index + 1 }}</span
-                >
-                <img
-                  class="size-10 shrink-0 rounded-full bg-surface-container-highest object-cover"
-                  :src="player.avatarUrl"
-                  alt=""
-                  width="40"
-                  height="40"
-                />
-              </span>
-            </template>
-            <span class="block py-1">
-              <span
-                :style="{ color: discordTextColor(player.color) }"
-                class="block truncate text-body-large"
-              >
-                {{ player.displayName }}
-              </span>
-              <span class="block truncate font-mono text-body-small text-on-surface-variant">
-                {{ player.username }}
-              </span>
-            </span>
-            <template #trailing>
-              <div class="flex shrink-0 flex-col items-end">
-                <span class="text-body-large tabular-nums">{{ formatDuration(player.ms) }}</span>
-                <span
-                  v-if="player.playingSince != null"
-                  class="text-label-small text-tertiary"
-                  :title="`Since ${absoluteTime(player.playingSince)}`"
-                  >Playing now</span
-                >
-              </div>
-            </template>
-          </ListItem>
-        </List>
-      </StateBlock>
-    </SupportingSheet>
-
-    <SupportingSheet v-model:open="trackSheetOpen" :headline="sheetTrack?.title ?? ''">
+    <SupportingSheet v-model:open="sheetOpen" :headline="sheetTrack?.title ?? ''">
       <template #leading>
         <img
           v-if="sheetTrack?.artUrl"

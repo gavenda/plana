@@ -1,4 +1,4 @@
-/** What the Games & music endpoints return; see src/server/discord/activity.ts. */
+/** What the activity endpoints (Games, Music) return; see src/server/discord/activity.ts. */
 
 export type ActivityMember = {
   id: string

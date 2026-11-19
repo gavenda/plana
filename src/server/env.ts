@@ -45,14 +45,14 @@ const schema = z
     REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
 
     /**
-     * Shows what Vivy, the music bot, played on Games & music, read from REDIS_URL, so both
+     * Shows what Vivy, the music bot, played on the Music page, read from REDIS_URL, so both
      * bots must share one Redis. Read only. Vivy's TIMEZONE should match this one, so both
      * count the same days.
      */
     VIVY_STATS: z.stringbool().default(false),
 
     /**
-     * Lets staff control Vivy from the Music page: search, queue, pause, skip. Sends requests
+     * Adds Vivy's player to the Music page, where staff control her: search, queue, pause, skip. Sends requests
      * over REDIS_URL, which must be the Redis Vivy uses, and relays Vivy's player state live.
      */
     VIVY_CONTROL: z.stringbool().default(false),

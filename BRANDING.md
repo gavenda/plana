@@ -423,6 +423,13 @@ form opens from the rail's FAB and each row's Edit button, with text buttons (Ca
 Save). A failed save closes the dialog, so its snackbar can be reached, and the snackbar's
 "Try again" reopens it on the same answers.
 
+Music's Queue dialog opens from a tonal button at the page's top right; playing something
+closes it. Its title row is the voice channel, an assist chip that opens a menu
+(`ChannelChip`; the dialog's name, "Queue", is for screen readers only), since a full select field is too heavy for a choice that is usually
+already right; where to search (a connected button group) sits at the title's right. It is
+the one dialog larger than 560dp: 840dp wide and a fixed 720dp tall (both capped by the
+window), so search results have room and the dialog doesn't jump as they load.
+
 **A confirmation dialog shows her portrait** at the top of its content, centred with the
 text under it (the library's `#icon` slot is a 24dp icon, too small for her). A dialog that holds a form or a list has no hero and no face. **Never use
 `window.confirm`**: like a native `<select>`, the browser draws it.
@@ -432,6 +439,7 @@ text under it (the library's `#icon` slot is a 24dp icon, too small for her). A 
 | Sign out (from the open rail) | `Hesitant`  | You mean that?                 | I'll be standing by until you return, Sensei.               | Stay · Sign out |
 | Remove a birthday             | `Attentive` | Remove birthday?               | {member}'s birthday will be deleted and won't be announced. | Cancel · Remove |
 | Add or change a birthday      | —           | Add birthday / Change birthday | Member and Birthday fields                                  | Cancel · Save   |
+| Queue music                   | —           | {channel} chip                 | Search and results                                          | Close           |
 
 Only the sign-out dialog speaks in her voice: it is about Sensei leaving her. A
 destructive confirmation states the consequence plainly, and her face is there to look

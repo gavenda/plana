@@ -52,7 +52,7 @@ const TRENDS: { metric: TrendMetric; label: string; icon: string }[] = [
   { metric: 'music', label: 'Hours of music', icon: 'music_note' },
 ]
 
-/** How many games and tracks Overview lists; Games & music has the rest. */
+/** How many games and tracks Overview lists; Games and Music have the rest. */
 const PLAY_LIMIT = 5
 const topGames = computed(() => play.data.value?.games.slice(0, PLAY_LIMIT) ?? [])
 const topTracks = computed(() => play.data.value?.tracks.slice(0, PLAY_LIMIT) ?? [])
@@ -166,13 +166,13 @@ const stats = computed(() =>
       label: 'Playing now',
       value: play.data.value ? countMembers(play.data.value.playing) : '—',
       loading: playLoading.value,
-      to: '/activity',
+      to: '/games',
     },
     {
       label: 'Listening now',
       value: play.data.value ? countMembers(play.data.value.listening) : '—',
       loading: playLoading.value,
-      to: '/activity',
+      to: '/music',
     },
     {
       label: 'In voice now',
@@ -384,7 +384,7 @@ const recent = computed(() =>
       <section aria-labelledby="overview-games">
         <div class="section-header">
           <h2 id="overview-games" class="text-title-medium">Top games this week</h2>
-          <LinkButton to="/activity">View all</LinkButton>
+          <LinkButton to="/games">View all</LinkButton>
         </div>
         <div
           :class="
@@ -408,7 +408,7 @@ const recent = computed(() =>
                 v-for="(game, index) in topGames"
                 :key="game.name"
                 :as="RouterLink"
-                :to="{ path: '/activity', query: { game: game.name } }"
+                :to="{ path: '/games', query: { game: game.name } }"
                 class="bg-surface-container!"
               >
                 <template #leading>
@@ -459,7 +459,7 @@ const recent = computed(() =>
       <section aria-labelledby="overview-tracks">
         <div class="section-header">
           <h2 id="overview-tracks" class="text-title-medium">Top tracks this week</h2>
-          <LinkButton to="/activity">View all</LinkButton>
+          <LinkButton to="/music">View all</LinkButton>
         </div>
         <div
           :class="
@@ -483,7 +483,7 @@ const recent = computed(() =>
                 v-for="(track, index) in topTracks"
                 :key="track.id"
                 :as="RouterLink"
-                :to="{ path: '/activity', query: { track: track.id } }"
+                :to="{ path: '/music', query: { track: track.id } }"
                 class="bg-surface-container!"
               >
                 <template #leading>

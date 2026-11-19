@@ -11,7 +11,7 @@ import { env } from '../env'
  * messages. `GuildModeration` delivers moderation actions from Discord's audit log, and
  * `GuildVoiceStates` says who a voice move or disconnect happened to, and records time spent in
  * voice for the Voice page. `GuildPresences` reports the games members play and what they
- * listen to on Spotify, for the Games & music page.
+ * listen to on Spotify, for the Games and Music pages.
  */
 export const client = new Client({
   intents: [

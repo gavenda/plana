@@ -74,9 +74,9 @@ see the Components section of BRANDING.md for which to use and Plana's own wrapp
 
 ## Vivy music control
 
-The Music page commands Vivy, the music bot, over Redis pub/sub (`src/server/discord/music.ts`).
-The messages are in `src/server/vivy-contract.ts`, a copy of Vivy's `src/remote/contract.ts`:
-change both repos together, never one alone. A Redis connection that has subscribed can run
+The Music page's player (with VIVY_CONTROL on) commands Vivy, the music bot, over Redis pub/sub
+(`src/server/discord/music.ts`). The messages are in `src/server/vivy-contract.ts`, a copy of
+Vivy's `src/remote/contract.ts`: change both repos together, never one alone. A Redis connection that has subscribed can run
 no other command, so the subscriber is its own client. Server code may import nothing from
 `src/lib` except `components-v2.ts`, which is all the container ships, so the page's types are
 repeated in `src/lib/music.ts`.

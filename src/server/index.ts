@@ -93,7 +93,7 @@ async function login(): Promise<void> {
           '  Enable them at https://discord.com/developers/applications\n' +
           '  -> your application -> Bot -> Privileged Gateway Intents\n' +
           '  -> Presence Intent, Server Members Intent and Message Content Intent,\n' +
-          '  then start again. Games & music needs the first, triage the second, and the\n' +
+          '  then start again. Games and Music need the first, triage the second, and the\n' +
           '  audit log the third for message text.',
       )
       process.exit(1)

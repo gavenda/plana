@@ -249,7 +249,7 @@ const plural = (count: number, one: string, many: string) =>
 <template>
   <div class="flex flex-col gap-4">
     <header class="flex min-h-14 flex-wrap items-center gap-4">
-      <LinkIconButton to="/activity" label="Back to Games & music" class="text-on-surface">
+      <LinkIconButton to="/games" label="Back to Games" class="text-on-surface">
         <span class="icon" aria-hidden="true">arrow_back</span>
       </LinkIconButton>
       <div class="min-w-0 flex-1">
