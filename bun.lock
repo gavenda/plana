@@ -517,7 +517,7 @@
 
     "source-map-js": ["source-map-js@1.2.2", "", {}, "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw=="],
 
-    "tailwind-material3": ["tailwind-material3@github:gavenda/tailwind-material3#8bf89e5", { "peerDependencies": { "tailwindcss": "^4.0.0", "vue": "^3.5.0" } }, "gavenda-tailwind-material3-8bf89e5", "sha512-d+PCugwOk1OpXzrqMKY3n2ni6d0gdHWn02heaCQ1bVFnr/1OPbPCo5+MtME76/1uBEz+oih/5CTCfNRbo76atA=="],
+    "tailwind-material3": ["tailwind-material3@github:gavenda/tailwind-material3#7395a24", { "peerDependencies": { "tailwindcss": "^4.0.0", "vue": "^3.5.0" } }, "gavenda-tailwind-material3-7395a24", "sha512-Uk+nURerCjYebZCukRrP8ZDZ6PjlBrzIL8C7+PgoXHu/ANAWEhPJqkbSbtTX+0Nu9dRH4fIcVr9orGdGXOr9Ew=="],
 
     "tailwindcss": ["tailwindcss@4.3.3", "", {}, "sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ=="],
 
