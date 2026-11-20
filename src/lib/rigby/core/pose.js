@@ -45,6 +45,12 @@ export class Pose {
     this.physics = new Map();
     /** Seconds of physics to simulate in the next `updateWorld` (0 = only apply offsets). */
     this.physicsDelta = 0;
+    /**
+     * Where the whole skeleton sits in a larger space (an Affine applied above its root bones), as
+     * when a character is an actor in a scene; null = at the origin. Constraints and physics work in
+     * the placed space, so an actor walking across a scene swings its hair.
+     */
+    this.placement = null;
     this.setToSetup(sk);
   }
 
@@ -96,14 +102,15 @@ export class Pose {
     if (this.deform) this.deform.clear();
     else this.deform = new Map();
     if (!this.ik || this.ik.length !== sk.ik.length) this.ik = sk.ik.map(() => ({}));
-    sk.ik.forEach((c, i) => {
+    for (let i = 0; i < sk.ik.length; i++) {
+      const c = sk.ik[i];
       const s = this.ik[i];
       s.mix = c.mix;
       s.softness = c.softness;
       s.bendPositive = c.bendPositive;
       s.compress = c.compress;
       s.stretch = c.stretch;
-    });
+    }
     const list = this.ensureConstraints(sk);
     resetConstraintState(list, this.constraintState);
   }
@@ -118,14 +125,23 @@ export class Pose {
     return list;
   }
 
-  /** Applies `anim` at `time` on top of the current pose, blended by `alpha` (1 = fully). */
-  apply(sk, anim, time, alpha) {
+  /**
+   * Applies `anim` at `time` on top of the current pose, blended by `alpha` (1 = fully). With
+   * `add` (additive slider constraints), bone keys and mesh deform add their change from the setup
+   * pose, times `alpha`, to the current pose instead of replacing it; other keys replace as usual.
+   */
+  apply(sk, anim, time, alpha, add = false) {
     const hold = alpha >= 0.5;
     for (const t of anim.bones) {
       const bone = sk.bones[t.bone];
       if (!bone) continue;
       const setup = bone.setup;
       const L = this.local[t.bone];
+      if (add) {
+        addBoneKeys(t, setup, L, time, alpha);
+        if (hold && t.inherit?.length) this.inherit[t.bone] = sample(t.inherit, time);
+        continue;
+      }
       let { x, y, rotation, scale_x: sx, scale_y: sy, shear_x: hx, shear_y: hy } = L;
       // Before a timeline's first key it does nothing, as in Spine. (Plana patch.)
       const has = (keys) => keys !== undefined && keys.length > 0 && time >= keys[0].time;
@@ -200,7 +216,8 @@ export class Pose {
       const deltas = sampleDeform(t.keys, time, deformLength(source));
       const key = `${t.slot}/${t.attachment}`;
       const prev = this.deform.get(key);
-      this.deform.set(key, prev && alpha < 1 ? prev.map((p, j) => lerp(p, deltas[j], alpha)) : deltas);
+      if (add) this.deform.set(key, prev ? prev.map((p, j) => p + deltas[j] * alpha) : deltas.map((d) => d * alpha));
+      else this.deform.set(key, prev && alpha < 1 ? prev.map((p, j) => lerp(p, deltas[j], alpha)) : deltas);
     }
     // Sequence keys: the frame of the image sequence a slot's attachment shows.
     if (hold && anim.extra?.attachments) {
@@ -255,9 +272,9 @@ export class Pose {
     const list = this.ensureConstraints(sk);
     const delta = this.physicsDelta;
     this.physicsDelta = 0;
-    const steps = [...sk.ik.map((c, i) => ({ order: c.order, ik: i })), ...list.map((c, i) => ({ order: c.order, other: i }))];
-    steps.sort((x, y) => x.order - y.order);
-    for (const step of steps) {
+    const steps = this.constraintSteps(sk, list);
+    for (let si = 0; si < steps.length; si++) {
+      const step = steps[si];
       if (step.ik !== undefined) {
         const c = sk.ik[step.ik];
         if (c.skinRequired && !this.skinActive(sk, (skin) => skin.ik.includes(step.ik))) continue;
@@ -282,6 +299,32 @@ export class Pose {
     }
   }
 
+  /**
+   * IK and the other constraints in solving order. Kept between updates and rebuilt when the
+   * constraints change or are reordered (checked without allocating).
+   */
+  constraintSteps(sk, list) {
+    let steps = this._steps;
+    let fresh = !steps || this._stepsIk !== sk.ik || this._stepsList !== list || steps.length !== sk.ik.length + list.length;
+    if (!fresh) {
+      for (let k = 0; k < steps.length; k++) {
+        const st = steps[k];
+        if ((st.ik !== undefined ? sk.ik[st.ik]?.order : list[st.other]?.order) !== st.order) {
+          fresh = true;
+          break;
+        }
+      }
+    }
+    if (fresh) {
+      steps = [...sk.ik.map((c, i) => ({ order: c.order, ik: i })), ...list.map((c, i) => ({ order: c.order, other: i }))];
+      steps.sort((x, y) => x.order - y.order);
+      this._steps = steps;
+      this._stepsIk = sk.ik;
+      this._stepsList = list;
+    }
+    return steps;
+  }
+
   /** Clears physics so every simulated bone starts again from its animated pose. */
   resetPhysics() {
     this.physics.clear();
@@ -300,7 +343,7 @@ export class Pose {
       const p = bones[i].parent;
       const want = desired.get(i);
       if (want) {
-        this.applied[i] = localFromWorld(p === null ? null : this.world[p], want, this.inherit[i]);
+        this.applied[i] = p === null && this.placement ? localFromWorld(this.placement, want, 'normal') : localFromWorld(p === null ? null : this.world[p], want, this.inherit[i]);
         this.world[i] = want;
         dirty[i] = 1;
       } else if (p !== null && dirty[p]) {
@@ -337,7 +380,10 @@ export class Pose {
   updateBone(sk, i) {
     const p = sk.bones[i].parent;
     const w = this.world[i] ?? (this.world[i] = new Affine());
-    if (p === null) toAffine(this.applied[i], w);
+    if (p === null) {
+      if (this.placement) Affine.multiply(this.placement, toAffine(this.applied[i], LOCAL), w);
+      else toAffine(this.applied[i], w);
+    }
     else inheritWorld(this.world[p], toAffine(this.applied[i], LOCAL), this.inherit[i], w);
   }
 
@@ -380,8 +426,8 @@ export class Pose {
       return;
     }
     const [p, ch] = c.bones;
-    let P = this.world[p].apply([0, 0]);
-    let C = this.world[ch].apply([0, 0]);
+    const P = this.world[p].apply([0, 0]);
+    const C = this.world[ch].apply([0, 0]);
     const tip = this.world[ch].apply([sk.bones[ch].length, 0]);
     const a = len(sub(C, P));
     const bLen = len(sub(tip, C));
@@ -392,13 +438,17 @@ export class Pose {
     }
     let d = len(sub(target, P));
     if (state.stretch && d > a + bLen) {
+      // Out of reach: straighten the chain toward the target (the parent aims, then the child),
+      // then stretch the parent to the distance. Straightening first keeps the child in line, so
+      // the parent's scale stretches it along its length instead of skewing it.
+      aim(p, P, C);
+      this.updateBranch(sk, p);
+      this.finishTwoBone(sk, p, ch, target, mix, state, parentSign);
       const s = (d / (a + bLen) - 1) * mix + 1;
       this.applied[p].scale_x *= s;
       if (c.uniform) this.applied[p].scale_y *= s;
       this.updateBranch(sk, p);
-      P = this.world[p].apply([0, 0]);
-      C = this.world[ch].apply([0, 0]);
-      return this.finishTwoBone(sk, p, ch, target, mix, state, parentSign);
+      return;
     }
     const soft = state.softness;
     if (soft > 0 && d > a + bLen - soft) d = a + bLen - soft * Math.exp(-(d - (a + bLen - soft)) / soft);
@@ -439,23 +489,35 @@ export class Pose {
     return sk.attachment(slot, this.attachment[slot]);
   }
 
-  /** World positions of a mesh-like attachment's vertices as a flat [x, y, ...] array. */
-  worldVertices(sk, slot, att) {
+  /** The deform offsets keyed for a mesh-like attachment in a slot, or undefined. */
+  deformOf(slot, att) {
+    if (!this.deform.size) return undefined;
+    return this.deform.get(att.type === 'linkedmesh' && att.deform ? `${slot}/${att.parent}` : `${slot}/${att.name}`);
+  }
+
+  /**
+   * World positions of a mesh-like attachment's vertices as a flat [x, y, ...] array: a new one, or
+   * `out` (reused, so a runtime drawing every frame doesn't allocate).
+   */
+  worldVertices(sk, slot, att, out = []) {
+    out.length = 0;
     const source = sk.meshSource(slot, att);
-    if (!source) return [];
-    const deformKey = att.type === 'linkedmesh' && att.deform ? `${slot}/${att.parent}` : `${slot}/${att.name}`;
-    const deform = this.deform.get(deformKey);
-    const out = [];
+    if (!source) return out;
+    const deform = this.deformOf(slot, att);
+    const world = this.world;
     if (source.weights) {
       let k = 0;
-      for (const v of source.weights) {
+      const weights = source.weights;
+      for (let vi = 0; vi < weights.length; vi++) {
+        const v = weights[vi];
         let x = 0;
         let y = 0;
-        for (const w of v) {
+        for (let wi = 0; wi < v.length; wi++) {
+          const w = v[wi];
           const bx = w.x + (deform ? deform[k] : 0);
           const by = w.y + (deform ? deform[k + 1] : 0);
           k += 2;
-          const m = this.world[w.bone];
+          const m = world[w.bone];
           x += (m.a * bx + m.c * by + m.tx) * w.weight;
           y += (m.b * bx + m.d * by + m.ty) * w.weight;
         }
@@ -513,6 +575,33 @@ export class Pose {
     }
     return out;
   }
+}
+
+/**
+ * Adds a bone timeline's change from the setup pose (times `alpha`) to local transform `L`:
+ * offsets for rotation, translation and shear, a factor for scale (as Spine's additive blend).
+ */
+function addBoneKeys(t, setup, L, time, alpha) {
+  const has = (keys) => keys !== undefined && keys.length > 0;
+  if (has(t.rotate)) L.rotation += sampleComponent(t.rotate, time, 0) * alpha;
+  if (has(t.translate)) {
+    L.x += sampleComponent(t.translate, time, 0) * alpha;
+    L.y += sampleComponent(t.translate, time, 1) * alpha;
+  }
+  if (has(t.translateX)) L.x += sampleComponent(t.translateX, time, 0) * alpha;
+  if (has(t.translateY)) L.y += sampleComponent(t.translateY, time, 0) * alpha;
+  if (has(t.scale)) {
+    L.scale_x += setup.scale_x * (sampleComponent(t.scale, time, 0) - 1) * alpha;
+    L.scale_y += setup.scale_y * (sampleComponent(t.scale, time, 1) - 1) * alpha;
+  }
+  if (has(t.scaleX)) L.scale_x += setup.scale_x * (sampleComponent(t.scaleX, time, 0) - 1) * alpha;
+  if (has(t.scaleY)) L.scale_y += setup.scale_y * (sampleComponent(t.scaleY, time, 0) - 1) * alpha;
+  if (has(t.shear)) {
+    L.shear_x = (L.shear_x ?? 0) + sampleComponent(t.shear, time, 0) * alpha;
+    L.shear_y = (L.shear_y ?? 0) + sampleComponent(t.shear, time, 1) * alpha;
+  }
+  if (has(t.shearX)) L.shear_x = (L.shear_x ?? 0) + sampleComponent(t.shearX, time, 0) * alpha;
+  if (has(t.shearY)) L.shear_y = (L.shear_y ?? 0) + sampleComponent(t.shearY, time, 0) * alpha;
 }
 
 /** Deform deltas at `time`: each key's sparse values expanded, interpolated along its curve. */

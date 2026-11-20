@@ -8,8 +8,10 @@
 import { pruneConstraints } from './constraintdata.js';
 import { Animation, BONE_CHANNELS, SLOT_CHANNELS, emptyBoneTimeline, emptySlotTimeline, makeKey } from './animation.js';
 import { LINEAR, cloneCurve } from './curve.js';
-import { identityTransform } from './math.js';
+import { readFilm } from './filmfx.js';
+import { identityTransform, toAffine } from './math.js';
 import { readControllers, readPoses } from './poses.js';
+import { readScene } from './scene.js';
 
 /** Version tag of the internal snapshot format. */
 export const FORMAT = 'rigby-snapshot/1';
@@ -17,6 +19,8 @@ export const FORMAT = 'rigby-snapshot/1';
 /** How a bone inherits its parent's transform. */
 export const INHERIT_MODES = ['normal', 'onlyTranslation', 'noRotationOrReflection', 'noScale', 'noScaleOrReflection'];
 export const BLEND_MODES = ['normal', 'additive', 'multiply', 'screen'];
+/** How images are sampled when drawn scaled: 'linear' (smooth) or 'nearest' (sharp pixel art). */
+export const TEXTURE_FILTERS = ['linear', 'nearest'];
 export const ATTACHMENT_TYPES = ['region', 'mesh', 'linkedmesh', 'boundingbox', 'path', 'point', 'clipping'];
 
 /**
@@ -64,6 +68,20 @@ export function findAttachment(slot, name) {
   return slot.attachments.find((a) => a.name === name);
 }
 
+/**
+ * Re-expresses an attachment in another bone's space, keeping it where it is (`toNew`: an Affine
+ * from the old bone's space to the new one's). Regions and points have an offset; meshes, bounding
+ * boxes, paths and clipping shapes have vertices in the bone's space unless they are weighted
+ * (weighted vertices belong to their bones, not the slot's). Linked meshes use their parent's.
+ */
+export function moveAttachment(att, toNew) {
+  if (att.offset) {
+    att.offset = toNew.mul(toAffine(att.offset)).decompose();
+  } else if (Array.isArray(att.vertices) && !att.weights) {
+    for (let i = 0; i + 1 < att.vertices.length; i += 2) [att.vertices[i], att.vertices[i + 1]] = toNew.apply([att.vertices[i], att.vertices[i + 1]]);
+  }
+}
+
 /** Number of vertices of a mesh-like attachment. */
 export function vertexCount(att) {
   if (att.weights) return att.weights.length;
@@ -100,6 +118,28 @@ export class Skeleton {
     this.settings = defaultSettings();
     /** Whether the file this came from stored settings (then saving keeps them, even at defaults). */
     this.settingsInFile = false;
+    /** Texture filtering for the viewport, renders and the exported atlas (see TEXTURE_FILTERS). */
+    this.textureFilter = 'linear';
+    /**
+     * Pixel grid for pixel art: world units per art pixel (usually 1), or 0 = off. When on, the
+     * editor draws the skeleton at that pixel size and scales it up, so rotated and bent parts
+     * stay on the art's pixel grid (viewport and renders).
+     */
+    this.pixelGrid = 0;
+    /**
+     * Mesh vertices locked in the editor, kept when the mesh is generated again from its image:
+     * { 'slot name/attachment name': [vertex indices] }. Editor data, saved in work files only.
+     */
+    this.meshLocks = {};
+    /**
+     * 2.5D turns (editor/turn.js): { name, bone, angle, bulge, reach, center, top, radius, parts:
+     * [{ slot, attachment, depth }], control, animation, constraint }. The skeleton data they build
+     * (a bone, an animation, a slider) is ordinary data; this is how to rebuild it. Work files only.
+     */
+    this.turns = [];
+    /** Warp deformers (editor/warp.js) and the deform keys meshes had before warps added theirs. Work files only. */
+    this.warps = [];
+    this.warpBase = {};
     /** Pose library: { name, bones: { bone name: local transform }, slots: { slot name: attachment } }. */
     this.poses = [];
     /** Facial controllers: { name, from (pose name or null = setup pose), to (pose name), value }. */
@@ -108,6 +148,14 @@ export class Skeleton {
     this.workspace = null;
     /** Audio tracks: { sound (file in the work file), animation (name), offset (s), volume }. */
     this.audio = [];
+    /**
+     * Scene composition (see scene.js): actors placed on this skeleton as a stage, layer depths and
+     * focal length; null for an ordinary character project. Actor characters are stored next to
+     * the project in the work file (actors/<id>/), not here.
+     */
+    this.scene = null;
+    /** Film effects (filmfx.js): layer effects, particle emitters, motion blur, depth of field; null when unused. Work files only. */
+    this.film = null;
   }
 
   static fromJson(json) {
@@ -661,13 +709,33 @@ function readSkeleton(o) {
   sk.extra = raw(o.extra) ?? {};
   sk.settings = readSettings(o.settings);
   sk.settingsInFile = o.settings !== undefined;
+  sk.textureFilter = oneOf(o.textureFilter, TEXTURE_FILTERS, 'linear');
+  sk.pixelGrid = Number.isFinite(o.pixelGrid) && o.pixelGrid > 0 ? o.pixelGrid : 0;
+  sk.meshLocks = readMeshLocks(o.meshLocks);
+  sk.warps = Array.isArray(o.warps) ? o.warps.filter((w) => w && typeof w.name === 'string' && w.rect && Number.isInteger(w.cols) && Number.isInteger(w.rows)) : [];
+  sk.warpBase = o.warpBase && typeof o.warpBase === 'object' && !Array.isArray(o.warpBase) ? o.warpBase : {};
+  sk.turns = Array.isArray(o.turns) ? o.turns.filter((x) => x && typeof x.name === 'string' && typeof x.bone === 'string' && Array.isArray(x.parts)) : [];
   sk.poses = readPoses(o.poses);
   sk.controllers = readControllers(o.controllers);
   sk.workspace = oneOf(o.workspace, ['game', 'film'], null);
+  sk.scene = readScene(o.scene);
+  sk.film = readFilm(o.film);
   sk.audio = arr(o.audio, 'audio')
     .filter((t) => t && typeof t.sound === 'string' && typeof t.animation === 'string')
     .map((t) => ({ sound: t.sound, animation: t.animation, offset: Number.isFinite(t.offset) ? t.offset : 0, volume: Number.isFinite(t.volume) ? Math.max(0, t.volume) : 1 }));
   return sk;
+}
+
+/** Locked mesh vertices: non-empty lists of distinct vertex indices, by 'slot/attachment'. */
+function readMeshLocks(o) {
+  const out = {};
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
+  for (const [key, list] of Object.entries(o)) {
+    if (!Array.isArray(list)) continue;
+    const ids = [...new Set(list.filter((i) => Number.isInteger(i) && i >= 0))].sort((a, b) => a - b);
+    if (ids.length) out[key] = ids;
+  }
+  return out;
 }
 
 /** Output settings with defaults for missing or invalid values. */
@@ -769,9 +837,18 @@ function writeSkeleton(sk) {
   if (Object.keys(sk.extra).length) out.extra = raw(sk.extra);
   // Only when set: saving a file that never had settings must not add them.
   if (sk.settingsInFile || JSON.stringify(sk.settings) !== JSON.stringify(defaultSettings())) out.settings = raw(sk.settings);
+  // Only when not the default, so files saved before the option existed are unchanged.
+  if (sk.textureFilter !== 'linear') out.textureFilter = sk.textureFilter;
+  if (sk.pixelGrid > 0) out.pixelGrid = sk.pixelGrid;
+  if (Object.keys(sk.meshLocks).length) out.meshLocks = raw(sk.meshLocks);
+  if (sk.turns.length) out.turns = raw(sk.turns);
+  if (sk.warps.length) out.warps = raw(sk.warps);
+  if (Object.keys(sk.warpBase).length) out.warpBase = raw(sk.warpBase);
   if (sk.poses.length) out.poses = raw(sk.poses);
   if (sk.controllers.length) out.controllers = raw(sk.controllers);
   if (sk.workspace) out.workspace = sk.workspace;
   if (sk.audio.length) out.audio = raw(sk.audio);
+  if (sk.scene) out.scene = raw(sk.scene);
+  if (sk.film) out.film = raw(sk.film);
   return out;
 }
